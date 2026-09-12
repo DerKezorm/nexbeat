@@ -1,0 +1,30 @@
+# Second opinion next to a local scanner that runs in the git hooks and is not
+# part of the repository.
+#
+# Everything here is an allowlist. Nothing is switched off: a rule that fires
+# on test fixtures on every push is a rule somebody stops reading, and then the
+# one real finding goes past unnoticed.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders and test fixtures that are meant to be read."
+paths = [
+  '''package-lock\.json''',
+  '''\.svg$''',
+  '''\.png$''',
+  '''\.ico$''',
+  '''\.woff2$''',
+]
+regexes = [
+  # The reserved documentation domain.
+  '''example\.(com|org|net)''',
+  # Values the test suite uses on itself.
+  '''test-secret-key-only-for-tests''',
+  '''admin-password-123''',
+  '''user-password-123''',
+  '''geheim-1234''',
+  '''echter-schluessel-abcd''',
+  '''test-lidarr-key''',
+]

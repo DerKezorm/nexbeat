@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Editors and systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local data and secrets
+data/
+data-*/
+*.db
+*.db-wal
+*.db-shm
+secret.key
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+*.log
+
+# Test output
+playwright-report/
+test-results/
+coverage/
+*.tsbuildinfo
