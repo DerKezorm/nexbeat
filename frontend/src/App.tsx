@@ -9,6 +9,7 @@ import { Logo } from './components/Logo'
 import { Spinner } from './components/ui'
 import { AlbumPage } from './pages/AlbumPage'
 import { ArtistPage } from './pages/ArtistPage'
+import { GenrePage } from './pages/GenrePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { MyRequestsPage } from './pages/MyRequestsPage'
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="suche" element={<SearchPage />} />
         <Route path="kuenstler/:mbid" element={<ArtistPage />} />
         <Route path="album/:mbid" element={<AlbumPage />} />
+        <Route path="genre/:tag" element={<GenrePage />} />
         <Route path="anfragen" element={<MyRequestsPage />} />
         <Route path="profil" element={<ProfilePage />} />
         <Route path="admin/anfragen" element={adminOnly(<AdminRequestsPage />)} />

@@ -1,3 +1,4 @@
+import { MAIN_GENRES } from '../lib/genres'
 import de from './de.json'
 
 const sources = import.meta.glob('../**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
@@ -38,6 +39,7 @@ describe('translation keys used in the code', () => {
       ...['starttls', 'ssl', 'none'].map((security) => `mail.security_${security}`),
       ...['album', 'ep', 'single', 'broadcast', 'other'].map((type) => `releaseType.${type}`),
       ...['person', 'group', 'orchestra', 'choir', 'character', 'other'].map((type) => `artistType.${type}`),
+      ...MAIN_GENRES.map((genre) => `genre.names.${genre.key}`),
     ]
     expect(composed.filter((key) => !exists(key))).toEqual([])
   })

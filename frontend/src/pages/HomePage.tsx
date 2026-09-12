@@ -10,6 +10,7 @@ import { useAuth } from '../auth/useAuth'
 import { AlbumCard } from '../components/music/AlbumCard'
 import { ArtistCard } from '../components/music/ArtistCard'
 import { ArtistImage } from '../components/music/ArtistImage'
+import { GenreBar } from '../components/music/GenreBar'
 import { Shelf, ShelfSkeleton } from '../components/music/Shelf'
 import { Symbol } from '../components/Symbol'
 import { ErrorBanner } from '../components/ui'
@@ -115,6 +116,7 @@ export function HomePage() {
   return (
     <div className="flex flex-col gap-12">
       <Hero spotlight={spotlight} />
+      <GenreBar />
 
       {query.isPending && (
         <div className="flex flex-col gap-10">

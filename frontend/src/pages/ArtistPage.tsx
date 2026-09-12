@@ -19,9 +19,10 @@ import { ArtistRequestButton } from '../components/music/ArtistRequestButton'
 import { Shelf, ShelfSkeleton } from '../components/music/Shelf'
 import { TrackRow } from '../components/music/TrackRow'
 import { usePlayer } from '../components/player/usePlayer'
+import { SectionProblem } from '../components/SectionProblem'
 import { Segmented } from '../components/Segmented'
 import { Symbol } from '../components/Symbol'
-import { Button, Card, ErrorBanner, PageLoading } from '../components/ui'
+import { Card, ErrorBanner, PageLoading } from '../components/ui'
 import { withDiscographyTypes } from '../lib/albums'
 import { formatYear } from '../lib/format'
 import { artistPreview, type ArtistPreview } from '../lib/preview'
@@ -48,19 +49,6 @@ function matches(album: DiscographyAlbum, filter: Filter): boolean {
   const plain = album.secondary_types.length === 0 && PLAIN_TYPES.includes(primary)
   if (filter === 'other') return !plain
   return plain && primary === filter
-}
-
-/** Eine Quelle hat gerade nicht geantwortet. Nie als "gibt es nicht" verkleiden. */
-function SectionProblem({ error, retrying, onRetry }: { error: Error | null; retrying: boolean; onRetry: () => void }) {
-  const { t } = useTranslation()
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-ink-700 px-5 py-4">
-      <p className="text-sm text-mist-400">{errorMessage(error)}</p>
-      <Button variant="ghost" onClick={onRetry} loading={retrying}>
-        {t('common.tryAgain')}
-      </Button>
-    </div>
-  )
 }
 
 function CoverSkeletons({ count, className }: { count: number; className: string }) {

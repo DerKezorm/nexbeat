@@ -46,8 +46,9 @@ def escape(query: str) -> str:
     return _LUCENE_SPECIAL.sub(r"\\\1", query)
 
 
-async def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
-    query = {**params, "fmt": "json"}
+async def _get(path: str, params: dict[str, Any], *, text: bool = False) -> Any:
+    """Die Antwort als JSON, mit ``text`` als blosser Text."""
+    query = {**params, "fmt": "txt" if text else "json"}
     for attempt in range(RETRIES + 1):
         await spacer.wait()
         try:
@@ -64,7 +65,7 @@ async def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             raise MusicBrainzError("musicbrainz_not_found")
         if response.status_code >= 400:
             raise MusicBrainzError("musicbrainz_busy" if response.status_code == 503 else "musicbrainz_error")
-        return response.json()
+        return response.text if text else response.json()
     raise MusicBrainzError("musicbrainz_busy")
 
 
@@ -119,6 +120,36 @@ async def search_release_groups(query: str, limit: int = 12) -> list[dict[str, A
     return [
         {**_release_group(item), "score": int(item.get("score") or 0)}
         for item in data.get("release-groups") or []
+        if item.get("id")
+    ]
+
+
+async def genre_names() -> list[str]:
+    """Alle Genre-Namen von MusicBrainz in einem Aufruf.
+
+    Gemessen am 12.09.2026: 2197 Namen, 26 KB als Text. Tags wie "british" oder "seen live"
+    stehen nicht darin. So trennt die Liste Genres von sonstigen Tags.
+    """
+    text = await _get("/genre/all", {}, text=True)
+    return sorted({line.strip() for line in text.splitlines() if line.strip()})
+
+
+def _votes(entity: dict[str, Any]) -> dict[str, int]:
+    """Stimmen je Tag. Gegenstimmen machen die Zahl negativ."""
+    return {entry["name"]: int(entry.get("count") or 0) for entry in entity.get("tags") or [] if entry.get("name")}
+
+
+async def artists_by_tag(tag: str, limit: int = 100) -> list[dict[str, Any]]:
+    """Kuenstler mit diesem Tag, wie die Suche sie ordnet, samt Stimmen je Tag.
+
+    ⚠️ Die Suche findet jeden, dem jemand den Tag je gegeben hat, auch nach Gegenstimmen.
+    Gemessen am 12.09.2026: Unter "jazz" standen Lady Gaga und Black Sabbath, unter "hip hop"
+    Nirvana. Die Stimmen gehen deshalb mit, gefiltert wird in ``genres``.
+    """
+    data = await _get("/artist", {"query": f'tag:"{escape(tag)}"', "limit": limit})
+    return [
+        {"mbid": item["id"], "name": item.get("name", ""), "tags": _votes(item)}
+        for item in data.get("artists") or []
         if item.get("id")
     ]
 

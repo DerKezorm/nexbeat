@@ -19,6 +19,9 @@ library.
 
 - **Discover:** "for you" and "because you listen to" rows from ListenBrainz
   similar-artist data, plus weekly trends. Artists already in Lidarr are left out.
+- **Genres:** browse twenty main genres. A genre page shows the most played
+  artists and albums of that genre and related genres to follow. Artists in
+  Lidarr stay in the list, marked as in the library.
 - **Search** artists and releases in MusicBrainz, browse discographies and
   similar artists, listen to 30 second previews.
 - **Request** a single album, EP or single. Unknown artists are added to Lidarr

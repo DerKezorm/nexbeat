@@ -113,6 +113,11 @@ export type SearchAlbum = {
   request: RequestState | null
 }
 
+/** `ranked`: nach Hoerzahlen von ListenBrainz sortiert. Sonst in der Reihenfolge der Tag-Suche. */
+export type GenreArtists = { artists: ArtistItem[]; related: string[]; ranked: boolean }
+/** `available`: false, wenn ListenBrainz abgeschaltet ist. Die Alben kommen nur von dort. */
+export type GenreAlbums = { albums: AlbumItem[]; available: boolean }
+
 export type TopTrack = {
   title: string
   preview: string

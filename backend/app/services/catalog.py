@@ -253,7 +253,7 @@ async def artist_page(db: Session, settings: AppSettings, user: User, mbid: str)
     }
 
 
-async def _top_release_groups(db: Session, settings: AppSettings, mbid: str) -> list[dict[str, Any]]:
+async def top_release_groups(db: Session, settings: AppSettings, mbid: str) -> list[dict[str, Any]]:
     token = settings.text("listenbrainz_token")
     # "v2" seit 12.09.2026: mit den Kuenstlern jeder Release-Group. Aeltere Eintraege hatten sie nicht.
     return await cache.cached(
@@ -278,7 +278,7 @@ async def artist_discography(db: Session, settings: AppSettings, user: User, mbi
     groups = await cache.cached(db, f"mb:discography:{mbid}", TTL_BROWSE, lambda: musicbrainz.release_groups(mbid))
     popularity: dict[str, dict[str, Any]] = {}
     if settings.flag("source_listenbrainz"):
-        popular = await optional(_top_release_groups(db, settings, mbid), "listenbrainz") or []
+        popular = await optional(top_release_groups(db, settings, mbid), "listenbrainz") or []
         popularity = {item["mbid"]: item for item in popular}
     albums = []
     for group in groups:
@@ -302,7 +302,7 @@ async def artist_discography(db: Session, settings: AppSettings, user: User, mbi
 POPULAR_TYPES = ("album", "ep", "")
 
 
-def _credited(item: dict[str, Any], mbid: str) -> bool:
+def credited(item: dict[str, Any], mbid: str) -> bool:
     """Gehoert die Release-Group dem Kuenstler? Nennt ListenBrainz niemanden, im Zweifel ja."""
     artists = item.get("artist_mbids") or []
     return not artists or mbid in artists
@@ -317,7 +317,7 @@ async def artist_popular(db: Session, settings: AppSettings, user: User, mbid: s
     """
     if not settings.flag("source_listenbrainz"):
         return {"albums": []}
-    ranked = sorted(await _top_release_groups(db, settings, mbid), key=lambda item: -item["listen_count"])
+    ranked = sorted(await top_release_groups(db, settings, mbid), key=lambda item: -item["listen_count"])
     albums = [
         {
             "mbid": item["mbid"],
@@ -329,7 +329,7 @@ async def artist_popular(db: Session, settings: AppSettings, user: User, mbid: s
             "cover": item["cover"] or coverart.release_group_front(item["mbid"], 250),
         }
         for item in ranked
-        if (item["type"] or "").casefold() in POPULAR_TYPES and _credited(item, mbid)
+        if (item["type"] or "").casefold() in POPULAR_TYPES and credited(item, mbid)
     ][:8]
     return {"albums": await _with_states(db, settings, user, mbid, albums)}
 

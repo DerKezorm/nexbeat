@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuth } from '../auth/useAuth'
 import { LoadingBar } from './LoadingBar'
@@ -27,6 +27,9 @@ function navClass(isActive: boolean, compact = false): string {
 export function AppShell() {
   const { t } = useTranslation()
   const { config } = useAuth()
+  const { pathname } = useLocation()
+  // Die Seite eines Genres gehoert zum Entdecken, auch wenn ihre Adresse anders anfaengt.
+  const active = (to: string, isActive: boolean) => isActive || (to === '/' && pathname.startsWith('/genre/'))
 
   return (
     <div className="nv-glow flex min-h-dvh flex-col">
@@ -38,7 +41,7 @@ export function AppShell() {
           </NavLink>
           <nav className="hidden flex-1 items-center gap-1 md:flex" aria-label={t('nav.main')}>
             {NAV_ITEMS.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => navClass(isActive)}>
+              <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => navClass(active(item.to, isActive))}>
                 {t(item.labelKey)}
               </NavLink>
             ))}
@@ -51,7 +54,7 @@ export function AppShell() {
         </div>
         <nav className="flex gap-1 overflow-x-auto border-t border-ink-700/60 px-4 py-2 md:hidden" aria-label={t('nav.main')}>
           {NAV_ITEMS.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => navClass(isActive, true)}>
+            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => navClass(active(item.to, isActive), true)}>
               {t(item.labelKey)}
             </NavLink>
           ))}

@@ -177,6 +177,51 @@ Nur lesend gemessen, an Lidarr 3.1.
 - ⚠️ Lookups laufen ueber Lidarrs Metadatendienst (api.lidarr.audio), der
   dokumentiert ausfaellt. Finden und Empfehlen duerfen davon nicht abhaengen.
 
+## Genres
+
+Gemessen am 12.09.2026 fuer "Nach Genre stoebern", an 20 Hauptgenres.
+
+- **MusicBrainz, Genre-Liste:** `GET /ws/2/genre/all?fmt=txt` liefert alle 2197 Namen in einem
+  Aufruf, 26 KB Text, ein Name je Zeile. Alle 20 Hauptgenres stehen darin, "indie",
+  "alternative", "soundtrack" und "german hip hop" nicht.
+- **MusicBrainz, Tag-Suche:** `GET /ws/2/artist?query=tag:"rock"&limit=100` fand 43848
+  Kuenstler, bei "k-pop" 1322. Jeder Treffer traegt `tags` mit `name` und `count`.
+  - ⚠️ Die Suche findet jeden, dem jemand den Tag je gegeben hat. `count` kann negativ sein,
+    gefunden wird der Kuenstler trotzdem. Nach Hoerzahlen sortiert fuehrten Lady Gaga und
+    Madonna "jazz" an, Linkin Park und Nirvana "hip hop", mit je einer Stimme gegen 20 bis 70
+    fuer ihr eigentliches Genre.
+  - Ein Filter, der traegt: die Stimmen fuer das Genre oder eine Spielart davon ("heavy metal"
+    fuer "metal") gegen die fuer das staerkste Genre, Tags ausserhalb der Genre-Liste nicht
+    mitgezaehlt. Ab 0,5 blieben je Genre 35 bis 99 von 100 Kuenstlern, vorn standen die
+    Erwarteten. Mit 0,3 fuehrte Radiohead "electronic" an, und Elvis Presley stand unter "r&b".
+  - "Various Artists" stand bei "rock" auf Platz eins, "[unknown]" unter "classical".
+  - 16 von 41 Aufrufen kamen erst im zweiten oder dritten Versuch mit `200`, zwei scheiterten
+    auch im dritten mit `503`.
+- **MusicBrainz, Albensuche nach Tag** taugt nicht fuer beliebte Alben:
+  `GET /ws/2/release-group?query=tag:"rock" AND primarytype:album` ordnet 371745 Treffer nach
+  Treffergenauigkeit. Nach Hoerzahlen sortiert fuehrte ein Album von Dire Straits, danach fast
+  nur Unbekanntes. Bei "metal" hatte das meistgehoerte Album 2065 Hoerungen.
+- **ListenBrainz, Hoerzahlen in einem Aufruf:** `POST /1/popularity/artist` mit
+  `{"artist_mbids": [...]}` und `POST /1/popularity/release-group` mit
+  `{"release_group_mbids": [...]}` nahmen je 100 Kennungen ohne Schluessel an. Die Antwort ist
+  eine Liste mit `total_listen_count` und `total_user_count`.
+- **ListenBrainz, beliebteste Alben eines Kuenstlers:** Fuer die sechs Spitzenkuenstler von 18
+  Genres kam ohne Schluessel 70 mal `200` und 18 mal `401`, darunter Coldplay, David Bowie und
+  fuenf von sechs K-Pop-Gruppen. `type` nennt nur die Hauptart. Sammlungen wie "The Essential
+  Elvis Presley" kommen als "Album".
+- **ListenBrainz, weltweite Albenliste:** `stats/sitewide/release-groups` mit `count=1000` fuer
+  `all_time` und `year` ergab zusammen 1300 Alben, mehr als 1000 je Zeitraum gibt es nicht.
+  Gefiltert nach den Kuenstlern eines Genres blieben bei "rock" 139, bei "jazz" 4, bei "latin" 0.
+- **ListenBrainz, Metadaten mehrerer Kuenstler:** `GET /1/metadata/artist/?artist_mbids=...&inc=tag`
+  ging mit 75 Kennungen (2991 Zeichen Adresse). Mit 100 (3966 Zeichen) kam `502` von openresty.
+  Tags, die ein Genre sind, tragen `genre_mbid`.
+- **ListenBrainz, Neuerscheinungen:** `explore/fresh-releases` lieferte fuer 30 Tage 3,6 MB in
+  5 s, fuer 90 Tage 12,5 MB in 10 s. Nur jede zehnte Veroeffentlichung hatte `release_tags`.
+- **Taugt nicht:** Labs `tag-similarity` nannte zu "hip hop" soul, bossa nova und flamenco, zu
+  "electronic" canada und summer. `lb-radio/tags` brach die Verbindung ohne Antwort ab.
+- **Deezer, Genres:** `GET /genre` liefert 25 Genres mit deutschen Namen. `genre/152/artists`
+  ("Rock") begann mit TKKG und Bibi Blocksberg.
+
 ## Spotify
 
 Faellt aus: Entwicklermodus seit 02/2026 auf 5 Testnutzer begrenzt.

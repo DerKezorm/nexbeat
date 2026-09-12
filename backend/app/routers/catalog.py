@@ -1,4 +1,4 @@
-"""Suche, Kuenstler- und Albumseiten, Kuenstlerbilder."""
+"""Suche, Genres, Kuenstler- und Albumseiten, Kuenstlerbilder."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 
 from ..deps import CurrentUser, DbSession
 from ..meldungen import fehler
-from ..services import catalog
+from ..services import catalog, genres
 from ..services.deezer import DeezerError
 from ..services.listenbrainz import ListenBrainzError
 from ..services.musicbrainz import MusicBrainzError
@@ -22,6 +22,13 @@ def _mbid(value: str) -> str:
     if not catalog.valid_mbid(value):
         raise fehler("invalid_mbid", "This is not a MusicBrainz ID.", 422)
     return value
+
+
+def _genre(value: str) -> str:
+    tag = genres.normalize_tag(value)
+    if tag is None:
+        raise fehler("invalid_genre", "This is not a valid genre.", 422)
+    return tag
 
 
 def _musicbrainz_problem(error: MusicBrainzError) -> HTTPException:
@@ -47,6 +54,24 @@ async def search_albums(user: CurrentUser, db: DbSession, q: str = Query(max_len
         return await catalog.search_albums(db, load_settings(db), user, q)
     except MusicBrainzError as error:
         raise _musicbrainz_problem(error) from error
+
+
+@router.get("/api/genres/artists", summary="Popular artists of a genre and related genres")
+async def genre_artists(user: CurrentUser, db: DbSession, tag: str = Query(max_length=200)) -> dict[str, Any]:
+    try:
+        return await genres.genre_artists(db, load_settings(db), _genre(tag))
+    except MusicBrainzError as error:
+        raise _musicbrainz_problem(error) from error
+
+
+@router.get("/api/genres/albums", summary="Popular albums of a genre")
+async def genre_albums(user: CurrentUser, db: DbSession, tag: str = Query(max_length=200)) -> dict[str, Any]:
+    try:
+        return await genres.genre_albums(db, load_settings(db), user, _genre(tag))
+    except MusicBrainzError as error:
+        raise _musicbrainz_problem(error) from error
+    except ListenBrainzError as error:
+        raise _source_problem(error) from error
 
 
 @router.get("/api/artists/{mbid}", summary="Artist page head: details, request state and quota")

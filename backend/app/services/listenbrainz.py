@@ -31,6 +31,8 @@ logger = logging.getLogger("nexbeat.listenbrainz")
 LABS_URL = "https://labs.api.listenbrainz.org"
 API_URL = "https://api.listenbrainz.org/1"
 SIMILAR_ALGORITHM = "session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30"
+#: Kennungen je Aufruf bei den Hoerzahlen. Gemessen am 12.09.2026: 100 gingen durch.
+POPULARITY_BATCH = 100
 
 
 class ListenBrainzError(Exception):
@@ -39,10 +41,12 @@ class ListenBrainzError(Exception):
         self.code = code
 
 
-async def _get(url: str, params: Any, token: str = "") -> Any:
+async def _request(method: str, url: str, params: Any = None, token: str = "", body: Any = None) -> Any:
     headers = {"Authorization": f"Token {token}"} if token else None
     try:
-        response = await http.client("listenbrainz", timeout=30.0).get(url, params=params, headers=headers)
+        response = await http.client("listenbrainz", timeout=30.0).request(
+            method, url, params=params, json=body, headers=headers
+        )
     except httpx.HTTPError as error:
         logger.info("ListenBrainz unreachable: %s", error)
         raise ListenBrainzError() from error
@@ -61,6 +65,10 @@ async def _get(url: str, params: Any, token: str = "") -> Any:
         return response.json()
     except ValueError as error:
         raise ListenBrainzError() from error
+
+
+async def _get(url: str, params: Any, token: str = "") -> Any:
+    return await _request("GET", url, params, token)
 
 
 def _rows_with(data: Any, key: str) -> list[dict[str, Any]]:
@@ -180,3 +188,30 @@ async def top_release_groups(artist_mbid: str, token: str = "") -> list[dict[str
             }
         )
     return _first_of_each(result)
+
+
+async def _popularity(kind: str, field: str, mbids: list[str], token: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    wanted = list(dict.fromkeys(mbid for mbid in mbids if mbid))
+    for start in range(0, len(wanted), POPULARITY_BATCH):
+        batch = wanted[start : start + POPULARITY_BATCH]
+        data = await _request("POST", f"{API_URL}/popularity/{kind}", token=token, body={f"{field}s": batch})
+        for row in data if isinstance(data, list) else []:
+            if row.get(field):
+                counts[row[field]] = int(row.get("total_listen_count") or 0)
+    return counts
+
+
+async def artist_popularity(mbids: list[str], token: str = "") -> dict[str, int]:
+    """Hoerzahlen je Kuenstler, bis zu 100 Kennungen in einem Aufruf.
+
+    Per POST, weil die Adresse sonst zu lang wird: Am 12.09.2026 brach ein GET mit 100
+    Kennungen bei rund 4000 Zeichen mit 502 ab, 75 gingen noch. Der POST nahm 100 Kennungen
+    ohne Schluessel an.
+    """
+    return await _popularity("artist", "artist_mbid", mbids, token)
+
+
+async def release_group_popularity(mbids: list[str], token: str = "") -> dict[str, int]:
+    """Hoerzahlen je Release-Group, wie ``artist_popularity``."""
+    return await _popularity("release-group", "release_group_mbid", mbids, token)
