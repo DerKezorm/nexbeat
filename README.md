@@ -48,3 +48,7 @@ Open http://localhost:5182 and create the first account.
 
 MusicBrainz, Cover Art Archive and ListenBrainz (open data). Artist images and
 previews come from the public Deezer API and can be switched off.
+
+## Licence
+
+[GNU Affero General Public License v3.0](LICENSE).
