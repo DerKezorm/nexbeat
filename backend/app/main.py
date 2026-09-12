@@ -91,6 +91,7 @@ def _mount_frontend(target: FastAPI, dist: Path) -> None:
     if (dist / "assets").is_dir():
         target.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
     root = dist.resolve()
+    start_page = index.resolve()
 
     # response_model=None: Aus zwei Antwortklassen baut FastAPI kein Modell und
     # bricht sonst schon beim Import ab.
@@ -99,9 +100,12 @@ def _mount_frontend(target: FastAPI, dist: Path) -> None:
         if path.startswith("api/"):
             return JSONResponse(status_code=404, content={"detail": meldung("not_found", "Not found.")})
         candidate = (dist / path).resolve()
-        if path and candidate.is_file() and root in candidate.parents:
+        if path and candidate.is_file() and root in candidate.parents and candidate != start_page:
             return FileResponse(candidate)
-        return FileResponse(index)
+        # Die Startseite fragt der Browser vor jeder Nutzung nach, mit dem ETag ist das ein 304.
+        # 12.09.2026: Ohne die Zeile behielt er nach einem Update die alte, die auf Dateien zeigt,
+        # die es nicht mehr gibt. Die Dateien unter /assets brauchen das nicht, ihr Name wechselt.
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
 _mount_frontend(app, get_settings().frontend_dist)

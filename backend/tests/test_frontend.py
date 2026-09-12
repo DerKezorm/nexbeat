@@ -37,3 +37,21 @@ def test_built_frontend_is_served(tmp_path: Path) -> None:
 
     # Nichts ausserhalb des Ordners, auch nicht ueber kodierte Punkte.
     assert client.get("/%2e%2e/secret.txt").text == INDEX
+
+
+def test_start_page_is_checked_again_but_hashed_files_are_not(tmp_path: Path) -> None:
+    # 12.09.2026: Die Startseite ging ohne Cache-Control hinaus. Nach einem Update behielt der
+    # Browser die alte index.html, die auf Dateien zeigt, die es nicht mehr gibt: weisse Seite.
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text(INDEX, encoding="utf-8")
+    (dist / "assets" / "app-1a2b3c.js").write_text("console.log(1)", encoding="utf-8")
+
+    site = FastAPI()
+    _mount_frontend(site, dist)
+    client = TestClient(site)
+
+    for page in ("/", "/kuenstler/abc", "/index.html"):
+        assert client.get(page).headers.get("cache-control") == "no-cache", page
+    # Der Name traegt die Pruefsumme des Inhalts, eine neue Fassung heisst anders.
+    assert "no-cache" not in client.get("/assets/app-1a2b3c.js").headers.get("cache-control", "")
