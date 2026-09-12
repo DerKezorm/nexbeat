@@ -13,6 +13,7 @@ from typing import Any
 
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from .config import get_settings
 from .models import Base
@@ -22,9 +23,16 @@ logger = logging.getLogger("nexbeat.db")
 _settings = get_settings()
 _settings.data_dir.mkdir(parents=True, exist_ok=True)
 
+# ⚠️ Kein Pool mit Obergrenze. Eine Anfrage haelt ihre Verbindung, solange sie auf Deezer,
+# MusicBrainz oder Lidarr wartet. Mit dem Standardpool (15 Verbindungen) wartete die sechzehnte
+# blockierend auf eine freie und hielt dabei die Ereignisschleife an, auch fuer alle, die ihre
+# gerade zurueckgeben wollten. 12.09.2026: Hinter einem HTTP/2-Proxy lud die Startseite rund 40
+# Bilder auf einmal, und nexbeat antwortete nicht mehr. Eine SQLite-Verbindung aufzumachen
+# kostet Bruchteile einer Millisekunde.
 engine = create_engine(
     f"sqlite:///{_settings.database_path}",
     connect_args={"check_same_thread": False, "timeout": 5},
+    poolclass=NullPool,
 )
 
 
