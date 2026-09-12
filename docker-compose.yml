@@ -1,0 +1,48 @@
+# nexbeat, start with:  docker compose up -d
+#
+# Then open http://<your-host>:8030 and create the first account. It becomes
+# the administrator; that route closes afterwards.
+#
+# To build from source instead of pulling the image, comment out `image:` and
+# uncomment `build: .`.
+
+services:
+  nexbeat:
+    image: ghcr.io/derkezorm/nexbeat:latest
+    # build: .
+    container_name: nexbeat
+    restart: unless-stopped
+
+    ports:
+      # Host port on the left, container port on the right.
+      - "8030:8000"
+
+    volumes:
+      # ⚠️ A local disk, never an SMB or NFS share. SQLite's locking does not
+      # work reliably over network filesystems, and that is how it loses data.
+      # On a NAS use a path on the internal volume, not a mounted share.
+      - ./data:/data
+
+    environment:
+      # Who should own the files in the data directory. The container fixes the
+      # permissions itself on startup.
+      PUID: 1000
+      PGID: 1000
+
+      # ⚠️ The key that signs sign-ins and encrypts the stored credentials
+      # (Lidarr API key, mail password, ListenBrainz token). Leaving it empty is
+      # fine: nexbeat creates one on first start and keeps it as
+      # /data/secret.key. Back it up together with the data directory; without
+      # it the stored credentials cannot be read.
+      NEXBEAT_SECRET_KEY: ${NEXBEAT_SECRET_KEY:-}
+
+      # Whether the session cookie may only travel over HTTPS.
+      #
+      #   auto   Secure when the request arrived over https (default)
+      #   on     always, for a reverse proxy that terminates TLS and forwards
+      #          plain http internally
+      #   off    never
+      #
+      # ⚠️ Do not set "on" if nexbeat is also opened over http://: the browser
+      # discards a Secure cookie sent over http, and then nobody stays signed in.
+      NEXBEAT_COOKIE_SECURE: ${NEXBEAT_COOKIE_SECURE:-auto}

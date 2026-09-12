@@ -1,0 +1,124 @@
+# Tests every change, then builds a container image and publishes it to the
+# GitHub Container Registry. On a NAS, `docker compose pull` is then enough.
+name: Build image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+# One run at a time. Running builds are deliberately not cancelled: a
+# half-published image is worse than a few minutes of waiting.
+concurrency:
+  group: docker-image
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          # Both files, otherwise the cache key differs from what gets installed.
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint and test the backend
+        working-directory: backend
+        run: |
+          python -m ruff check app tests
+          python -m pytest -q
+
+      # On a release the version in the code must match the tag. Otherwise the
+      # app reports a different version than the one that is installed.
+      - name: Version matches the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: backend
+        run: |
+          IN_CODE=$(python -c "import app; print(app.__version__)")
+          AT_TAG="${GITHUB_REF_NAME#v}"
+          echo "code: $IN_CODE / tag: $AT_TAG"
+          if [ "$IN_CODE" != "$AT_TAG" ]; then
+            echo "::error::app/__init__.py says $IN_CODE, the tag says $AT_TAG."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Lint, test and build the frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+
+  image:
+    name: Build image
+    runs-on: ubuntu-latest
+    # Only once the tests pass: a broken image helps nobody.
+    needs: tests
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Several processor architectures: NAS devices come with Intel/AMD and ARM.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out names and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # "latest" follows the tag, not the branch: whoever has "latest" in
+          # their compose file gets a released version on the next pull, not
+          # whatever reached main a minute ago. The development state is "main".
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
