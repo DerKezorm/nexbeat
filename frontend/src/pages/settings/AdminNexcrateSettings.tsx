@@ -3,13 +3,23 @@ import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
-import { api, errorMessage, storedError } from '../../api/client'
+import { ApiError, api, errorMessage, storedError } from '../../api/client'
 import type { NexcrateFacts, NexcratePairing, NexcrateStatus } from '../../api/types'
 import { useAuth } from '../../auth/useAuth'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Symbol } from '../../components/Symbol'
 import { Button, ErrorBanner, Field, OkBanner, PageLoading, Section, Toggle } from '../../components/ui'
 import { useSettings } from './useSettings'
+
+/** nexcrates eigener Code und Satz hinter einer Ablehnung, fuer die Fehlersuche. Ohne ihn stand nur "abgelehnt" da. */
+function Detail({ text }: { text: unknown }) {
+  if (typeof text !== 'string' || !text) return null
+  return <p className="font-mono text-xs break-all text-mist-500">{text}</p>
+}
+
+function detailOf(error: unknown): unknown {
+  return error instanceof ApiError ? error.data?.detail : null
+}
 
 function remaining(until: string | undefined, now: number): string {
   if (!until) return ''
@@ -200,7 +210,12 @@ export function AdminNexcrateSettings() {
                 <Readiness facts={facts} />
               </>
             ) : (
-              status.data?.error && <ErrorBanner message={storedError(status.data.error.code) ?? status.data.error.code} />
+              status.data?.error && (
+                <>
+                  <ErrorBanner message={storedError(status.data.error.code) ?? status.data.error.code} />
+                  <Detail text={status.data.error.detail} />
+                </>
+              )
             )}
             <div className="flex flex-wrap gap-3">
               <Button variant="ghost" onClick={() => void status.refetch()} loading={status.isFetching}>
@@ -248,6 +263,7 @@ export function AdminNexcrateSettings() {
               </Button>
             </div>
             {start.isError && <ErrorBanner message={errorMessage(start.error)} />}
+            {start.isError && <Detail text={detailOf(start.error)} />}
             {manual && (
               <form
                 className="flex flex-col gap-3 rounded-xl border border-ink-700 p-4"
@@ -271,6 +287,7 @@ export function AdminNexcrateSettings() {
                   </Button>
                 </div>
                 {saveKey.isError && <ErrorBanner message={errorMessage(saveKey.error)} />}
+                {saveKey.isError && <Detail text={detailOf(saveKey.error)} />}
               </form>
             )}
           </div>
@@ -300,7 +317,7 @@ export function AdminNexcrateSettings() {
             value={events?.connected ? t('nexcrate.eventsOn') : t('nexcrate.eventsOff')}
             hint={
               events?.error
-                ? (storedError(events.error) ?? events.error)
+                ? `${storedError(events.error) ?? events.error}${events.detail ? ` (${events.detail})` : ''}`
                 : events?.last_event_at
                   ? t('nexcrate.eventsLast', { time: clock(events.last_event_at) })
                   : t('nexcrate.eventsNone')
@@ -314,6 +331,7 @@ export function AdminNexcrateSettings() {
           {sync.isSuccess && <span className="text-sm text-ok-500">{t('nexcrate.synced', { count: sync.data.artists })}</span>}
         </div>
         {sync.isError && <ErrorBanner message={errorMessage(sync.error)} />}
+        {sync.isError && <Detail text={detailOf(sync.error)} />}
       </Section>
 
       <ConfirmDialog

@@ -306,7 +306,14 @@ export type NexcrateStatus = {
   url: string
   connected: boolean
   key_hint: string | null
-  events: { connected: boolean; since: string | null; last_event_at: string | null; last_seq: number | null; error: string | null }
+  events: {
+    connected: boolean
+    since: string | null
+    last_event_at: string | null
+    last_seq: number | null
+    error: string | null
+    detail?: string | null
+  }
   artists: number
   facts: NexcrateFacts | null
   error: { code: string; detail: string } | null

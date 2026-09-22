@@ -34,7 +34,14 @@ MUSIC_KINDS = ("album", "artist")
 LIBRARY_TYPES = ("title.added", "title.removed", "title.changed")
 
 _restart: asyncio.Event | None = None
-_status: dict[str, Any] = {"connected": False, "since": None, "last_event_at": None, "last_seq": None, "error": None}
+_status: dict[str, Any] = {
+    "connected": False,
+    "since": None,
+    "last_event_at": None,
+    "last_seq": None,
+    "error": None,
+    "detail": None,
+}
 
 
 def status() -> dict[str, Any]:
@@ -71,7 +78,7 @@ async def _consume(client: nexcrate.NexcrateClient, wake: Callable[[bool], None]
     after = _status["last_seq"]
     if after is None:
         after = await client.latest_event()
-    _status.update(connected=True, since=utcnow(), error=None, last_seq=after)
+    _status.update(connected=True, since=utcnow(), error=None, detail=None, last_seq=after)
     logger.info("Listening to nexcrate events after %s", after)
     async for event in client.stream(after):
         seq = event.get("seq")
@@ -113,7 +120,8 @@ async def run(stop: asyncio.Event, wake: Callable[[bool], None]) -> None:
             if error.code == "nexcrate_marker_too_old":
                 _status["last_seq"] = None
             _status["error"] = error.code
-            logger.info("nexcrate event stream stopped: %s", error.code)
+            _status["detail"] = error.detail[:300]
+            logger.info("nexcrate event stream stopped: %s (%s)", error.code, error.detail[:300])
         else:
             _status["error"] = "nexcrate_unexpected_answer"
             logger.exception("nexcrate event stream failed", exc_info=error)
