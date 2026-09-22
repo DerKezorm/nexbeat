@@ -522,11 +522,12 @@
       "nexcrate_path_unknown": "No nexcrate with an interface for programs answers at this address.",
       "nexcrate_pairing_gone": "The request to connect has expired. Start it again.",
       "nexcrate_marker_too_old": "nexbeat reads the library from nexcrate again.",
-      "nexcrate_refused": "nexcrate refused the request.",
+      "nexcrate_refused": "nexcrate refused the request. nexcrate's reason is shown below.",
       "nexcrate_unexpected_answer": "nexcrate answered unexpectedly.",
       "nexcrate_title_gone": "nexcrate no longer has this. Was it removed there?",
       "nexcrate_not_watched": "nexcrate no longer watches this album. Was it taken back or frozen there?",
-      "artist_albums_not_in_nexcrate": "nexcrate watches no studio album of this artist."
+      "artist_albums_not_in_nexcrate": "nexcrate watches no studio album of this artist.",
+      "nexcrate_unavailable": "nexcrate cannot be reached right now: the address answers with a server error instead of nexcrate, usually the proxy in front of it. Is nexcrate running, or is it being restarted? nexbeat keeps trying on its own."
     }
   },
   "services": {

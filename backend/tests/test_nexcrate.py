@@ -158,6 +158,7 @@ def test_a_dry_run_sends_nothing_to_nexcrate(
             "nexcrate_busy",
         ),
         (httpx.Response(500, json={"code": "internal_error", "message": "x", "params": {}}), "nexcrate_pending"),
+        (httpx.Response(502, text="<html><body>502 Bad Gateway</body></html>"), "nexcrate_unavailable"),
     ],
 )
 def test_an_open_outcome_is_simply_sent_again(
@@ -168,7 +169,9 @@ def test_an_open_outcome_is_simply_sent_again(
     create_user("lena")
     request = _request(admin_client, auth_headers(admin_client, "lena")).json()["request"]
     assert (request["status"], request["error_code"]) == ("approved", code)
-    assert _refresh() == 1
+    # Nicht sofort: die erste Uebergabe kann noch unterwegs sein.
+    assert _refresh() == 0
+    assert _refresh(utcnow() + timedelta(minutes=2)) == 1
     assert _stored(request["id"]).status.value == "searching"
     assert len(fake_nexcrate.requests_sent()) == 2
 
@@ -521,3 +524,12 @@ def test_the_library_is_read_right_after_connecting_or_switching(
     else:
         admin_client.put("/api/settings", json={"request_mode": "arr"})
     assert True in woken
+
+
+def test_a_proxy_error_page_says_nexcrate_is_not_there() -> None:
+    # 22.09.2026: nexcrate wurde neu aufgespielt, der Proxy davor antwortete 502 mit HTML. nexbeat sagte
+    # "abgelehnt", und niemand kam darauf, dass nexcrate gar nicht lief.
+    page = "<html>\n<body>502 Bad Gateway</body>\n</html>"
+    error = nexcrate._error_from(httpx.Response(502, text=page), "/system")
+    assert (error.code, error.transient) == ("nexcrate_unavailable", True)
+    assert error.detail == "HTTP 502: <html> <body>502 Bad Gateway</body> </html>"

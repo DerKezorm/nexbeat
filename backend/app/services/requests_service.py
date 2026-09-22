@@ -67,7 +67,17 @@ UNCERTAIN_CODES = ("lidarr_timeout", "lidarr_pending")
 #: Anlegen scheitert in Lidarr.
 RESUME_AFTER = timedelta(minutes=10)
 #: Kennungen einer Anfrage im NEX-Modus, die der naechste Abgleich einfach noch einmal sendet.
-NEXCRATE_RESEND_CODES = ("nexcrate_pending", "nexcrate_timeout", "nexcrate_unreachable", "nexcrate_busy")
+NEXCRATE_RESEND_CODES = (
+    "nexcrate_pending",
+    "nexcrate_timeout",
+    "nexcrate_unreachable",
+    "nexcrate_busy",
+    "nexcrate_unavailable",
+)
+#: Erst nach dieser Zeit sendet der Abgleich eine offene Uebergabe noch einmal. 22.09.2026: Der Abgleich lief
+#: waehrend der ersten Uebergabe los, sah ``nexcrate_pending`` und sendete dieselbe Anfrage 0,7 s spaeter ein
+#: zweites Mal. nexcrate nahm sie idempotent, harmlos, aber nicht gewollt.
+NEXCRATE_RESEND_AFTER = timedelta(seconds=60)
 
 
 class RequestProblem(Exception):
@@ -716,6 +726,8 @@ async def _refresh_nexcrate(db: Session, settings: AppSettings, now: datetime) -
     open_requests = _open_requests(db)
     for request in open_requests:
         if not (writes and request.status == RequestStatus.approved and request.error_code in NEXCRATE_RESEND_CODES):
+            continue
+        if request.submitted_at is not None and now - request.submitted_at < NEXCRATE_RESEND_AFTER:
             continue
         before = (request.status, request.error_code)
         logger.info("Request %s: sending to nexcrate again", request.id)

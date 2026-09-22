@@ -93,13 +93,17 @@ def _error_from(response: httpx.Response, path: str) -> NexcrateError:
     params = body.get("params") if isinstance(body, dict) and isinstance(body.get("params"), dict) else {}
     message = str(body.get("message") or "") if isinstance(body, dict) else ""
     status = response.status_code
-    detail = f"{remote}: {message}" if remote else response.text[:300]
+    detail = f"{remote}: {message}" if remote else f"HTTP {status}: {' '.join(response.text.split())[:200]}"
     if remote in REMOTE_CODES:
         code = REMOTE_CODES[remote]
     elif status in (401, 403):
         code = "nexcrate_key_rejected"
     elif status == 404 and not remote:
         code = "nexcrate_path_unknown"
+    elif status >= 500 and not remote:
+        # 22.09.2026: Waehrend nexcrate neu aufgespielt wurde, antwortete der Proxy davor mit 502 und einer
+        # HTML-Seite. Das hiess "abgelehnt", obwohl nexcrate gar nicht lief.
+        code = "nexcrate_unavailable"
     else:
         code = "nexcrate_refused"
     transient = status >= 500 or code == "nexcrate_busy"
