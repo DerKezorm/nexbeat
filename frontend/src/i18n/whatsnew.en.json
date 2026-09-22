@@ -1,0 +1,30 @@
+{
+  "entries": {
+    "1.1.0": {
+      "lead": "nexbeat can now request from nexcrate as well, and from this version on this window tells you after each update what changed.",
+      "sections": [
+        {
+          "title": "Requests to nexcrate",
+          "body": "Where there was only Lidarr, an administrator can now choose nexcrate. Nothing changes for you: request as usual and follow the state under My requests.",
+          "where": "Menu at your name › My requests"
+        },
+        {
+          "title": "About nexbeat",
+          "body": "Version, licence and this text now live in the menu at your name. You can open this window again from there.",
+          "where": "Menu at your name › About nexbeat"
+        },
+        {
+          "title": "Update hint",
+          "body": "Once a day nexbeat asks GitHub whether there is a newer version and shows it on the page and in the menu. It can be switched off on the same page.",
+          "where": "Menu at your name › About nexbeat › Updates",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "When nexcrate refuses something, its own reason is shown below.",
+        "After connecting to nexcrate the library is there at once."
+      ]
+    }
+  }
+}

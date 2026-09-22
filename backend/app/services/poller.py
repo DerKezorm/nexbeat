@@ -22,7 +22,7 @@ from collections.abc import Awaitable
 from typing import Any
 
 from ..db import SessionLocal
-from . import cache, library, nexcrate_events, recommendations, requests_service, sitzung, tokens
+from . import cache, library, nexcrate_events, recommendations, requests_service, sitzung, tokens, updates
 from .settings_service import load_settings
 
 logger = logging.getLogger("nexbeat.poller")
@@ -83,6 +83,8 @@ async def _requests_loop(stop: asyncio.Event) -> None:
                 _library_due = False
                 await _guarded("library sync", library.sync_artists(db, settings))
             await _guarded("request status", requests_service.refresh_open(db, settings))
+            # Einmal am Tag, damit der Hinweis im Menue steht, ohne dass jemand die Ueber-Seite oeffnet.
+            await _guarded("update check", updates.status(enabled=settings.flag("update_check")))
             if started - last["purge"] >= PURGE_INTERVAL:
                 last["purge"] = started
                 try:

@@ -14,11 +14,12 @@ from ..meldungen import fehler, meldung
 from ..models import User, utcnow
 from ..schemas import LoginIn, MeOut, MeUpdate, PasswordChangeIn, TokenPair, UserOut
 from ..security import decode_token, dummy_hash, hash_password, verify_password
-from ..services import anmeldebremse, quota, sitzung
+from ..services import anmeldebremse, quota, sitzung, updates
 from ..services.settings_service import load_settings
 from ..services.tokens import normalize_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+_NO_UPDATE = updates.UpdateStatus(current="")
 
 
 def _find_user(db: Session, login: str) -> User | None:
@@ -37,6 +38,10 @@ def me_out(db: Session, user: User) -> MeOut:
             "is_admin": user.is_admin,
             "quota": quota.as_dict(state),
             "request_target": settings.target,
+            "seen_version": user.seen_version,
+            "update_available": bool(
+                user.is_admin and settings.flag("update_check") and (updates.cached() or _NO_UPDATE).available
+            ),
         }
     )
 
@@ -114,6 +119,8 @@ def update_me(payload: MeUpdate, user: CurrentUser, db: DbSession) -> MeOut:
         user.display_name = payload.display_name.strip()
     if payload.language is not None:
         user.language = payload.language
+    if payload.seen_version is not None:
+        user.seen_version = payload.seen_version
     db.commit()
     return me_out(db, user)
 

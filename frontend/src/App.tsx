@@ -20,6 +20,7 @@ import { SearchPage } from './pages/SearchPage'
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const AdminRequestsPage = lazy(() => import('./pages/AdminRequestsPage').then((m) => ({ default: m.AdminRequestsPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })))
 const SetupPage = lazy(() => import('./pages/SetupPage').then((m) => ({ default: m.SetupPage })))
 const InvitationPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.InvitationPage })))
 const SetPasswordPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.SetPasswordPage })))
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="genre/:tag" element={<GenrePage />} />
         <Route path="anfragen" element={<MyRequestsPage />} />
         <Route path="profil" element={<ProfilePage />} />
+        <Route path="ueber" element={<AboutPage />} />
         <Route path="admin/anfragen" element={adminOnly(<AdminRequestsPage />)} />
         <Route path="admin/einstellungen" element={adminOnly(<SettingsPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />

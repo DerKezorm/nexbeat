@@ -23,7 +23,22 @@ export type User = {
   quota: Quota
 }
 
-export type Me = User & { is_admin: boolean; request_target?: 'lidarr' | 'nexcrate' | null }
+export type Me = User & {
+  is_admin: boolean
+  request_target?: 'lidarr' | 'nexcrate' | null
+  /** Die Fassung, deren "Was ist neu" das Konto zuletzt geschlossen hat. */
+  seen_version?: string | null
+  /** Nur Admins: GitHub kennt eine neuere Fassung. */
+  update_available?: boolean
+}
+
+export type AboutInfo = {
+  version: string
+  repo_url: string
+  releases_url: string
+  license: string
+  update: { enabled: boolean; latest: string | null; available: boolean; checked_at: string | null } | null
+}
 
 export type AppConfig = {
   version: string

@@ -52,6 +52,8 @@ DEFAULTS: dict[str, str] = {
     "listenbrainz_token": "",
     "quota_default_limit": "10",
     "quota_period": "week",
+    # Einmal am Tag bei GitHub nach einer neueren Fassung fragen. Ab Werk an, abschaltbar auf "Ueber nexbeat".
+    "update_check": "true",
 }
 
 SECRET_KEYS = frozenset(
@@ -65,7 +67,7 @@ SECRET_KEYS = frozenset(
         "nexcrate_pairing",
     }
 )
-BOOL_KEYS = frozenset({"lidarr_dry_run", "source_listenbrainz", "source_deezer"})
+BOOL_KEYS = frozenset({"lidarr_dry_run", "source_listenbrainz", "source_deezer", "update_check"})
 INT_KEYS = frozenset({"smtp_port", "lidarr_quality_profile_id", "lidarr_metadata_profile_id", "quota_default_limit"})
 CHOICES: dict[str, tuple[str, ...]] = {
     "smtp_security": SECURITY_MODES,

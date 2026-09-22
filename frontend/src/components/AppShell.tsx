@@ -8,6 +8,7 @@ import { Logo } from './Logo'
 import { LanguageSwitcher, ThemeSwitcher } from './Switchers'
 import { PageLoading } from './ui'
 import { UserMenu } from './UserMenu'
+import { WhatsNewAfterUpdate } from './WhatsNewAfterUpdate'
 
 const NAV_ITEMS = [
   { to: '/', labelKey: 'nav.discover', end: true },
@@ -61,6 +62,7 @@ export function AppShell() {
         </nav>
       </header>
 
+      <WhatsNewAfterUpdate />
       <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 pt-8 pb-28 sm:px-6">
         <Suspense fallback={<PageLoading />}>
           <Outlet />

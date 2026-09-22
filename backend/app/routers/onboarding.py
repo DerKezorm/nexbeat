@@ -14,6 +14,7 @@ from collections import deque
 from fastapi import APIRouter, BackgroundTasks, Request
 from sqlalchemy import func, select
 
+from .. import __version__
 from ..deps import DbSession
 from ..meldungen import fehler
 from ..models import Role, TokenPurpose, User, utcnow
@@ -90,6 +91,7 @@ def accept_invitation(raw: str, payload: AcceptInvitationIn, db: DbSession) -> d
     if db.scalar(select(User.id).where(User.email == token.email)):
         raise fehler("email_taken", "An account with this email address already exists.", 409)
     user = User(
+        seen_version=__version__,
         username=payload.username,
         email=token.email,
         password_hash=hash_password(payload.password),

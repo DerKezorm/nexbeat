@@ -95,6 +95,9 @@ class User(Base):
     sessions_valid_from: Mapped[datetime | None] = mapped_column(default=None)
     last_login_at: Mapped[datetime | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # Die Fassung, deren "Was ist neu" dieses Konto zuletzt geschlossen hat. Leer bei Konten von vor 1.1.0: sie
+    # sehen das Fenster einmal. Neue Konten bekommen die laufende Fassung, sie kennen nichts Altes.
+    seen_version: Mapped[str | None] = mapped_column(String(32), default=None)
 
     requests: Mapped[list[MusicRequest]] = relationship(
         back_populates="user",

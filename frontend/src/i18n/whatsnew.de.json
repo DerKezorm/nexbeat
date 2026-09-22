@@ -1,0 +1,30 @@
+{
+  "entries": {
+    "1.1.0": {
+      "lead": "nexbeat kann jetzt auch bei nexcrate anfragen, und ab dieser Fassung steht nach jedem Update hier, was sich geändert hat.",
+      "sections": [
+        {
+          "title": "Anfragen bei nexcrate",
+          "body": "Wo bisher nur Lidarr stand, kann ein Admin jetzt nexcrate wählen. Für dich ändert sich nichts: anfragen wie gewohnt, den Stand siehst du unter Meine Anfragen.",
+          "where": "Menü an deinem Namen › Meine Anfragen"
+        },
+        {
+          "title": "Über nexbeat",
+          "body": "Fassung, Lizenz und dieser Text stehen jetzt im Menü an deinem Namen. Dort lässt sich dieses Fenster auch später noch einmal öffnen.",
+          "where": "Menü an deinem Namen › Über nexbeat"
+        },
+        {
+          "title": "Update-Hinweis",
+          "body": "nexbeat sieht einmal am Tag bei GitHub nach, ob es eine neuere Fassung gibt, und zeigt es auf der Seite und im Menü. Abschalten lässt es sich auf derselben Seite.",
+          "where": "Menü an deinem Namen › Über nexbeat › Updates",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Lehnt nexcrate etwas ab, steht dessen eigene Begründung darunter.",
+        "Nach dem Verbinden mit nexcrate ist der Bestand sofort da."
+      ]
+    }
+  }
+}

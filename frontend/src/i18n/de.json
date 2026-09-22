@@ -31,7 +31,8 @@
     "myRequests": "Meine Anfragen",
     "allRequests": "Alle Anfragen",
     "settings": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "about": "Über nexbeat"
   },
   "footer": {
     "tagline": "nexbeat",
@@ -605,5 +606,29 @@
     "synced": "{{count}} Künstler gelesen.",
     "automaticOffHint": "Einschalten in nexcrate sucht jedes überwachte Album ohne Dateien, nicht nur Angefragtes. Einzelne Alben sucht nexcrate auch von Hand auf der Albumseite.",
     "automaticOffAtOnce": "Die Musik-Automatik ist in nexcrate aus. Angefragte Alben sucht nexcrate trotzdem sofort; was niemand anfragt, kommt nicht von selbst."
+  },
+  "about": {
+    "title": "Über nexbeat",
+    "tagline": "Musik finden und bei Lidarr oder nexcrate anfragen.",
+    "version": "Fassung",
+    "source": "Quellcode",
+    "license": "Lizenz",
+    "data": "Daten von",
+    "dataSources": "MusicBrainz, ListenBrainz, Deezer, Cover Art Archive",
+    "whatsNew": "Was ist neu in {{version}}",
+    "updates": "Updates",
+    "updatesIntro": "nexbeat fragt einmal am Tag bei GitHub nach, ob es eine neuere Fassung gibt. Mitgeschickt wird nur die übliche Kennung des Programms, nichts über Konten, Einstellungen oder Musik.",
+    "updateCheck": "Einmal am Tag bei GitHub nachsehen",
+    "newer": "nexbeat {{version}} ist erschienen.",
+    "howToUpdate": "Aktualisieren mit",
+    "releaseNotes": "Was sich ändert, auf GitHub",
+    "current": "Du hast die neueste Fassung. Zuletzt nachgesehen {{when}}.",
+    "notChecked": "Noch nicht nachgesehen.",
+    "checkNow": "Jetzt nachsehen",
+    "newBadge": "Neu"
+  },
+  "whatsNew": {
+    "title": "Was ist neu · {{version}}",
+    "gotIt": "Verstanden"
   }
 }

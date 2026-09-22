@@ -60,6 +60,9 @@ class QuotaOut(BaseModel):
 class MeOut(UserOut):
     is_admin: bool
     quota: QuotaOut
+    seen_version: str | None = None
+    # Nur fuer Admins: GitHub kennt eine neuere Fassung (aus dem letzten Nachsehen, ohne neue Anfrage).
+    update_available: bool = False
     # Wohin Anfragen gehen, fuer die Texte der Oberflaeche: lidarr, nexcrate oder null.
     request_target: str | None = None
 
@@ -71,6 +74,7 @@ class AdminUserOut(UserOut):
 class MeUpdate(BaseModel):
     display_name: str | None = Field(default=None, max_length=128)
     language: Literal["", "de", "en"] | None = None
+    seen_version: str | None = Field(default=None, max_length=32, pattern=r"^\d+\.\d+\.\d+$")
 
 
 class PasswordChangeIn(BaseModel):
