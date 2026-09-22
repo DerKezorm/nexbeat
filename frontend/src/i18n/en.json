@@ -576,9 +576,9 @@
       "no_folder": "no folder",
       "no_indexer": "no indexer with music categories",
       "no_download_client": "no download client",
-      "fed_by_source": "still fed by Lidarr"
+      "fed_by_source": "still fed by Lidarr",
+      "automatic_off": "the music automatic is off: requested albums arrive but are not searched"
     },
-    "automaticOff": "nexcrate's automatic for music is off. It still searches requested albums; nothing else comes on its own.",
     "ready": "Music version “{{name}}” is ready.",
     "noVersion": "nexcrate has no music version. Add one in nexcrate, or every request fails.",
     "noMusic": "This nexcrate cannot handle music through its interface yet. An update of nexcrate helps.",
@@ -602,6 +602,7 @@
     "eventsLast": "last at {{time}}",
     "eventsNone": "none yet",
     "syncNow": "Sync now",
-    "synced": "{{count}} artists read."
+    "synced": "{{count}} artists read.",
+    "automaticOffHint": "Switching it on in nexcrate searches every watched album without files, not only requested ones. Single albums can also be searched by hand on their album page in nexcrate."
   }
 }

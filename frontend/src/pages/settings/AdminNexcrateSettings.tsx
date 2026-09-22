@@ -54,8 +54,9 @@ function Readiness({ facts }: { facts: NexcrateFacts }) {
       </div>
     )
   }
-  // "Automatik aus" haelt eine Anfrage nicht auf: nexcrate sucht einen Suchwunsch auch dann.
-  const blocking = version.reasons.filter((reason) => reason !== 'automatic_off')
+  // "Automatik aus" haelt Alben auf. Gemessen am 22.09.2026 an einer echten nexcrate: Der Suchwunsch einer Anfrage
+  // gilt dort nur fuer Filme und Serien (automatic/wishes.py), angefragte Alben wurden nie gesucht.
+  const blocking = version.reasons
   const automaticOff = version.reasons.includes('automatic_off')
   return (
     <div className="flex flex-col gap-2">
@@ -76,7 +77,7 @@ function Readiness({ facts }: { facts: NexcrateFacts }) {
           {t('nexcrate.ready', { name: version.name })}
         </p>
       )}
-      {automaticOff && <p className="text-xs text-mist-500">{t('nexcrate.automaticOff')}</p>}
+      {automaticOff && <p className="text-xs text-mist-500">{t('nexcrate.automaticOffHint')}</p>}
     </div>
   )
 }

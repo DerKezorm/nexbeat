@@ -576,9 +576,9 @@
       "no_folder": "kein Ordner",
       "no_indexer": "kein Indexer mit Musik-Kategorien",
       "no_download_client": "kein Download-Programm",
-      "fed_by_source": "wird noch von Lidarr gespeist"
+      "fed_by_source": "wird noch von Lidarr gespeist",
+      "automatic_off": "die Musik-Automatik ist aus: angefragte Alben kommen an, werden aber nicht gesucht"
     },
-    "automaticOff": "Die Automatik für Musik ist in nexcrate aus. Angefragte Alben sucht nexcrate trotzdem, von selbst kommt sonst nichts.",
     "ready": "Musik-Fassung „{{name}}“ ist bereit.",
     "noVersion": "nexcrate hat keine Musik-Fassung. Lege in nexcrate eine an, sonst scheitert jede Anfrage.",
     "noMusic": "Diese nexcrate kann über ihre Schnittstelle noch keine Musik. Ein Update von nexcrate hilft.",
@@ -602,6 +602,7 @@
     "eventsLast": "letztes um {{time}}",
     "eventsNone": "noch keins",
     "syncNow": "Jetzt abgleichen",
-    "synced": "{{count}} Künstler gelesen."
+    "synced": "{{count}} Künstler gelesen.",
+    "automaticOffHint": "Einschalten in nexcrate sucht jedes überwachte Album ohne Dateien, nicht nur Angefragtes. Einzelne Alben sucht nexcrate auch von Hand auf der Albumseite."
   }
 }

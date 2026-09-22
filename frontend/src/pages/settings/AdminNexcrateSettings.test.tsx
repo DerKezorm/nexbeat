@@ -130,8 +130,8 @@ describe('nexcrate settings', () => {
     expect(screen.getByRole('button', { name: i18n.t('nexcrate.again') })).toBeInTheDocument()
   })
 
-  it('name what the music version lacks, but not a switched off automatic', async () => {
-    // Die Automatik aus haelt eine Anfrage nicht auf: nexcrate sucht einen Suchwunsch trotzdem.
+  it('name what the music version lacks, a switched off automatic too', async () => {
+    // 22.09.2026 an einer echten nexcrate: Mit ausgeschalteter Musik-Automatik wurde kein angefragtes Album gesucht.
     answer({
       '/api/settings': { ...SETTINGS, nexcrate_url: ON.url, nexcrate_api_key_set: true },
       '/api/settings/nexcrate/status': ON,
@@ -140,8 +140,8 @@ describe('nexcrate settings', () => {
     show(<AdminNexcrateSettings />)
     expect(await screen.findByText(i18n.t('nexcrate.notReadyTitle'))).toBeInTheDocument()
     const reasons = screen.getAllByRole('listitem').map((item) => item.textContent)
-    expect(reasons).toEqual([i18n.t('nexcrate.reason.no_indexer')])
-    expect(screen.getByText(i18n.t('nexcrate.automaticOff'))).toBeInTheDocument()
+    expect(reasons).toEqual([i18n.t('nexcrate.reason.no_indexer'), i18n.t('nexcrate.reason.automatic_off')])
+    expect(screen.getByText(i18n.t('nexcrate.automaticOffHint'))).toBeInTheDocument()
   })
 
   it('send the key typed by hand and check it', async () => {
