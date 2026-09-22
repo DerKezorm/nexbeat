@@ -299,6 +299,8 @@ export type NexcrateFacts = {
   music: boolean
   scopes: string[]
   can_request: boolean
+  /** nexcrate sucht Anfragen sofort, auch Alben bei ausgeschalteter Automatik. Fehlt bei aelteren. */
+  searches_at_once?: boolean
   music_versions: { name: string; tier: string | null; ready: boolean; reasons: string[] }[]
 }
 

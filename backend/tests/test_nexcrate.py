@@ -540,3 +540,12 @@ def test_a_proxy_error_page_says_nexcrate_is_not_there() -> None:
     )
     assert nexcrate._error_from(httpx.Response(502, text=proxy), "/system").detail == "HTTP 502: 502 Bad Gateway"
     assert nexcrate._error_from(httpx.Response(503, text=""), "/system").detail == "HTTP 503: (empty)"
+
+
+@pytest.mark.parametrize("newer", [False, True])
+def test_the_check_says_whether_requests_search_at_once(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, newer: bool
+) -> None:
+    # nexcrate sagt es seit 22.09.2026 selbst an; eine aeltere nexcrate hat das Feld nicht.
+    fake_nexcrate.searches_at_once = newer
+    assert admin_client.post("/api/settings/test/nexcrate", json={}).json()["searches_at_once"] is newer

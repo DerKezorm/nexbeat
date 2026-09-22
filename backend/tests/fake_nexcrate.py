@@ -28,6 +28,8 @@ class FakeNexcrate:
         self.key = KEY
         self.scopes = ["read", "request"]
         self.music = True
+        #: Neuere nexcrate: Anfragen suchen sofort (``capabilities.wishes_search_at_once``).
+        self.searches_at_once = False
         self.music_version: dict[str, Any] | None = {"ready": True, "reasons": [], "tier": "lossless"}
         #: Alben und Kuenstler nach MBID. Ein Album: name, artist, versions (Liste), tracks.
         self.albums: dict[str, dict[str, Any]] = {}
@@ -213,7 +215,12 @@ class FakeNexcrate:
                     "contract": {"major": 1, "stage": "V5"},
                     "installation_id": self.installation_id,
                     "scopes": self.scopes,
-                    "capabilities": {"music": self.music, "events": True, "stream": True},
+                    "capabilities": {
+                        "music": self.music,
+                        "events": True,
+                        "stream": True,
+                        **({"wishes_search_at_once": True} if self.searches_at_once else {}),
+                    },
                 },
             )
         if path == "/api/v1/versions":

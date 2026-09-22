@@ -144,6 +144,23 @@ describe('nexcrate settings', () => {
     expect(screen.getByText(i18n.t('nexcrate.automaticOffHint'))).toBeInTheDocument()
   })
 
+  it('show a switched off automatic only as a hint when nexcrate searches requests at once', async () => {
+    const facts = {
+      ...ON.facts!,
+      searches_at_once: true,
+      music_versions: [{ name: 'Music', tier: null, ready: false, reasons: ['automatic_off'] }],
+    }
+    answer({
+      '/api/settings': { ...SETTINGS, nexcrate_url: ON.url, nexcrate_api_key_set: true },
+      '/api/settings/nexcrate/status': { ...ON, facts },
+      '/api/settings/nexcrate/pairing': { state: 'none' },
+    })
+    show(<AdminNexcrateSettings />)
+    expect(await screen.findByText(i18n.t('nexcrate.ready', { name: 'Music' }))).toBeInTheDocument()
+    expect(screen.queryByText(i18n.t('nexcrate.notReadyTitle'))).not.toBeInTheDocument()
+    expect(screen.getByText(i18n.t('nexcrate.automaticOffAtOnce'))).toBeInTheDocument()
+  })
+
   it('send the key typed by hand and check it', async () => {
     answer({
       '/api/settings': SETTINGS,

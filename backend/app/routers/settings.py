@@ -173,6 +173,9 @@ async def _nexcrate_facts(client: nexcrate.NexcrateClient) -> dict[str, Any]:
         "music": music,
         "scopes": scopes,
         "can_request": "request" in scopes,
+        # Seit nexcrate vom 22.09.2026: Anfragen suchen sofort, auch Alben und bei ausgeschalteter Automatik.
+        # Fehlt das Feld (aeltere nexcrate), wartet ein angefragtes Album auf die Musik-Automatik.
+        "searches_at_once": bool(capabilities.get("wishes_search_at_once")),
         "music_versions": [
             {
                 "name": item.get("name") or "",

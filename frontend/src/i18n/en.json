@@ -603,6 +603,7 @@
     "eventsNone": "none yet",
     "syncNow": "Sync now",
     "synced": "{{count}} artists read.",
-    "automaticOffHint": "Switching it on in nexcrate searches every watched album without files, not only requested ones. Single albums can also be searched by hand on their album page in nexcrate."
+    "automaticOffHint": "Switching it on in nexcrate searches every watched album without files, not only requested ones. Single albums can also be searched by hand on their album page in nexcrate.",
+    "automaticOffAtOnce": "nexcrate's music automatic is off. nexcrate still searches requested albums at once; nothing that nobody requests comes on its own."
   }
 }

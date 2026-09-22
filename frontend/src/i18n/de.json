@@ -603,6 +603,7 @@
     "eventsNone": "noch keins",
     "syncNow": "Jetzt abgleichen",
     "synced": "{{count}} Künstler gelesen.",
-    "automaticOffHint": "Einschalten in nexcrate sucht jedes überwachte Album ohne Dateien, nicht nur Angefragtes. Einzelne Alben sucht nexcrate auch von Hand auf der Albumseite."
+    "automaticOffHint": "Einschalten in nexcrate sucht jedes überwachte Album ohne Dateien, nicht nur Angefragtes. Einzelne Alben sucht nexcrate auch von Hand auf der Albumseite.",
+    "automaticOffAtOnce": "Die Musik-Automatik ist in nexcrate aus. Angefragte Alben sucht nexcrate trotzdem sofort; was niemand anfragt, kommt nicht von selbst."
   }
 }
