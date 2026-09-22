@@ -9,8 +9,7 @@ nexbeat is a small, self-hosted companion to Lidarr, built in the spirit of
 per-user quotas counted by request, optional approval, and a discovery page
 that recommends artists based on what the library and each user already have.
 
-> **Status:** early. It runs against a real Lidarr, but it is a small side
-> project: expect rough edges.
+> **Status:** stable. Used daily against Lidarr and nexcrate.
 
 The screenshots show a throwaway instance with a few well-known artists as its
 library.
