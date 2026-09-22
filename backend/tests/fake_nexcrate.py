@@ -58,8 +58,17 @@ class FakeNexcrate:
         self.artists[mbid] = {"name": name, "loading": False, **artist}
         self.touch("artist", mbid)
 
-    def add_album(self, mbid: str, artist: str, *, state: str | None = None, have: int = 0, total: int = 10,
-                  monitored: bool = True, name: str = "Example Album") -> None:
+    def add_album(
+        self,
+        mbid: str,
+        artist: str,
+        *,
+        state: str | None = None,
+        have: int = 0,
+        total: int = 10,
+        monitored: bool = True,
+        name: str = "Example Album",
+    ) -> None:
         versions = [] if state is None else [{"state": state, "monitored": monitored}]
         self.albums[mbid] = {"name": name, "artist": artist, "versions": versions, "tracks": (have, total)}
         self.touch("album", mbid)
@@ -71,9 +80,18 @@ class FakeNexcrate:
         self.tombstones[("artist", mbid)] = self.seq
 
     def event(self, type_: str, kind: str, mbid: str) -> None:
-        self.events.append({"seq": len(self.events) + 1, "type": type_, "at": "2026-09-22T06:00:00Z",
-                            "title": {"kind": kind, "ref": f"mbid:{mbid}", "name": "x"}, "version_id": None,
-                            "origin": None, "download_id": None, "params": {}})
+        self.events.append(
+            {
+                "seq": len(self.events) + 1,
+                "type": type_,
+                "at": "2026-09-22T06:00:00Z",
+                "title": {"kind": kind, "ref": f"mbid:{mbid}", "name": "x"},
+                "version_id": None,
+                "origin": None,
+                "download_id": None,
+                "params": {},
+            }
+        )
 
     def requests_sent(self) -> list[dict[str, Any]]:
         return [body for method, path, body in self.calls if method == "POST" and path == "/api/v1/requests"]
@@ -85,16 +103,39 @@ class FakeNexcrate:
         have, total = album["tracks"]
         tracks = {"have": have, "total": total} if album["versions"] else None
         versions = [
-            {"version_id": VERSION_ID, "state": v["state"], "monitored": v["monitored"], "size_bytes": None,
-             "quality": None, "origin": None, "album": {"tracks": tracks}}
+            {
+                "version_id": VERSION_ID,
+                "state": v["state"],
+                "monitored": v["monitored"],
+                "size_bytes": None,
+                "quality": None,
+                "origin": None,
+                "album": {"tracks": tracks},
+            }
             for v in album["versions"]
         ]
         return {
-            "kind": "album", "ref": f"mbid:{mbid}", "refs": [f"mbid:{mbid}"], "name": album["name"], "year": 2020,
-            "poster_path": None, "origin": None, "monitored": bool(versions), "versions": versions, "tags": [],
-            "album": {"artists": [{"ref": f"mbid:{album['artist']}", "name": "Example Artist"}], "type": "Album",
-                      "secondary_types": [], "group": "studio", "first_release_date": "2020-01-01",
-                      "cover_url": None, "target_release": None, "tracks": tracks, "media": []},
+            "kind": "album",
+            "ref": f"mbid:{mbid}",
+            "refs": [f"mbid:{mbid}"],
+            "name": album["name"],
+            "year": 2020,
+            "poster_path": None,
+            "origin": None,
+            "monitored": bool(versions),
+            "versions": versions,
+            "tags": [],
+            "album": {
+                "artists": [{"ref": f"mbid:{album['artist']}", "name": "Example Artist"}],
+                "type": "Album",
+                "secondary_types": [],
+                "group": "studio",
+                "first_release_date": "2020-01-01",
+                "cover_url": None,
+                "target_release": None,
+                "tracks": tracks,
+                "media": [],
+            },
         }
 
     def _artist_title(self, mbid: str, *, catalogue: bool) -> dict[str, Any]:
@@ -103,14 +144,32 @@ class FakeNexcrate:
         watched = [m for m in own if any(v["monitored"] for v in self.albums[m]["versions"])]
         available = [m for m in watched if self.albums[m]["versions"][0]["state"] == "available"]
         return {
-            "kind": "artist", "ref": f"mbid:{mbid}", "refs": [f"mbid:{mbid}"], "name": artist["name"], "year": 1990,
-            "poster_path": None, "origin": None, "monitored": True, "versions": [], "tags": [],
-            "artist": {"sort_name": artist["name"], "type": "Group", "country": "GB", "disambiguation": None,
-                       "new_albums": "all", "album_types": ["studio"],
-                       "albums": {"total": len(own), "watched": len(watched), "available": len(available),
-                                  "missing": len(watched) - len(available)},
-                       "loading": artist["loading"],
-                       "catalogue": [self._album_title(m) for m in own] if catalogue else None},
+            "kind": "artist",
+            "ref": f"mbid:{mbid}",
+            "refs": [f"mbid:{mbid}"],
+            "name": artist["name"],
+            "year": 1990,
+            "poster_path": None,
+            "origin": None,
+            "monitored": True,
+            "versions": [],
+            "tags": [],
+            "artist": {
+                "sort_name": artist["name"],
+                "type": "Group",
+                "country": "GB",
+                "disambiguation": None,
+                "new_albums": "all",
+                "album_types": ["studio"],
+                "albums": {
+                    "total": len(own),
+                    "watched": len(watched),
+                    "available": len(available),
+                    "missing": len(watched) - len(available),
+                },
+                "loading": artist["loading"],
+                "catalogue": [self._album_title(m) for m in own] if catalogue else None,
+            },
         }
 
     def _title(self, kind: str, mbid: str, *, catalogue: bool = True) -> dict[str, Any] | None:
@@ -146,16 +205,31 @@ class FakeNexcrate:
     def _route(self, request: httpx.Request, path: str, body: Any) -> httpx.Response:
         query = request.url.params
         if path == "/api/v1/system":
-            return httpx.Response(200, json={
-                "app": "nexcrate", "version": "0.1.0", "contract": {"major": 1, "stage": "V5"},
-                "installation_id": self.installation_id, "scopes": self.scopes,
-                "capabilities": {"music": self.music, "events": True, "stream": True}})
+            return httpx.Response(
+                200,
+                json={
+                    "app": "nexcrate",
+                    "version": "0.1.0",
+                    "contract": {"major": 1, "stage": "V5"},
+                    "installation_id": self.installation_id,
+                    "scopes": self.scopes,
+                    "capabilities": {"music": self.music, "events": True, "stream": True},
+                },
+            )
         if path == "/api/v1/versions":
             items = []
             if self.music_version is not None:
-                items.append({"version_id": VERSION_ID, "kind": "album", "name": "Music", "order": 1,
-                              "tier": self.music_version["tier"], "ready": self.music_version["ready"],
-                              "reasons": [{"code": code, "params": {}} for code in self.music_version["reasons"]]})
+                items.append(
+                    {
+                        "version_id": VERSION_ID,
+                        "kind": "album",
+                        "name": "Music",
+                        "order": 1,
+                        "tier": self.music_version["tier"],
+                        "ready": self.music_version["ready"],
+                        "reasons": [{"code": code, "params": {}} for code in self.music_version["reasons"]],
+                    }
+                )
             return httpx.Response(200, json={"items": items})
         if path == "/api/v1/requests":
             return self._request(body)
@@ -163,8 +237,15 @@ class FakeNexcrate:
             items = []
             for item in body["items"]:
                 title = self._title(item["kind"], item["ref"].partition(":")[2])
-                items.append({"kind": item["kind"], "ref": item["ref"], "known": title is not None, "title": title,
-                              "error": None})
+                items.append(
+                    {
+                        "kind": item["kind"],
+                        "ref": item["ref"],
+                        "known": title is not None,
+                        "title": title,
+                        "error": None,
+                    }
+                )
             return httpx.Response(200, json={"items": items})
         if path == "/api/v1/titles":
             return self._list(int(query["after"]), query.get("kind"), int(query.get("limit", "500")))
@@ -178,16 +259,22 @@ class FakeNexcrate:
         if path == "/api/v1/events":
             after, limit = int(query["after"]), int(query.get("limit", "100"))
             items = [e for e in self.events if e["seq"] > after][:limit]
-            return httpx.Response(200, json={"items": items, "next_after": items[-1]["seq"] if items else after,
-                                             "more": False, "latest": len(self.events)})
+            return httpx.Response(
+                200,
+                json={
+                    "items": items,
+                    "next_after": items[-1]["seq"] if items else after,
+                    "more": False,
+                    "latest": len(self.events),
+                },
+            )
         if path == "/api/v1/events/stream":
             after = int(query["after"])
             lines = ["retry: 3000", ""]
             for event in (e for e in self.events if e["seq"] > after):
                 lines += [f"id: {event['seq']}", f"event: {event['type']}", f"data: {json.dumps(event)}", ""]
             lines += [": keep-alive", ""]
-            return httpx.Response(200, headers={"content-type": "text/event-stream"},
-                                  content="\n".join(lines).encode())
+            return httpx.Response(200, headers={"content-type": "text/event-stream"}, content="\n".join(lines).encode())
         return _error(404, "not_found", "This address does not exist.")
 
     def _list(self, after: int, kind: str | None, limit: int) -> httpx.Response:
@@ -196,12 +283,16 @@ class FakeNexcrate:
         rows = sorted((seq, k, m) for (k, m), seq in self.changed.items() if seq > after and (kind in (None, k)))
         page = rows[:limit]
         items = [{**(self._title(k, m, catalogue=False) or {}), "seq": seq} for seq, k, m in page]
-        removed = [{"kind": k, "ref": f"mbid:{m}", "seq": seq} for (k, m), seq in self.tombstones.items()
-                   if seq > after and kind in (None, k)]
+        removed = [
+            {"kind": k, "ref": f"mbid:{m}", "seq": seq}
+            for (k, m), seq in self.tombstones.items()
+            if seq > after and kind in (None, k)
+        ]
         more = len(rows) > limit
         next_after = page[-1][0] if more else max([after, self.seq] if rows or removed else [after])
-        return httpx.Response(200, json={"items": items, "removed": removed, "next_after": next_after,
-                                         "more": more, "latest": self.seq})
+        return httpx.Response(
+            200, json={"items": items, "removed": removed, "next_after": next_after, "more": more, "latest": self.seq}
+        )
 
     def _request(self, body: dict[str, Any]) -> httpx.Response:
         if "request" not in self.scopes:
@@ -218,9 +309,17 @@ class FakeNexcrate:
             if not album["versions"]:
                 album["versions"] = [{"state": "wanted", "monitored": True}]
                 self.touch("album", mbid)
-            return httpx.Response(201 if created else 200, json={
-                "created": created, "versions": [{"version_id": VERSION_ID, "outcome": outcome}],
-                "albums_watched": None, "search": "queued", "notes": [], "title": self._album_title(mbid)})
+            return httpx.Response(
+                201 if created else 200,
+                json={
+                    "created": created,
+                    "versions": [{"version_id": VERSION_ID, "outcome": outcome}],
+                    "albums_watched": None,
+                    "search": "queued",
+                    "notes": [],
+                    "title": self._album_title(mbid),
+                },
+            )
         created = mbid not in self.artists
         if created:
             self.add_artist(mbid)
@@ -231,17 +330,37 @@ class FakeNexcrate:
             if not self.albums[album_mbid]["versions"]:
                 self.albums[album_mbid]["versions"] = [{"state": "wanted", "monitored": True}]
                 watched += 1
-        return httpx.Response(201 if created else 200, json={
-            "created": created, "versions": [], "albums_watched": watched, "search": "queued", "notes": [],
-            "title": self._artist_title(mbid, catalogue=False)})
+        return httpx.Response(
+            201 if created else 200,
+            json={
+                "created": created,
+                "versions": [],
+                "albums_watched": watched,
+                "search": "queued",
+                "notes": [],
+                "title": self._artist_title(mbid, catalogue=False),
+            },
+        )
 
     def _pairing(self, request: httpx.Request, path: str, body: Any) -> httpx.Response:
         if request.method == "POST":
             pairing_id = f"pair{len(self.pairings) + 1}"
-            self.pairings[pairing_id] = {"state": "pending", "secret": "s3cret", "app": body["app"],
-                                         "scopes": body["scopes"]}
-            return httpx.Response(201, json={"pairing_id": pairing_id, "secret": "s3cret", "code": "5Z3-M4G",
-                                             "expires_at": "2099-01-01T00:00:00Z", "poll_seconds": 2})
+            self.pairings[pairing_id] = {
+                "state": "pending",
+                "secret": "s3cret",
+                "app": body["app"],
+                "scopes": body["scopes"],
+            }
+            return httpx.Response(
+                201,
+                json={
+                    "pairing_id": pairing_id,
+                    "secret": "s3cret",
+                    "code": "5Z3-M4G",
+                    "expires_at": "2099-01-01T00:00:00Z",
+                    "poll_seconds": 2,
+                },
+            )
         pairing_id = path.rsplit("/", 1)[1]
         pairing = self.pairings.get(pairing_id)
         if pairing is None or request.headers.get("x-pairing-secret") != pairing["secret"]:
@@ -250,5 +369,12 @@ class FakeNexcrate:
         if state == "confirmed":
             key = self.key
             pairing["state"] = "delivered"
-        return httpx.Response(200, json={"state": state, "key": key, "scopes": pairing["scopes"] if key else None,
-                                         "expires_at": "2099-01-01T00:00:00Z"})
+        return httpx.Response(
+            200,
+            json={
+                "state": state,
+                "key": key,
+                "scopes": pairing["scopes"] if key else None,
+                "expires_at": "2099-01-01T00:00:00Z",
+            },
+        )

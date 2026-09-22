@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.db import SessionLocal
 from app.models import LibraryArtist, MusicRequest, utcnow
-from app.services import http, library, nexcrate, nexcrate_events, requests_service
+from app.services import http, library, nexcrate, nexcrate_events, poller, requests_service
 from app.services.settings_service import load_settings
 from tests.conftest import ARTIST, OTHER_RELEASE_GROUP, RELEASE_GROUP, auth_headers, create_user
 from tests.fake_nexcrate import KEY, URL, FakeNexcrate
@@ -126,8 +126,9 @@ def test_a_whole_artist_asks_for_studio_albums_only(
     monkeypatch.setattr(requests_service.catalog, "studio_albums", studio)
     fake_nexcrate.studio[ARTIST] = [STUDIO_ONE, STUDIO_TWO]
     create_user("lena")
-    response = admin_client.post("/api/requests/artist", json={"artist_mbid": ARTIST},
-                                 headers=auth_headers(admin_client, "lena"))
+    response = admin_client.post(
+        "/api/requests/artist", json={"artist_mbid": ARTIST}, headers=auth_headers(admin_client, "lena")
+    )
     assert response.status_code == 201, response.text
     sent = fake_nexcrate.requests_sent()
     assert sent[0]["kind"] == "artist"
@@ -152,8 +153,10 @@ def test_a_dry_run_sends_nothing_to_nexcrate(
     [
         (httpx.ReadTimeout("slow"), "nexcrate_timeout"),
         (httpx.ConnectError("down"), "nexcrate_unreachable"),
-        (httpx.Response(429, json={"code": "rate_limited", "message": "x", "params": {"retry_after": 1}}),
-         "nexcrate_busy"),
+        (
+            httpx.Response(429, json={"code": "rate_limited", "message": "x", "params": {"retry_after": 1}}),
+            "nexcrate_busy",
+        ),
         (httpx.Response(500, json={"code": "internal_error", "message": "x", "params": {}}), "nexcrate_pending"),
     ],
 )
@@ -353,7 +356,9 @@ def test_album_view_names_every_state(state: str, have: int, monitored: bool, ex
     assert nexcrate.album_view(title).state == expected
 
 
-def test_metadata_profile_blocks_do_not_apply(admin_client: TestClient, fake_nexcrate: FakeNexcrate, release_groups) -> None:
+def test_metadata_profile_blocks_do_not_apply(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, release_groups
+) -> None:
     release_groups[RELEASE_GROUP]["primary_type"] = "Single"
     create_user("lena")
     assert _request(admin_client, auth_headers(admin_client, "lena")).status_code == 201
@@ -495,3 +500,24 @@ def test_times_of_the_stream_carry_their_zone() -> None:
     # Ohne "Z" las der Browser die Zeit als Ortszeit und zeigte sie zwei Stunden daneben (22.09.2026).
     moment = utcnow()
     assert nexcrate_events._iso(moment) == moment.isoformat() + "Z"
+
+
+@pytest.mark.parametrize("how", ["pairing", "switch"])
+def test_the_library_is_read_right_after_connecting_or_switching(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch, how: str
+) -> None:
+    # 22.09.2026: Nach dem Koppeln war der Bestand bis zum naechsten planmaessigen Abgleich (zehn Minuten) leer.
+    # Entdecken zeigte einen Kuenstler aus nexcrate als neu, und die Anfrage dafuer ging durch.
+    woken: list[bool] = []
+    monkeypatch.setattr(poller, "wake", lambda library_too=False: woken.append(library_too))
+    fake = FakeNexcrate()
+    http.use_transport(httpx.MockTransport(fake.handle))
+    admin_client.put("/api/settings", json={"request_mode": "nex"})
+    woken.clear()
+    if how == "pairing":
+        admin_client.post("/api/settings/nexcrate/pairing", json={"url": URL})
+        fake.pairings["pair1"]["state"] = "confirmed"
+        assert admin_client.get("/api/settings/nexcrate/pairing").json()["state"] == "confirmed"
+    else:
+        admin_client.put("/api/settings", json={"request_mode": "arr"})
+    assert True in woken

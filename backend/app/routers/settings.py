@@ -14,7 +14,17 @@ from ..deps import AdminUser, DbSession
 from ..meldungen import fehler
 from ..models import LibraryArtist
 from ..schemas import TestMailIn
-from ..services import cache, library, lidarr, listenbrainz, mail, mail_templates, nexcrate, nexcrate_events
+from ..services import (
+    cache,
+    library,
+    lidarr,
+    listenbrainz,
+    mail,
+    mail_templates,
+    nexcrate,
+    nexcrate_events,
+    poller,
+)
 from ..services.lidarr import LidarrError
 from ..services.mail import MailConfig, MailError
 from ..services.nexcrate import NexcrateError
@@ -71,6 +81,10 @@ def _changed_target(db: DbSession) -> None:
     db.commit()
     save_settings(db, {"nexcrate_marker": ""}, internal=True)
     nexcrate_events.restart()
+    # Sofort neu einlesen, nicht erst im naechsten planmaessigen Abgleich. 22.09.2026: Nach dem Koppeln war der
+    # Bestand bis zu zehn Minuten leer, Entdecken zeigte Kuenstler aus nexcrate als neu, und eine Anfrage
+    # dafuer ging durch, als fehlten sie.
+    poller.wake(library_too=True)
 
 
 @router.delete("/secret/{key}", summary="Remove a stored secret")
