@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
@@ -82,6 +83,19 @@ class NexcrateError(Exception):
         self.params = params or {}
 
 
+def _page_text(text: str) -> str:
+    """Kurzfassung einer Antwort, die kein JSON ist. Eine HTML-Seite (Proxy) wird zu ihrem Titel.
+
+    22.09.2026: Waehrend nexcrate neu startete, stand die ganze 502-Seite von openresty als Begruendung in den
+    Einstellungen.
+    """
+    found = re.search(r"<title[^>]*>(.*?)</title>", text, re.IGNORECASE | re.DOTALL)
+    if found is None and "<" in text:
+        found = re.search(r"<h1[^>]*>(.*?)</h1>", text, re.IGNORECASE | re.DOTALL)
+    plain = found.group(1) if found else re.sub(r"<[^>]+>", " ", text)
+    return " ".join(plain.split())[:120] or "(empty)"
+
+
 def _error_from(response: httpx.Response, path: str) -> NexcrateError:
     try:
         body = response.json()
@@ -93,7 +107,7 @@ def _error_from(response: httpx.Response, path: str) -> NexcrateError:
     params = body.get("params") if isinstance(body, dict) and isinstance(body.get("params"), dict) else {}
     message = str(body.get("message") or "") if isinstance(body, dict) else ""
     status = response.status_code
-    detail = f"{remote}: {message}" if remote else f"HTTP {status}: {' '.join(response.text.split())[:200]}"
+    detail = f"{remote}: {message}" if remote else f"HTTP {status}: {_page_text(response.text)}"
     if remote in REMOTE_CODES:
         code = REMOTE_CODES[remote]
     elif status in (401, 403):

@@ -532,4 +532,11 @@ def test_a_proxy_error_page_says_nexcrate_is_not_there() -> None:
     page = "<html>\n<body>502 Bad Gateway</body>\n</html>"
     error = nexcrate._error_from(httpx.Response(502, text=page), "/system")
     assert (error.code, error.transient) == ("nexcrate_unavailable", True)
-    assert error.detail == "HTTP 502: <html> <body>502 Bad Gateway</body> </html>"
+    assert error.detail == "HTTP 502: 502 Bad Gateway"
+    # Die ganze Seite von openresty stand am 22.09.2026 als Begruendung in den Einstellungen; es bleibt der Titel.
+    proxy = (
+        "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n"
+        "<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>openresty</center>\r\n</body>\r\n</html>"
+    )
+    assert nexcrate._error_from(httpx.Response(502, text=proxy), "/system").detail == "HTTP 502: 502 Bad Gateway"
+    assert nexcrate._error_from(httpx.Response(503, text=""), "/system").detail == "HTTP 503: (empty)"
