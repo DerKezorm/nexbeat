@@ -223,7 +223,8 @@ def studio_only(profile: dict[str, Any]) -> bool:
 
 
 def client_for(settings: AppSettings) -> LidarrClient | None:
-    if not settings.lidarr_configured:
+    # Im NEX-Modus spricht nexbeat Lidarr nie an, auch wenn es noch eingetragen ist.
+    if not settings.lidarr_configured or settings.mode != "arr":
         return None
     return LidarrClient(settings.text("lidarr_url"), settings.text("lidarr_api_key"))
 

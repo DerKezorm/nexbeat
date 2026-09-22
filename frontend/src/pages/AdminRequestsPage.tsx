@@ -14,6 +14,7 @@ import { Segmented } from '../components/Segmented'
 import { Button, ErrorBanner, PageLoading, PageTitle } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { canRetry } from '../lib/requests'
+import { useTarget } from '../lib/target'
 
 const FILTERS = ['waiting', 'underway', 'done', 'problems', 'all'] as const
 type Filter = (typeof FILTERS)[number]
@@ -36,6 +37,7 @@ function inFilter(request: MusicRequest, filter: Filter): boolean {
 /** Alle Anfragen fuer Admins: freigeben, ablehnen, erneut senden. */
 export function AdminRequestsPage() {
   const { t, i18n } = useTranslation()
+  const target = useTarget()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<Filter>('waiting')
   const [rejecting, setRejecting] = useState<MusicRequest | null>(null)
@@ -72,7 +74,7 @@ export function AdminRequestsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle sub={t('adminRequests.intro')}>{t('adminRequests.title')}</PageTitle>
+      <PageTitle sub={t('adminRequests.intro', { target })}>{t('adminRequests.title')}</PageTitle>
       <Segmented
         value={filter}
         options={FILTERS}

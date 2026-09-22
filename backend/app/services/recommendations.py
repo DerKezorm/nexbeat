@@ -189,7 +189,7 @@ async def home(db: Session, settings: AppSettings, user: User) -> dict[str, Any]
         "rows": rows,
         "library_size": len(known),
         "has_seeds": bool(personal or candidates),
-        "requests_enabled": settings.lidarr_ready,
+        "requests_enabled": settings.requests_ready,
     }
 
 

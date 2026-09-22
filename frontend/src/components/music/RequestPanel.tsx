@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/useAuth'
 import { formatDate } from '../../lib/format'
 import { Symbol } from '../Symbol'
 import { Button, Card, ErrorBanner } from '../ui'
+import { useTarget } from '../../lib/target'
 
 /**
  * Der Kasten, in dem angefragt wird. Er sagt vorher, was passiert: wie viel vom
@@ -16,6 +17,7 @@ import { Button, Card, ErrorBanner } from '../ui'
  */
 export function RequestPanel({ data }: { data: AlbumPageData }) {
   const { t, i18n } = useTranslation()
+  const target = useTarget()
   const { user, refreshUser } = useAuth()
   const queryClient = useQueryClient()
   const { album, library, request, quota } = data
@@ -44,7 +46,7 @@ export function RequestPanel({ data }: { data: AlbumPageData }) {
         </span>
         <div>
           <p className="font-semibold">{t('request.available')}</p>
-          <p className="mt-0.5 text-sm text-mist-500">{t('request.availableHint')}</p>
+          <p className="mt-0.5 text-sm text-mist-500">{t('request.availableHint', { target })}</p>
         </div>
       </div>
     )
@@ -66,7 +68,7 @@ export function RequestPanel({ data }: { data: AlbumPageData }) {
           </span>
           <div>
             <p className="font-semibold">
-              {waiting ? t('request.waiting') : dryRun ? t('request.dryRunSent') : failed ? t('request.failed') : t('request.searching')}
+              {waiting ? t('request.waiting') : dryRun ? t('request.dryRunSent', { target }) : failed ? t('request.failed') : t('request.searching', { target })}
             </p>
             <p className="mt-0.5 text-sm text-mist-500">
               {request.mine ? t('request.byYou') : t('request.bySomeone')}
@@ -88,7 +90,7 @@ export function RequestPanel({ data }: { data: AlbumPageData }) {
     body = (
       <div className="flex flex-col gap-2">
         <p className="font-semibold">{t('request.notReady')}</p>
-        <p className="text-sm text-mist-500">{user?.is_admin ? t('request.notReadyAdmin') : t('request.notReadyUser')}</p>
+        <p className="text-sm text-mist-500">{user?.is_admin ? t('request.notReadyAdmin') : t('request.notReadyUser', { target })}</p>
         {user?.is_admin && (
           <Link to="/admin/einstellungen?reiter=lidarr" className="text-sm font-semibold text-accent-500 hover:text-accent-400">
             {t('request.toSettings')}
@@ -131,7 +133,7 @@ export function RequestPanel({ data }: { data: AlbumPageData }) {
         </div>
         {data.requires_approval && <p className="text-sm text-warn-500">{t('request.needsApproval')}</p>}
         {data.dry_run && user?.is_admin && (
-          <p className="rounded-xl border border-warn-500/40 bg-warn-500/10 px-3 py-2 text-xs text-warn-500">{t('request.dryRunHint')}</p>
+          <p className="rounded-xl border border-warn-500/40 bg-warn-500/10 px-3 py-2 text-xs text-warn-500">{t('request.dryRunHint', { target })}</p>
         )}
         <Button onClick={() => create.mutate()} loading={create.isPending} disabled={exhausted} className="w-full py-3 text-base">
           <Symbol name="inbox" className="h-5 w-5" />

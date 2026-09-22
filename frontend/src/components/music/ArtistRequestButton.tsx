@@ -9,6 +9,7 @@ import { formatDate } from '../../lib/format'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { Symbol } from '../Symbol'
 import { RequestStatusChip } from './RequestStatusChip'
+import { useTarget } from '../../lib/target'
 
 /**
  * Der ganze Kuenstler auf einmal: alle Studioalben und die kuenftigen. Zaehlt als
@@ -16,6 +17,7 @@ import { RequestStatusChip } from './RequestStatusChip'
  */
 export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
   const { t, i18n } = useTranslation()
+  const target = useTarget()
   const { user, refreshUser } = useAuth()
   const queryClient = useQueryClient()
   const [asking, setAsking] = useState(false)
@@ -89,10 +91,10 @@ export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
         title={t('artistRequest.title', { name: artist.name })}
         description={
           <div className="flex flex-col gap-2">
-            <p>{t('artistRequest.text')}</p>
+            <p>{t('artistRequest.text', { target })}</p>
             <p className="text-mist-500">{t('artistRequest.counts')}</p>
             {data.requires_approval && <p className="text-warn-500">{t('request.needsApproval')}</p>}
-            {data.dry_run && user?.is_admin && <p className="text-warn-500">{t('request.dryRunHint')}</p>}
+            {data.dry_run && user?.is_admin && <p className="text-warn-500">{t('request.dryRunHint', { target })}</p>}
           </div>
         }
         confirmLabel={t('artistRequest.confirm')}

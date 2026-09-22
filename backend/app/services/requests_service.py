@@ -30,6 +30,15 @@ nicht nach Art, das tut nur sein Metadatenprofil.
 
 ⚠️ Im Probelauf (``lidarr_dry_run``) geht nichts an Lidarr, auch nicht aus dem Abgleich.
 Die Anfrage bleibt mit der Kennung ``dry_run`` stehen und laesst sich spaeter erneut senden.
+Der Probelauf gilt im NEX-Modus genauso.
+
+NEX-Modus (seit 22.09.2026, ``docs/plan-nexcrate.md``): Die Anfrage geht als
+``POST /api/v1/requests`` an nexcrate, mit ``origin`` ``nexbeat:request:<nummer>``. nexcrate
+nimmt sie idempotent an. Ein offener Ausgang (Zeitueberschreitung, nicht erreichbar,
+ueberlastet) laesst die Anfrage deshalb "freigegeben" stehen, und der naechste Abgleich
+sendet sie einfach noch einmal. Den Stand liest der Abgleich im Stapel ueber
+``titles/lookup``. Nachsuchen wie bei Lidarr gibt es nicht: nexcrates Suchwunsch bleibt
+stehen, bis gesucht ist, auch bei ausgeschalteter Automatik.
 """
 
 from __future__ import annotations
@@ -42,7 +51,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import ALBUM_KIND, ARTIST_KIND, OPEN_STATUSES, MusicRequest, RequestStatus, User, utcnow
-from . import catalog, coverart, library, lidarr, quota
+from . import catalog, coverart, library, lidarr, nexcrate, quota
 from .musicbrainz import MusicBrainzError
 from .settings_service import AppSettings
 
@@ -57,6 +66,8 @@ UNCERTAIN_CODES = ("lidarr_timeout", "lidarr_pending")
 #: sendet die Anfrage neu. Frueher kann die Uebergabe noch unterwegs sein, und ein zweites
 #: Anlegen scheitert in Lidarr.
 RESUME_AFTER = timedelta(minutes=10)
+#: Kennungen einer Anfrage im NEX-Modus, die der naechste Abgleich einfach noch einmal sendet.
+NEXCRATE_RESEND_CODES = ("nexcrate_pending", "nexcrate_timeout", "nexcrate_unreachable", "nexcrate_busy")
 
 
 class RequestProblem(Exception):
@@ -137,7 +148,7 @@ def _musicbrainz_problem(error: MusicBrainzError) -> RequestProblem:
 
 
 async def create(db: Session, settings: AppSettings, user: User, release_group_mbid: str) -> MusicRequest:
-    if not settings.lidarr_ready:
+    if not settings.requests_ready:
         raise RequestProblem("requests_not_ready", "Requests are not set up yet.", 409)
     try:
         group = await catalog.release_group_info(db, release_group_mbid)
@@ -180,7 +191,7 @@ async def create(db: Session, settings: AppSettings, user: User, release_group_m
 
 async def create_artist(db: Session, settings: AppSettings, user: User, artist_mbid: str) -> MusicRequest:
     """Alle Studioalben eines Kuenstlers und die kuenftigen, als eine Anfrage."""
-    if not settings.lidarr_ready:
+    if not settings.requests_ready:
         raise RequestProblem("requests_not_ready", "Requests are not set up yet.", 409)
     _check_duplicate(db, user.id, ARTIST_KIND, artist_mbid)
     blocked = await library.whole_artist_block(db, settings, artist_mbid)
@@ -230,17 +241,23 @@ def _fail(db: Session, request: MusicRequest, code: str, message: str) -> None:
 
 
 async def submit(db: Session, settings: AppSettings, request: MusicRequest) -> None:
-    client = lidarr.client_for(settings)
     request.submitted_at = utcnow()
-    if client is None or not settings.lidarr_ready:
-        _fail(db, request, "requests_not_ready", "Lidarr is not configured.")
+    if not settings.requests_ready:
+        _fail(db, request, "requests_not_ready", "No target for requests is configured.")
         return
     if settings.flag("lidarr_dry_run"):
         request.status = RequestStatus.approved
         request.error_code = "dry_run"
-        request.error_message = "Dry run: nothing was sent to Lidarr."
+        request.error_message = f"Dry run: nothing was sent to {settings.target}."
         db.commit()
-        logger.info("Dry run: request %s was not sent to Lidarr", request.id)
+        logger.info("Dry run: request %s was not sent", request.id)
+        return
+    if settings.mode == "nex":
+        await _submit_to_nexcrate(db, settings, request)
+        return
+    client = lidarr.client_for(settings)
+    if client is None:
+        _fail(db, request, "requests_not_ready", "Lidarr is not configured.")
         return
     # Vor dem ersten Aufruf gespeichert. 12.09.2026: Brach die Uebergabe ab, blieb die Anfrage
     # fuer immer "freigegeben", und nichts sah wieder nach.
@@ -267,6 +284,51 @@ async def submit(db: Session, settings: AppSettings, request: MusicRequest) -> N
     logger.info("Request %s handed to Lidarr", request.id)
 
 
+async def _submit_to_nexcrate(db: Session, settings: AppSettings, request: MusicRequest) -> None:
+    """Die Anfrage an nexcrate. Idempotent dort, also darf sie jederzeit noch einmal gehen."""
+    client = nexcrate.client_for(settings)
+    if client is None:
+        _fail(db, request, "requests_not_ready", "nexcrate is not connected.")
+        return
+    request.error_code = "nexcrate_pending"
+    request.error_message = "Hand-over to nexcrate started, not confirmed yet."
+    db.commit()
+    whole_artist = request.kind == ARTIST_KIND
+    body: dict[str, Any] = {
+        "kind": ARTIST_KIND if whole_artist else ALBUM_KIND,
+        "ref": nexcrate.ref(request.artist_mbid if whole_artist else request.release_group_mbid),
+        "origin": f"nexbeat:request:{request.id}",
+        "search_now": True,
+    }
+    if whole_artist:
+        body["artist"] = dict(nexcrate.WHOLE_ARTIST)
+    try:
+        answer = await client.request(body)
+    except nexcrate.NexcrateError as error:
+        if error.transient:
+            request.status = RequestStatus.approved
+            request.error_code = error.code if error.code in NEXCRATE_RESEND_CODES else "nexcrate_pending"
+            request.error_message = f"{error.code}: {error.detail}"[:500] + " The background check sends it again."
+            db.commit()
+            logger.info("Request %s: nexcrate did not take it yet (%s), sending again later", request.id, error.code)
+        else:
+            _fail(db, request, error.code, error.detail)
+        return
+    request.status = RequestStatus.searching
+    request.error_code = ""
+    request.error_message = ""
+    db.commit()
+    library.forget_nexcrate_albums(db, request.artist_mbid)
+    notes = ", ".join(note.get("code", "") for note in answer.get("notes") or [])
+    logger.info(
+        "Request %s handed to nexcrate (created %s, search %s%s)",
+        request.id,
+        answer.get("created"),
+        answer.get("search"),
+        f", notes {notes}" if notes else "",
+    )
+
+
 def _lidarr_target(settings: AppSettings) -> dict[str, Any]:
     return {
         "qualityProfileId": settings.number("lidarr_quality_profile_id"),
@@ -279,9 +341,7 @@ def _find_artist(artists: list[dict[str, Any]], artist_mbid: str) -> dict[str, A
     return next((item for item in artists if item.get("foreignArtistId") == artist_mbid), None)
 
 
-async def _submit_album(
-    db: Session, client: lidarr.LidarrClient, settings: AppSettings, request: MusicRequest
-) -> None:
+async def _submit_album(db: Session, client: lidarr.LidarrClient, settings: AppSettings, request: MusicRequest) -> None:
     artist = _find_artist(await client.artists(), request.artist_mbid)
     listed: list[dict[str, Any]] = []
     if artist is not None:
@@ -393,9 +453,7 @@ async def _submit_artist(
         # Erst nachsehen, dann aendern: Ohne Studioalben bleibt der Kuenstler in Lidarr unberuehrt.
         albums = [album for album in await client.albums_for_artist(artist["id"]) if lidarr.is_studio_album(album)]
         if not albums:
-            raise lidarr.LidarrError(
-                "artist_albums_not_in_lidarr", "Lidarr lists no studio albums for this artist."
-            )
+            raise lidarr.LidarrError("artist_albums_not_in_lidarr", "Lidarr lists no studio albums for this artist.")
         if artist.get("monitored") is not True or artist.get("monitorNewItems") != "all":
             await client.update_artist({**artist, "monitored": True, "monitorNewItems": "all"})
         unmonitored = [album["id"] for album in albums if not album.get("monitored")]
@@ -441,7 +499,11 @@ def cancel(db: Session, user: User, request: MusicRequest) -> None:
 
 
 async def retry(db: Session, settings: AppSettings, request: MusicRequest) -> None:
-    unsent = request.status == RequestStatus.approved and request.error_code == "dry_run"
+    unsent = request.status == RequestStatus.approved and (
+        request.error_code == "dry_run"
+        # nexcrate nimmt Anfragen idempotent an: noch einmal senden schadet nie.
+        or (settings.mode == "nex" and request.error_code in NEXCRATE_RESEND_CODES)
+    )
     if request.status == RequestStatus.approved and not unsent:
         # Offen, ob Lidarr den Auftrag hat. 12.09.2026: Erneut gesendet scheiterte die Anfrage, wenn
         # Lidarr den Kuenstler inzwischen angelegt hatte. Der Abgleich bringt sie zu Ende.
@@ -577,8 +639,124 @@ async def _search_again(
         logger.info("Search again skipped: %s", error.code)
 
 
+def sent_elsewhere(settings: AppSettings, request: MusicRequest) -> bool:
+    """Ging die Anfrage an das Ziel vor dem letzten Wechsel des Modus?
+
+    Dann kennt das neue Ziel sie nicht, und das ist kein Fehler: Der Abgleich reicht sie einmal nach.
+    Nach dem Nachreichen ist ``submitted_at`` neuer als der Wechsel, und es gilt wieder das Uebliche.
+    """
+    raw = settings.text("request_mode_changed_at")
+    if not raw or request.submitted_at is None:
+        return False
+    try:
+        changed = datetime.fromisoformat(raw)
+    except ValueError:
+        return False
+    return request.submitted_at.replace(tzinfo=UTC) < changed
+
+
+def _open_requests(db: Session) -> list[MusicRequest]:
+    open_statuses = (RequestStatus.approved, RequestStatus.searching)
+    return list(db.scalars(select(MusicRequest).where(MusicRequest.status.in_(open_statuses))))
+
+
+def _finish(request: MusicRequest, now: datetime) -> None:
+    request.status = RequestStatus.downloaded
+    request.completed_at = now
+    request.progress = 100
+    request.error_code = ""
+    request.error_message = ""
+
+
+def _follow_nexcrate(db: Session, request: MusicRequest, found: dict[str, Any], now: datetime) -> int:
+    """Eine Anfrage nach dem, was ``titles/lookup`` ueber ihren Titel sagt. 1 heisst: geaendert."""
+    if found.get("error"):
+        logger.info("Request %s: nexcrate cannot look it up (%s)", request.id, found["error"])
+        return 0
+    title = found.get("title") if found.get("known") else None
+    late = request.submitted_at is not None and now - request.submitted_at > ALBUM_APPEAR_TIMEOUT
+    if title is None:
+        if late:
+            _fail(db, request, "nexcrate_title_gone", "nexcrate does not have this any more.")
+            return 1
+        return 0
+    before = (request.status, request.progress)
+    if request.kind == ARTIST_KIND:
+        block = title.get("artist") or {}
+        albums = block.get("albums") or {}
+        watched, available = int(albums.get("watched") or 0), int(albums.get("available") or 0)
+        if watched == 0:
+            if late and not block.get("loading"):
+                _fail(db, request, "artist_albums_not_in_nexcrate", "nexcrate watches no album of this artist.")
+                return 1
+            return 0
+        request.progress = min(100, round(100 * available / watched))
+        if available >= watched and not block.get("loading"):
+            _finish(request, now)
+    else:
+        view = nexcrate.album_view(title)
+        if view.state == "available":
+            _finish(request, now)
+        elif view.state == "known":
+            # Die Fassung ist weg oder nicht mehr ueberwacht: in nexcrate zurueckgenommen oder eingefroren.
+            _fail(db, request, "nexcrate_not_watched", "nexcrate no longer watches this album.")
+            return 1
+        else:
+            request.progress = view.percent
+    db.commit()
+    return int((request.status, request.progress) != before)
+
+
+async def _refresh_nexcrate(db: Session, settings: AppSettings, now: datetime) -> int:
+    client = nexcrate.client_for(settings)
+    if client is None:
+        return 0
+    writes = not settings.flag("lidarr_dry_run")
+    changed = 0
+    open_requests = _open_requests(db)
+    for request in open_requests:
+        if not (writes and request.status == RequestStatus.approved and request.error_code in NEXCRATE_RESEND_CODES):
+            continue
+        before = (request.status, request.error_code)
+        logger.info("Request %s: sending to nexcrate again", request.id)
+        await submit(db, settings, request)
+        changed += int((request.status, request.error_code) != before)
+        if request.error_code in ("nexcrate_unreachable", "nexcrate_timeout"):
+            # Nicht erreichbar: die uebrigen nicht auch noch einzeln anlaufen lassen.
+            break
+    following = [request for request in open_requests if request.status == RequestStatus.searching]
+    if not following:
+        return changed
+    moved = [request for request in following if sent_elsewhere(settings, request)]
+    if moved and writes:
+        # Vor dem Wechsel an Lidarr gegangen. nexcrate nimmt sie idempotent: Was es schon hat, bleibt.
+        for request in moved:
+            logger.info("Request %s: handing it to nexcrate after the switch", request.id)
+            request.status = RequestStatus.approved
+            await submit(db, settings, request)
+            changed += 1
+        following = [request for request in following if request.status == RequestStatus.searching]
+    items = [
+        {
+            "kind": request.kind,
+            "ref": nexcrate.ref(request.artist_mbid if request.kind == ARTIST_KIND else request.release_group_mbid),
+        }
+        for request in following
+    ]
+    try:
+        found = await client.lookup(items)
+    except nexcrate.NexcrateError as error:
+        logger.info("Status check at nexcrate skipped: %s", error.code)
+        return changed
+    for request, entry in zip(following, found, strict=False):
+        changed += _follow_nexcrate(db, request, entry, now)
+    return changed
+
+
 async def refresh_open(db: Session, settings: AppSettings, now: datetime | None = None) -> int:
-    """Stand der offenen Anfragen bei Lidarr nachsehen. Gibt die Zahl der Aenderungen zurueck."""
+    """Stand der offenen Anfragen nachsehen. Gibt die Zahl der Aenderungen zurueck."""
+    if settings.mode == "nex":
+        return await _refresh_nexcrate(db, settings, now or utcnow())
     client = lidarr.client_for(settings)
     if client is None:
         return 0
@@ -614,6 +792,15 @@ async def refresh_open(db: Session, settings: AppSettings, now: datetime | None 
             await submit(db, settings, request)
             changed += int((request.status, request.error_code) != before)
             continue
+        if writes and request.status == RequestStatus.searching and sent_elsewhere(settings, request):
+            wanted_here = _wanted_studio_albums(albums) if request.kind == ARTIST_KIND else _album_of(request, albums)
+            if not wanted_here:
+                # Vor dem Wechsel an nexcrate gegangen, Lidarr kennt sie nicht: einmal nachreichen.
+                logger.info("Request %s: handing it to Lidarr after the switch", request.id)
+                request.status = RequestStatus.approved
+                await submit(db, settings, request)
+                changed += 1
+                continue
         if request.kind == ARTIST_KIND:
             changed += _follow_artist(db, request, albums, now)
             wanted = _wanted_studio_albums(albums)

@@ -7,6 +7,10 @@ sie Minuten dauern kann und den Anfragestand nicht aufhalten soll.
 
 Ein Webhook von Lidarr weckt die erste Schleife vorzeitig. Seinem Inhalt wird
 nicht geglaubt, er ist nur der Anstoss, bei Lidarr nachzusehen.
+
+Im NEX-Modus weckt nexcrates Ereignisstrom (``nexcrate_events``, eine dritte
+Schleife). Ein Ereignis zu einem Kuenstler laesst dabei auch den Bestand vorzeitig
+nachlesen; das kostet nur die Aenderungen seit der letzten Nummer.
 """
 
 from __future__ import annotations
@@ -18,7 +22,7 @@ from collections.abc import Awaitable
 from typing import Any
 
 from ..db import SessionLocal
-from . import cache, library, recommendations, requests_service, sitzung, tokens
+from . import cache, library, nexcrate_events, recommendations, requests_service, sitzung, tokens
 from .settings_service import load_settings
 
 logger = logging.getLogger("nexbeat.poller")
@@ -33,9 +37,13 @@ WARM_START_DELAY = 45.0
 MIN_ROUND_GAP = 10.0
 
 _wake_event: asyncio.Event | None = None
+_library_due = False
 
 
-def wake() -> None:
+def wake(library_too: bool = False) -> None:
+    global _library_due
+    if library_too:
+        _library_due = True
     if _wake_event is not None:
         _wake_event.set()
 
@@ -61,7 +69,7 @@ async def _wait(stop: asyncio.Event, seconds: float, wake_event: asyncio.Event |
 
 
 async def _requests_loop(stop: asyncio.Event) -> None:
-    global _wake_event
+    global _wake_event, _library_due
     _wake_event = asyncio.Event()
     last = {"library": float("-inf"), "purge": float("-inf")}
     if await _wait(stop, START_DELAY):
@@ -70,8 +78,9 @@ async def _requests_loop(stop: asyncio.Event) -> None:
         started = time.monotonic()
         with SessionLocal() as db:
             settings = load_settings(db)
-            if started - last["library"] >= LIBRARY_INTERVAL:
+            if _library_due or started - last["library"] >= LIBRARY_INTERVAL:
                 last["library"] = started
+                _library_due = False
                 await _guarded("library sync", library.sync_artists(db, settings))
             await _guarded("request status", requests_service.refresh_open(db, settings))
             if started - last["purge"] >= PURGE_INTERVAL:
@@ -101,4 +110,4 @@ async def _warm_loop(stop: asyncio.Event) -> None:
 
 
 async def run(stop: asyncio.Event) -> None:
-    await asyncio.gather(_requests_loop(stop), _warm_loop(stop))
+    await asyncio.gather(_requests_loop(stop), _warm_loop(stop), nexcrate_events.run(stop, wake))

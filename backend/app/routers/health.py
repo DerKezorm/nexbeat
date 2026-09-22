@@ -27,5 +27,5 @@ def public_config(db: DbSession) -> dict[str, Any]:
         "mail_configured": settings.mail_configured,
         "default_language": settings.default_language,
         "previews_enabled": settings.flag("source_deezer"),
-        "requests_enabled": settings.lidarr_ready,
+        "requests_enabled": settings.requests_ready,
     }

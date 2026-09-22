@@ -14,6 +14,7 @@ import { GenreBar } from '../components/music/GenreBar'
 import { Shelf, ShelfSkeleton } from '../components/music/Shelf'
 import { Symbol } from '../components/Symbol'
 import { ErrorBanner } from '../components/ui'
+import { useTarget } from '../lib/target'
 
 function rowTitle(row: DiscoverRow, t: (key: string, options?: Record<string, unknown>) => string) {
   if (row.id === 'for_you') return { title: t('discover.forYou'), hint: t('discover.forYouHint') }
@@ -102,6 +103,7 @@ function Hero({ spotlight }: { spotlight: ArtistItem | null }) {
 
 export function HomePage() {
   const { t } = useTranslation()
+  const target = useTarget()
   const { user } = useAuth()
   const query = useQuery({
     queryKey: ['discover'],
@@ -158,7 +160,7 @@ export function HomePage() {
           <Symbol name="sparkle" className="h-8 w-8 text-accent-500" />
           <h2 className="text-lg font-semibold">{t('discover.emptyTitle')}</h2>
           <p className="max-w-md text-sm text-mist-500">
-            {user?.is_admin && !query.data.requests_enabled ? t('discover.emptyAdmin') : t('discover.emptyUser')}
+            {user?.is_admin && !query.data.requests_enabled ? t('discover.emptyAdmin', { target }) : t('discover.emptyUser')}
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             <Link to="/suche" className="rounded-full bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-400">
@@ -169,7 +171,7 @@ export function HomePage() {
                 to="/admin/einstellungen?reiter=lidarr"
                 className="rounded-full border border-ink-700 bg-ink-850 px-5 py-2.5 text-sm font-semibold text-mist-300 hover:text-mist-100"
               >
-                {t('discover.emptySettings')}
+                {t('discover.emptySettings', { target })}
               </Link>
             )}
           </div>

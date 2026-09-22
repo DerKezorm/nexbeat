@@ -60,6 +60,8 @@ class QuotaOut(BaseModel):
 class MeOut(UserOut):
     is_admin: bool
     quota: QuotaOut
+    # Wohin Anfragen gehen, fuer die Texte der Oberflaeche: lidarr, nexcrate oder null.
+    request_target: str | None = None
 
 
 class AdminUserOut(UserOut):

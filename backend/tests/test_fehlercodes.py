@@ -15,7 +15,7 @@ I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n"
 
 PATTERNS = [
     re.compile(
-        r"\b(?:fehler|meldung|LidarrError|MusicBrainzError|RequestProblem|MailError|SettingsError)\(\s*"
+        r"\b(?:fehler|meldung|LidarrError|NexcrateError|MusicBrainzError|RequestProblem|MailError|SettingsError)\(\s*"
         r'"([a-z][a-z0-9_]+)"'
     ),
     re.compile(r'_fail\(\s*db,\s*request,\s*"([a-z][a-z0-9_]+)"'),
@@ -29,6 +29,8 @@ EXTRA = {
     "deezer_unavailable",
     "dry_run",
     "lidarr_pending",
+    "nexcrate_pending",
+    "nexcrate_refused",
     "mail_host_unknown",
     "mail_connect_failed",
     "musicbrainz_error",
@@ -36,7 +38,10 @@ EXTRA = {
 
 
 def codes_in_source() -> set[str]:
-    found: set[str] = set()
+    # Die Codes, unter denen nexbeat nexcrates Fehler fuehrt, stehen in einer Tabelle.
+    from app.services.nexcrate import REMOTE_CODES
+
+    found: set[str] = set(REMOTE_CODES.values())
     for path in APP.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         for pattern in PATTERNS:

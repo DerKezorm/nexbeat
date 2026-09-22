@@ -34,6 +34,17 @@ DEFAULTS: dict[str, str] = {
     "lidarr_quality_profile_id": "",
     "lidarr_metadata_profile_id": "",
     "lidarr_dry_run": "false",
+    # "arr" (Lidarr) oder "nex" (nexcrate). Leer heisst: noch nicht gewaehlt; eine Installation
+    # mit eingetragenem Lidarr gilt dann als ARR-Modus, wie vor dem 22.09.2026.
+    "request_mode": "",
+    "nexcrate_url": "",
+    "nexcrate_api_key": "",
+    # Eine laufende Bitte ums Koppeln (JSON mit Kennung, Geheimnis, Code, Adresse). Lebt zehn Minuten.
+    "nexcrate_pairing": "",
+    # Nummer der Aenderungsmarke, bis zu der nexbeat die Kuenstler aus nexcrate kennt, und woher.
+    "nexcrate_marker": "",
+    # Wann der Modus zuletzt wechselte (ISO, UTC). Offene Anfragen von davor reicht der Abgleich nach.
+    "request_mode_changed_at": "",
     "webhook_secret": "",
     "source_listenbrainz": "true",
     "source_deezer": "true",
@@ -43,16 +54,27 @@ DEFAULTS: dict[str, str] = {
     "quota_period": "week",
 }
 
-SECRET_KEYS = frozenset({"smtp_password", "lidarr_api_key", "lastfm_api_key", "listenbrainz_token", "webhook_secret"})
+SECRET_KEYS = frozenset(
+    {
+        "smtp_password",
+        "lidarr_api_key",
+        "lastfm_api_key",
+        "listenbrainz_token",
+        "webhook_secret",
+        "nexcrate_api_key",
+        "nexcrate_pairing",
+    }
+)
 BOOL_KEYS = frozenset({"lidarr_dry_run", "source_listenbrainz", "source_deezer"})
 INT_KEYS = frozenset({"smtp_port", "lidarr_quality_profile_id", "lidarr_metadata_profile_id", "quota_default_limit"})
 CHOICES: dict[str, tuple[str, ...]] = {
     "smtp_security": SECURITY_MODES,
     "quota_period": ("day", "week", "month"),
     "default_language": ("de", "en"),
+    "request_mode": ("arr", "nex"),
 }
 # Werden nur vom Server selbst geschrieben, nie ueber PUT /api/settings.
-INTERNAL_KEYS = frozenset({"webhook_secret"})
+INTERNAL_KEYS = frozenset({"webhook_secret", "nexcrate_pairing", "nexcrate_marker", "request_mode_changed_at"})
 
 _CACHE_KEY = "nexbeat_settings"
 
@@ -117,6 +139,31 @@ class AppSettings:
         )
 
     @property
+    def mode(self) -> str | None:
+        """``arr``, ``nex`` oder ``None``, solange nichts gewaehlt und kein Lidarr eingetragen ist."""
+        chosen = self.text("request_mode")
+        if chosen in ("arr", "nex"):
+            return chosen
+        return "arr" if self.lidarr_configured else None
+
+    @property
+    def nexcrate_configured(self) -> bool:
+        return bool(self.text("nexcrate_url") and self.text("nexcrate_api_key"))
+
+    @property
+    def requests_ready(self) -> bool:
+        """Kann eine Anfrage jetzt ihr Ziel erreichen? Im NEX-Modus reicht die Verbindung:
+        Ordner und Profile waehlt nexcrate selbst."""
+        if self.mode == "nex":
+            return self.nexcrate_configured
+        return self.mode == "arr" and self.lidarr_ready
+
+    @property
+    def target(self) -> str | None:
+        """Der Name des Ziels fuer Texte der Oberflaeche: ``lidarr`` oder ``nexcrate``."""
+        return {"arr": "lidarr", "nex": "nexcrate"}.get(self.mode or "")
+
+    @property
     def quota_default_limit(self) -> int | None:
         value = self.number("quota_default_limit")
         return None if value is None or value < 0 else value
@@ -159,7 +206,7 @@ def _normalize(key: str, raw: Any) -> str:
         return str(int(value))
     if key in CHOICES and value not in CHOICES[key]:
         raise SettingsError("invalid_setting", key)
-    if key in ("public_url", "lidarr_url"):
+    if key in ("public_url", "lidarr_url", "nexcrate_url"):
         if value and not value.startswith(("http://", "https://")):
             raise SettingsError("invalid_setting", key)
         return value.rstrip("/")
@@ -206,6 +253,17 @@ def delete_secret(db: Session, key: str) -> AppSettings:
         db.commit()
     forget(db)
     return load_settings(db)
+
+
+def delete_secret_internal(db: Session, key: str) -> None:
+    """Ein Wert, den nur der Server schreibt, wieder weg (etwa eine abgelaufene Bitte ums Koppeln)."""
+    if key not in INTERNAL_KEYS:
+        raise SettingsError("unknown_setting", key)
+    row = db.get(Setting, key)
+    if row is not None:
+        db.delete(row)
+        db.commit()
+    forget(db)
 
 
 def public_settings(settings: AppSettings) -> dict[str, Any]:

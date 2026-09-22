@@ -1,6 +1,6 @@
 # nexbeat
 
-Find music and request it from Lidarr with one click.
+Find music and request it from Lidarr or nexcrate with one click.
 
 ![Discover: recommendations based on the library, plus what is trending this week](docs/screenshots/discover.png)
 
@@ -36,6 +36,16 @@ library.
 nexbeat never changes Lidarr settings. It adds and monitors artists and albums
 and starts searches, nothing else.
 
+**Two modes.** The administrator picks where requests go. In **ARR mode** it is
+Lidarr, as described above. In **NEX mode** it is nexcrate, through its
+interface for other programs (`/api/v1`, contract 1 with music): nexbeat asks
+for albums and whole artists (studio albums only), reads their state in batches
+and listens to nexcrate's event stream, so a change shows up within seconds.
+Connecting takes one step: nexbeat asks for a key, nexcrate shows a code, the
+owner confirms it there. A key made by hand works too. nexbeat changes nothing
+in nexcrate's settings either. Switching modes hands open requests to the new
+program once.
+
 ![An artist page with discography, most listened albums and similar artists](docs/screenshots/artist.png)
 
 ## Running with Docker
@@ -49,16 +59,21 @@ docker compose up -d
 Open `http://<your-host>:8030` and create the first account. It becomes the
 administrator. Then, under **Settings**:
 
-1. **Lidarr:** address, API key, root folder, quality and metadata profile. If
-   users should be able to request whole artists, pick a metadata profile that
-   allows official studio albums only. nexbeat checks this and says why when it
-   does not fit.
+1. **Services, Target:** choose ARR or NEX mode.
+   - **Lidarr:** address, API key, root folder, quality and metadata profile. If
+     users should be able to request whole artists, pick a metadata profile that
+     allows official studio albums only. nexbeat checks this and says why when it
+     does not fit.
+   - **nexcrate:** enter its address and connect, then confirm the code in
+     nexcrate with the rights Read and Request. nexbeat shows whether nexcrate's
+     music version is ready (profile, indexer with music categories, download
+     client); that is set up in nexcrate, not here.
 2. **Mail** (optional): for invitations and password resets. Without a mail
    server, nexbeat hands out the links for you to pass on.
 3. **Users:** invite people, set their quota and whether their requests need
    approval.
 
-The Lidarr tab also shows a webhook address. Entered in Lidarr, it lets nexbeat
+In ARR mode the tab also shows a webhook address. Entered in Lidarr, it lets nexbeat
 notice finished downloads right away; without it, nexbeat checks every two
 minutes.
 

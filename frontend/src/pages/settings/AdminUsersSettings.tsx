@@ -10,6 +10,7 @@ import { Avatar } from '../../components/Avatar'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Button, Card, ErrorBanner, Field, OkBanner, PageLoading, SELECT_CLASS, Toggle } from '../../components/ui'
 import { formatDate } from '../../lib/format'
+import { useTarget } from '../../lib/target'
 
 type QuotaMode = 'default' | 'unlimited' | 'custom'
 
@@ -36,6 +37,7 @@ function DeliveryResult({ delivery, email }: { delivery: Delivery; email?: strin
 
 function UserEditor({ user, onDone }: { user: User; onDone: () => void }) {
   const { t } = useTranslation()
+  const target = useTarget()
   const queryClient = useQueryClient()
   const [role, setRole] = useState<Role>(user.role)
   const [active, setActive] = useState(user.is_active)
@@ -86,7 +88,7 @@ function UserEditor({ user, onDone }: { user: User; onDone: () => void }) {
         )}
       </div>
       <Toggle label={t('users.active')} hint={t('users.activeHint')} checked={active} onChange={setActive} />
-      <Toggle label={t('users.requiresApproval')} hint={t('users.requiresApprovalHint')} checked={approval} onChange={setApproval} />
+      <Toggle label={t('users.requiresApproval')} hint={t('users.requiresApprovalHint', { target })} checked={approval} onChange={setApproval} />
       {save.isError && <ErrorBanner message={errorMessage(save.error)} />}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" loading={save.isPending}>
@@ -103,6 +105,7 @@ function UserEditor({ user, onDone }: { user: User; onDone: () => void }) {
 /** Benutzer im Aufbau von Nexview: Einladen oben, offene Einladungen, dann Karten nach Rolle. */
 export function AdminUsersSettings() {
   const { t, i18n } = useTranslation()
+  const target = useTarget()
   const { user: me } = useAuth()
   const queryClient = useQueryClient()
   const [invite, setInvite] = useState({ email: '', role: 'user' as Role })
@@ -269,7 +272,7 @@ export function AdminUsersSettings() {
       <ConfirmDialog
         open={deleting !== null}
         title={t('users.deleteTitle')}
-        description={t('users.deleteText', { name: deleting?.display_name || deleting?.username })}
+        description={t('users.deleteText', { name: deleting?.display_name || deleting?.username, target })}
         confirmLabel={t('users.delete')}
         loading={remove.isPending}
         error={remove.isError ? errorMessage(remove.error) : null}

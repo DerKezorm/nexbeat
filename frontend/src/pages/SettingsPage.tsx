@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { TabRow, type Tab } from '../components/TabRow'
 import { PageTitle } from '../components/ui'
 import { AdminAddressSettings } from './settings/AdminAddressSettings'
-import { AdminLidarrSettings } from './settings/AdminLidarrSettings'
+import { AdminServicesSettings } from './settings/AdminServicesSettings'
 import { AdminMailSettings } from './settings/AdminMailSettings'
 import { AdminQuotaSettings } from './settings/AdminQuotaSettings'
 import { AdminSourcesSettings } from './settings/AdminSourcesSettings'
@@ -71,7 +71,7 @@ export function SettingsPage() {
 
       {tab === 'address' && <AdminAddressSettings />}
       {tab === 'mail' && <AdminMailSettings />}
-      {tab === 'lidarr' && <AdminLidarrSettings />}
+      {tab === 'lidarr' && <AdminServicesSettings />}
       {tab === 'sources' && <AdminSourcesSettings />}
       {tab === 'users' && <AdminUsersSettings />}
       {tab === 'quota' && <AdminQuotaSettings />}

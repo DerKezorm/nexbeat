@@ -29,9 +29,15 @@ def _find_user(db: Session, login: str) -> User | None:
 
 
 def me_out(db: Session, user: User) -> MeOut:
-    state = quota.state(db, user, load_settings(db))
+    settings = load_settings(db)
+    state = quota.state(db, user, settings)
     return MeOut.model_validate(
-        {**UserOut.model_validate(user).model_dump(), "is_admin": user.is_admin, "quota": quota.as_dict(state)}
+        {
+            **UserOut.model_validate(user).model_dump(),
+            "is_admin": user.is_admin,
+            "quota": quota.as_dict(state),
+            "request_target": settings.target,
+        }
     )
 
 

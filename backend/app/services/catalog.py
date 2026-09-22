@@ -234,7 +234,7 @@ async def artist_page(db: Session, settings: AppSettings, user: User, mbid: str)
     library_row = db.get(LibraryArtist, mbid)
     request = artist_request_state(db, user, mbid)
     blocked = None
-    if settings.lidarr_ready and request is None:
+    if settings.requests_ready and request is None:
         blocked = await library.whole_artist_block(db, settings, mbid)
     return {
         "blocked": blocked,
@@ -246,7 +246,7 @@ async def artist_page(db: Session, settings: AppSettings, user: User, mbid: str)
         },
         "sources": {"listenbrainz": settings.flag("source_listenbrainz"), "deezer": settings.flag("source_deezer")},
         "request": request,
-        "requests_enabled": settings.lidarr_ready,
+        "requests_enabled": settings.requests_ready,
         "requires_approval": user.requires_approval and not user.is_admin,
         "dry_run": settings.flag("lidarr_dry_run"),
         "quota": quota.as_dict(quota.state(db, user, settings)),
@@ -438,7 +438,7 @@ async def album_page(db: Session, settings: AppSettings, user: User, release_gro
     # 12.09.2026: Ein Soundtrack liess sich anfragen, und die Anfrage scheiterte still am
     # Metadatenprofil. Listet Lidarr das Album schon, laesst das Profil des Kuenstlers es zu.
     blocked = None
-    if settings.lidarr_ready and release_group_mbid not in states:
+    if settings.requests_ready and release_group_mbid not in states:
         blocked = await library.type_block(db, settings, group)
     return {
         "blocked": blocked,
@@ -457,7 +457,7 @@ async def album_page(db: Session, settings: AppSettings, user: User, release_gro
         "library": states.get(release_group_mbid),
         "request": request_states(db, user, [release_group_mbid]).get(release_group_mbid),
         "quota": quota.as_dict(quota.state(db, user, settings)),
-        "requests_enabled": settings.lidarr_ready,
+        "requests_enabled": settings.requests_ready,
         "requires_approval": user.requires_approval and not user.is_admin,
         "dry_run": settings.flag("lidarr_dry_run"),
     }

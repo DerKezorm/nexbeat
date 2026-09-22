@@ -11,9 +11,11 @@ import { RequestStatusChip } from '../components/music/RequestStatusChip'
 import { Symbol } from '../components/Symbol'
 import { Button, ErrorBanner, KeyFigure, PageLoading, PageTitle } from '../components/ui'
 import { formatDate } from '../lib/format'
+import { useTarget } from '../lib/target'
 
 export function MyRequestsPage() {
   const { t, i18n } = useTranslation()
+  const target = useTarget()
   const { user, refreshUser } = useAuth()
   const queryClient = useQueryClient()
   const query = useQuery({
@@ -36,7 +38,7 @@ export function MyRequestsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageTitle sub={t('myRequests.intro')}>{t('myRequests.title')}</PageTitle>
+      <PageTitle sub={t('myRequests.intro', { target })}>{t('myRequests.title')}</PageTitle>
 
       {quota && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

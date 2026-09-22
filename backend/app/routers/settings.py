@@ -1,8 +1,10 @@
-"""Einstellungen fuer Admins: Adresse, Mail, Lidarr, Quellen, Kontingent."""
+"""Einstellungen fuer Admins: Adresse, Mail, Lidarr oder nexcrate, Quellen, Kontingent."""
 
 from __future__ import annotations
 
 import asyncio
+import json
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -10,13 +12,16 @@ from pydantic import BaseModel, Field
 
 from ..deps import AdminUser, DbSession
 from ..meldungen import fehler
+from ..models import LibraryArtist
 from ..schemas import TestMailIn
-from ..services import cache, library, lidarr, listenbrainz, mail, mail_templates
+from ..services import cache, library, lidarr, listenbrainz, mail, mail_templates, nexcrate, nexcrate_events
 from ..services.lidarr import LidarrError
 from ..services.mail import MailConfig, MailError
+from ..services.nexcrate import NexcrateError
 from ..services.settings_service import (
     SettingsError,
     delete_secret,
+    delete_secret_internal,
     ensure_webhook_secret,
     load_settings,
     public_settings,
@@ -37,6 +42,7 @@ def read_settings(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
 
 @router.put("", summary="Change some settings")
 def update_settings(payload: dict[str, Any], _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    before = load_settings(db).mode
     try:
         settings = save_settings(db, payload)
     except SettingsError as error:
@@ -44,7 +50,27 @@ def update_settings(payload: dict[str, Any], _admin: AdminUser, db: DbSession) -
     if any(key.startswith("lidarr_") for key in payload):
         # Ein anderes Lidarr hat andere Alben. Alte Antworten gelten nicht mehr.
         cache.forget_prefix(db, "lidarr:")
-    return public_settings(settings)
+    if settings.mode != before:
+        # Offene Anfragen, die vorher ans andere Ziel gingen, reicht der Abgleich einmal nach.
+        save_settings(db, {"request_mode_changed_at": datetime.now(UTC).isoformat()}, internal=True)
+        _changed_target(db)
+    elif settings.mode == "nex" and any(key.startswith("nexcrate_") for key in payload):
+        _changed_target(db)
+    return public_settings(load_settings(db))
+
+
+def _changed_target(db: DbSession) -> None:
+    """Anderes Ziel, andere Alben: Zwischenspeicher und Bestand gelten nicht mehr, der Strom verbindet neu.
+
+    Nur bei einem Wechsel des Modus oder einer anderen nexcrate im NEX-Modus. Wer im ARR-Modus eine
+    nexcrate eintraegt, verliert den Bestand aus Lidarr nicht.
+    """
+    cache.forget_prefix(db, "nexcrate:")
+    cache.forget_prefix(db, "lidarr:")
+    db.query(LibraryArtist).delete()
+    db.commit()
+    save_settings(db, {"nexcrate_marker": ""}, internal=True)
+    nexcrate_events.restart()
 
 
 @router.delete("/secret/{key}", summary="Remove a stored secret")
@@ -53,6 +79,8 @@ def remove_secret(key: str, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
         settings = delete_secret(db, key)
     except SettingsError as error:
         raise _settings_error(error) from error
+    if key == "nexcrate_api_key" and settings.mode == "nex":
+        _changed_target(db)
     return public_settings(settings)
 
 
@@ -106,6 +134,167 @@ async def test_lidarr(payload: LidarrTestIn, _admin: AdminUser, db: DbSession) -
     return {"ok": True, "version": status.get("version", "")}
 
 
+class NexcrateTestIn(BaseModel):
+    url: str | None = Field(default=None, max_length=500)
+    api_key: str | None = Field(default=None, max_length=200)
+
+
+def _nexcrate_problem(error: NexcrateError) -> HTTPException:
+    return fehler(error.code, "nexcrate could not be reached or refused.", 502, detail=error.detail[:300])
+
+
+async def _nexcrate_facts(client: nexcrate.NexcrateClient) -> dict[str, Any]:
+    """Was nexbeat ueber eine nexcrate wissen muss: Fassung, Vertrag, Rechte, Musik und ihre Fassung."""
+    system = await client.system()
+    capabilities = system.get("capabilities") or {}
+    contract = system.get("contract") or {}
+    scopes = list(system.get("scopes") or [])
+    music = bool(capabilities.get("music"))
+    versions = await client.music_versions() if music else []
+    return {
+        "ok": True,
+        "version": system.get("version") or "",
+        "contract": contract.get("major"),
+        "stage": contract.get("stage"),
+        "music": music,
+        "scopes": scopes,
+        "can_request": "request" in scopes,
+        "music_versions": [
+            {
+                "name": item.get("name") or "",
+                "tier": item.get("tier"),
+                "ready": bool(item.get("ready")),
+                "reasons": [reason.get("code") for reason in item.get("reasons") or [] if reason.get("code")],
+            }
+            for item in versions
+        ],
+    }
+
+
+@router.post("/test/nexcrate", summary="Check nexcrate with saved or unsaved values")
+async def test_nexcrate(payload: NexcrateTestIn, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    settings = load_settings(db)
+    url = (payload.url or settings.text("nexcrate_url")).strip().rstrip("/")
+    typed = payload.api_key or ""
+    key = typed if typed and not typed.startswith("•") else settings.text("nexcrate_api_key")
+    if not url or not key:
+        raise fehler("nexcrate_not_configured", "Connect nexcrate first.", 422)
+    if not url.startswith(("http://", "https://")):
+        raise fehler("invalid_setting", "This setting is unknown or its value is not allowed.", 422, key="nexcrate_url")
+    try:
+        return await _nexcrate_facts(nexcrate.NexcrateClient(url, key))
+    except NexcrateError as error:
+        raise _nexcrate_problem(error) from error
+
+
+@router.get("/nexcrate/status", summary="How the connection to nexcrate stands")
+async def nexcrate_status(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    settings = load_settings(db)
+    base = {
+        "url": settings.text("nexcrate_url"),
+        "connected": settings.nexcrate_configured,
+        "key_hint": settings.text("nexcrate_api_key")[-4:] if settings.nexcrate_configured else None,
+        "events": nexcrate_events.status(),
+        "artists": db.query(LibraryArtist).count(),
+        "facts": None,
+        "error": None,
+    }
+    if not settings.nexcrate_configured:
+        return base
+    try:
+        client = nexcrate.NexcrateClient(settings.text("nexcrate_url"), settings.text("nexcrate_api_key"))
+        base["facts"] = await _nexcrate_facts(client)
+    except NexcrateError as error:
+        base["error"] = {"code": error.code, "detail": error.detail[:300]}
+    return base
+
+
+class PairingIn(BaseModel):
+    url: str = Field(min_length=1, max_length=500)
+
+
+def _pairing(db: DbSession) -> dict[str, Any] | None:
+    raw = load_settings(db).text("nexcrate_pairing")
+    try:
+        stored = json.loads(raw) if raw else None
+    except ValueError:
+        return None
+    return stored if isinstance(stored, dict) else None
+
+
+def _forget_pairing(db: DbSession) -> None:
+    delete_secret_internal(db, "nexcrate_pairing")
+
+
+@router.post("/nexcrate/pairing", summary="Ask nexcrate for a key; the owner confirms it there")
+async def start_pairing(payload: PairingIn, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    url = payload.url.strip().rstrip("/")
+    if not url.startswith(("http://", "https://")):
+        raise fehler("invalid_setting", "This setting is unknown or its value is not allowed.", 422, key="nexcrate_url")
+    try:
+        asked = await nexcrate.NexcrateClient(url).pairing_ask("nexbeat", nexcrate.SCOPES)
+    except NexcrateError as error:
+        raise _nexcrate_problem(error) from error
+    stored = {
+        "url": url,
+        "id": asked.get("pairing_id"),
+        "secret": asked.get("secret"),
+        "code": asked.get("code"),
+        "expires_at": asked.get("expires_at"),
+        "poll_seconds": asked.get("poll_seconds") or 2,
+    }
+    save_settings(db, {"nexcrate_pairing": json.dumps(stored)}, internal=True)
+    return {"state": "pending", **{key: stored[key] for key in ("url", "code", "expires_at", "poll_seconds")}}
+
+
+@router.get("/nexcrate/pairing", summary="Whether the owner confirmed in nexcrate; stores the key once it comes")
+async def poll_pairing(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    stored = _pairing(db)
+    if stored is None:
+        return {"state": "none"}
+    shown = {key: stored.get(key) for key in ("url", "code", "expires_at", "poll_seconds")}
+    try:
+        answer = await nexcrate.NexcrateClient(stored["url"]).pairing_poll(str(stored["id"]), str(stored["secret"]))
+    except NexcrateError as error:
+        if error.code == "nexcrate_pairing_gone":
+            # Abgelaufen oder bei nexcrate vergessen. Ohne Geheimnis sagt nexcrate dasselbe.
+            _forget_pairing(db)
+            return {"state": "expired", **shown}
+        if error.transient:
+            return {"state": "pending", **shown, "error": error.code}
+        raise _nexcrate_problem(error) from error
+    state = answer.get("state") or "pending"
+    if state == "confirmed" and answer.get("key"):
+        # ⚠️ Zuerst speichern: nexcrate liefert den Schluessel genau einmal.
+        save_settings(db, {"nexcrate_url": stored["url"], "nexcrate_api_key": answer["key"]})
+        _forget_pairing(db)
+        if load_settings(db).mode == "nex":
+            _changed_target(db)
+        return {"state": "confirmed", **shown, "scopes": answer.get("scopes") or []}
+    if state in ("denied", "expired", "delivered"):
+        _forget_pairing(db)
+        # "delivered" ohne Schluessel in der Hand: die Antwort mit ihm ging verloren. Neu koppeln.
+        return {"state": "denied" if state == "denied" else "expired", **shown}
+    if _expired(stored.get("expires_at")):
+        _forget_pairing(db)
+        return {"state": "expired", **shown}
+    return {"state": "pending", **shown}
+
+
+def _expired(value: Any) -> bool:
+    try:
+        moment = datetime.fromisoformat(str(value))
+    except ValueError:
+        return False
+    return moment.tzinfo is not None and moment < datetime.now(UTC)
+
+
+@router.delete("/nexcrate/pairing", status_code=204, summary="Stop waiting for the owner")
+def cancel_pairing(_admin: AdminUser, db: DbSession) -> None:
+    # nexcrate kennt kein Zuruecknehmen einer Bitte; sie laeuft dort nach zehn Minuten ab.
+    _forget_pairing(db)
+
+
 class ListenBrainzTestIn(BaseModel):
     token: str | None = Field(default=None, max_length=200)
 
@@ -149,12 +338,17 @@ def webhook_info(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
     }
 
 
-@router.post("/library/sync", summary="Read the artist list from Lidarr now")
+@router.post("/library/sync", summary="Read the artist list from Lidarr or nexcrate now")
 async def sync_library(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    settings = load_settings(db)
     try:
-        count = await library.sync_artists(db, load_settings(db))
+        count = await library.sync_artists(db, settings)
     except LidarrError as error:
         raise fehler(error.code, "Lidarr could not be reached.", 502, detail=error.detail[:300]) from error
+    except NexcrateError as error:
+        raise _nexcrate_problem(error) from error
+    if count is None and settings.mode == "nex":
+        raise fehler("nexcrate_not_configured", "Connect nexcrate first.", 409)
     if count is None:
         raise fehler("lidarr_not_configured", "Enter the Lidarr address and API key first.", 409)
     return {"artists": count}

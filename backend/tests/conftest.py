@@ -160,7 +160,9 @@ def fake_lidarr(admin_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> Fa
         },
     )
     assert response.status_code == 200, response.text
-    monkeypatch.setattr(lidarr, "client_for", lambda settings: fake if settings.lidarr_configured else None)
+    real = lidarr.client_for
+    # Dieselbe Pruefung wie der echte Client (eingetragen und ARR-Modus), nur mit der Attrappe dahinter.
+    monkeypatch.setattr(lidarr, "client_for", lambda settings: fake if real(settings) is not None else None)
     return fake
 
 

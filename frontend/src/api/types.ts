@@ -23,7 +23,7 @@ export type User = {
   quota: Quota
 }
 
-export type Me = User & { is_admin: boolean }
+export type Me = User & { is_admin: boolean; request_target?: 'lidarr' | 'nexcrate' | null }
 
 export type AppConfig = {
   version: string
@@ -257,6 +257,10 @@ export type AppSettings = {
   lidarr_quality_profile_id: number | null
   lidarr_metadata_profile_id: number | null
   lidarr_dry_run: boolean
+  request_mode: '' | 'arr' | 'nex'
+  nexcrate_url: string
+  nexcrate_api_key: string
+  nexcrate_api_key_set: boolean
   source_listenbrainz: boolean
   source_deezer: boolean
   lastfm_api_key: string
@@ -285,3 +289,35 @@ export type LidarrOptions = {
 }
 
 export type WebhookInfo = { path: string; username: string; password: string; events: string[] }
+
+/** Was nexbeat ueber eine nexcrate weiss, aus `/api/v1/system` und `/api/v1/versions?kind=album`. */
+export type NexcrateFacts = {
+  ok: boolean
+  version: string
+  contract: number | null
+  stage: string | null
+  music: boolean
+  scopes: string[]
+  can_request: boolean
+  music_versions: { name: string; tier: string | null; ready: boolean; reasons: string[] }[]
+}
+
+export type NexcrateStatus = {
+  url: string
+  connected: boolean
+  key_hint: string | null
+  events: { connected: boolean; since: string | null; last_event_at: string | null; last_seq: number | null; error: string | null }
+  artists: number
+  facts: NexcrateFacts | null
+  error: { code: string; detail: string } | null
+}
+
+export type NexcratePairing = {
+  state: 'none' | 'pending' | 'confirmed' | 'denied' | 'expired'
+  url?: string
+  code?: string
+  expires_at?: string
+  poll_seconds?: number
+  scopes?: string[]
+  error?: string
+}
