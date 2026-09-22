@@ -16,9 +16,9 @@ import { WhatsNewDialog } from './WhatsNewDialog'
  */
 export function WhatsNewAfterUpdate() {
   const { i18n } = useTranslation()
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, config } = useAuth()
   const [closed, setClosed] = useState(false)
-  const version = latestVersion()
+  const version = latestVersion(config?.version)
   if (closed || !user || !version || !unseen(user.seen_version, version)) return null
   const entry = entryFor(version, i18n.language)
   if (!entry) return null

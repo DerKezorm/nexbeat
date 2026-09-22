@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { api } from '../api/client'
 import type { AboutInfo, Me } from '../api/types'
 import { AuthContext, type AuthState } from '../auth/AuthContext'
-import { UserMenu } from '../components/UserMenu'
+import { AppShell } from '../components/AppShell'
 import { WhatsNewAfterUpdate } from '../components/WhatsNewAfterUpdate'
 import i18n, { startI18n } from '../i18n'
 import { latestVersion } from '../lib/whatsnew'
@@ -113,16 +113,26 @@ describe('what is new after an update', () => {
   })
 })
 
-describe('the menu', () => {
-  it('lists about nexbeat for everyone and marks a newer version for admins only', () => {
+describe('the footer', () => {
+  it('links about nexbeat for everyone and shows a newer version to admins only', async () => {
     vi.spyOn(api, 'get').mockResolvedValue([])
-    const { unmount } = show(<UserMenu />, auth({ update_available: true }))
-    fireEvent.click(screen.getByRole('button', { expanded: false }))
-    // Ein Nutzer sieht den Eintrag, aber keinen Hinweis auf eine neuere Fassung.
-    expect(screen.getByRole('menuitem', { name: i18n.t('nav.about') })).toBeInTheDocument()
+    const user = auth({ update_available: true })
+    user.config = { version: '1.1.0' } as AuthState['config']
+    const { unmount } = show(<AppShell />, user)
+    expect(await screen.findByRole('link', { name: i18n.t('about.title') })).toBeInTheDocument()
+    expect(screen.queryByText(i18n.t('about.updateShort'))).not.toBeInTheDocument()
     unmount()
-    show(<UserMenu />, auth({ is_admin: true, update_available: true }))
-    fireEvent.click(screen.getByRole('button', { expanded: false }))
-    expect(screen.getByRole('menuitem', { name: new RegExp(`${i18n.t('nav.about')}\\s*${i18n.t('about.newBadge')}`) })).toBeInTheDocument()
+    const admin = auth({ is_admin: true, update_available: true })
+    admin.config = { version: '1.1.0' } as AuthState['config']
+    show(<AppShell />, admin)
+    expect(await screen.findByText(i18n.t('about.updateShort'))).toBeInTheDocument()
+  })
+})
+
+describe('the running version', () => {
+  it('never shows an entry newer than the running version', () => {
+    expect(latestVersion('1.0.0')).toBeNull()
+    expect(latestVersion('1.1.0')).toBe('1.1.0')
+    expect(latestVersion('9.0.0')).toBe(latestVersion())
   })
 })

@@ -8,7 +8,7 @@ import type { MusicRequest } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { Avatar } from './Avatar'
 
-type Entry = { to: string; labelKey: string; adminOnly?: boolean; badge?: number; dot?: boolean }
+type Entry = { to: string; labelKey: string; adminOnly?: boolean; badge?: number }
 
 /**
  * Aufklappmenue am eigenen Namen, wie in Nexview: Alles Persoenliche und die
@@ -56,8 +56,6 @@ export function UserMenu() {
       { to: '/anfragen', labelKey: 'nav.myRequests' },
       { to: '/admin/anfragen', labelKey: 'nav.allRequests', adminOnly: true, badge: waiting },
       { to: '/admin/einstellungen', labelKey: 'nav.settings', adminOnly: true },
-      // Fuer alle; der Punkt "Neu" nur fuer Admins, wenn GitHub eine neuere Fassung kennt.
-      { to: '/ueber', labelKey: 'nav.about', dot: user.is_admin && user.update_available },
     ] as Entry[]
   ).filter((entry) => !entry.adminOnly || user.is_admin)
 
@@ -72,9 +70,7 @@ export function UserMenu() {
       >
         <span className="relative">
           <Avatar name={name} />
-          {(waiting > 0 || (user.is_admin && user.update_available)) && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent-500 ring-2 ring-ink-950" />
-          )}
+          {waiting > 0 && <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent-500 ring-2 ring-ink-950" />}
         </span>
         <span className="hidden max-w-32 truncate text-sm text-mist-300 sm:inline">{name}</span>
         <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 text-mist-500" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -116,9 +112,6 @@ export function UserMenu() {
               {t(entry.labelKey)}
               {entry.badge ? (
                 <span className="ml-auto rounded-full bg-accent-500 px-1.5 text-[10px] font-bold text-white">{entry.badge}</span>
-              ) : null}
-              {entry.dot ? (
-                <span className="ml-auto rounded-full bg-accent-500 px-1.5 text-[10px] font-bold text-white">{t('about.newBadge')}</span>
               ) : null}
             </NavLink>
           ))}

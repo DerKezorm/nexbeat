@@ -27,7 +27,7 @@ function navClass(isActive: boolean, compact = false): string {
 /** Rahmen der angemeldeten Ansicht, gebaut wie in Nexview: Kopfzeile, Pillen, Inhalt, Fusszeile. */
 export function AppShell() {
   const { t } = useTranslation()
-  const { config } = useAuth()
+  const { config, user } = useAuth()
   const { pathname } = useLocation()
   // Die Seite eines Genres gehoert zum Entdecken, auch wenn ihre Adresse anders anfaengt.
   const active = (to: string, isActive: boolean) => isActive || (to === '/' && pathname.startsWith('/genre/'))
@@ -71,7 +71,10 @@ export function AppShell() {
 
       <footer className="relative z-10 border-t border-ink-700/60">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-5 text-xs text-mist-600 sm:px-6">
-          <span>{t('footer.tagline')}</span>
+          {/* Wie in Nexview: "Ueber" steht hier, fuer alle, nicht im Menue. */}
+          <NavLink to="/ueber" className="transition-colors hover:text-mist-300">
+            {t('about.title')}
+          </NavLink>
           {config && (
             <>
               <span aria-hidden="true">·</span>
@@ -80,6 +83,15 @@ export function AppShell() {
           )}
           <span aria-hidden="true">·</span>
           <span>{t('footer.sources')}</span>
+          {user?.is_admin && user.update_available && (
+            <NavLink
+              to="/ueber"
+              className="inline-flex items-center gap-1.5 rounded-full bg-accent-500/15 px-2.5 py-1 font-medium text-accent-400 transition-colors hover:bg-accent-500/25"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-400" aria-hidden="true" />
+              {t('about.updateShort')}
+            </NavLink>
+          )}
         </div>
       </footer>
     </div>

@@ -54,9 +54,12 @@ export function compareVersions(a: string, b: string): number {
   return 0
 }
 
-/** Die neueste Fassung mit einem Eintrag. */
-export function latestVersion(): string | null {
-  const versions = Object.keys(FILES.en.entries)
+/**
+ * Die neueste Fassung mit einem Eintrag, hoechstens die laufende. 22.09.2026: Der Text fuer die naechste Fassung
+ * stand schon im Code, die Fussleiste sagte 1.0.0, das Fenster 1.1.0.
+ */
+export function latestVersion(running?: string | null): string | null {
+  const versions = Object.keys(FILES.en.entries).filter((version) => !running || compareVersions(version, running) <= 0)
   return versions.length ? versions.sort((a, b) => compareVersions(b, a))[0] : null
 }
 

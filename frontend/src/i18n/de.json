@@ -31,8 +31,7 @@
     "myRequests": "Meine Anfragen",
     "allRequests": "Alle Anfragen",
     "settings": "Einstellungen",
-    "logout": "Abmelden",
-    "about": "Über nexbeat"
+    "logout": "Abmelden"
   },
   "footer": {
     "tagline": "nexbeat",
@@ -625,7 +624,7 @@
     "current": "Du hast die neueste Fassung. Zuletzt nachgesehen {{when}}.",
     "notChecked": "Noch nicht nachgesehen.",
     "checkNow": "Jetzt nachsehen",
-    "newBadge": "Neu"
+    "updateShort": "Update verfügbar"
   },
   "whatsNew": {
     "title": "Was ist neu · {{version}}",

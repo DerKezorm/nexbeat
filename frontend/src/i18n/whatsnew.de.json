@@ -10,13 +10,13 @@
         },
         {
           "title": "Über nexbeat",
-          "body": "Fassung, Lizenz und dieser Text stehen jetzt im Menü an deinem Namen. Dort lässt sich dieses Fenster auch später noch einmal öffnen.",
-          "where": "Menü an deinem Namen › Über nexbeat"
+          "body": "Fassung, Lizenz und dieser Text stehen jetzt unten in der Fußzeile unter „Über nexbeat“. Dort lässt sich dieses Fenster auch später noch einmal öffnen.",
+          "where": "Fußzeile › Über nexbeat"
         },
         {
           "title": "Update-Hinweis",
-          "body": "nexbeat sieht einmal am Tag bei GitHub nach, ob es eine neuere Fassung gibt, und zeigt es auf der Seite und im Menü. Abschalten lässt es sich auf derselben Seite.",
-          "where": "Menü an deinem Namen › Über nexbeat › Updates",
+          "body": "nexbeat sieht einmal am Tag bei GitHub nach, ob es eine neuere Fassung gibt, und zeigt es in der Fußzeile und auf der Seite. Abschalten lässt es sich auf derselben Seite.",
+          "where": "Fußzeile › Über nexbeat › Updates",
           "admin": true
         }
       ],

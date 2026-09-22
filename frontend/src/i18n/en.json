@@ -31,8 +31,7 @@
     "myRequests": "My requests",
     "allRequests": "All requests",
     "settings": "Settings",
-    "logout": "Sign out",
-    "about": "About nexbeat"
+    "logout": "Sign out"
   },
   "footer": {
     "tagline": "nexbeat",
@@ -625,7 +624,7 @@
     "current": "You have the newest version. Last checked {{when}}.",
     "notChecked": "Not checked yet.",
     "checkNow": "Check now",
-    "newBadge": "New"
+    "updateShort": "Update available"
   },
   "whatsNew": {
     "title": "What is new · {{version}}",

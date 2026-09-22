@@ -10,13 +10,13 @@
         },
         {
           "title": "About nexbeat",
-          "body": "Version, licence and this text now live in the menu at your name. You can open this window again from there.",
-          "where": "Menu at your name › About nexbeat"
+          "body": "Version, licence and this text now live at the bottom, under “About nexbeat” in the footer. You can open this window again from there.",
+          "where": "Footer › About nexbeat"
         },
         {
           "title": "Update hint",
-          "body": "Once a day nexbeat asks GitHub whether there is a newer version and shows it on the page and in the menu. It can be switched off on the same page.",
-          "where": "Menu at your name › About nexbeat › Updates",
+          "body": "Once a day nexbeat asks GitHub whether there is a newer version and shows it in the footer and on the page. It can be switched off on the same page.",
+          "where": "Footer › About nexbeat › Updates",
           "admin": true
         }
       ],

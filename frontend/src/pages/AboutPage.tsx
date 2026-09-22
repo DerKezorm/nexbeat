@@ -61,7 +61,7 @@ export function AboutPage() {
 
   const info = about.data
   const update = info.update
-  const newest = latestVersion()
+  const newest = latestVersion(info.version)
   const entry = newest ? entryFor(newest, i18n.language) : null
 
   return (
