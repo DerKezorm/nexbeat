@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { ApiError, api, errorMessage } from '../../api/client'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { Symbol } from '../../components/Symbol'
 import { Button, ErrorBanner, Field, OkBanner, PageLoading, SELECT_CLASS, Section, Toggle } from '../../components/ui'
 import { useSettings } from './useSettings'
 
@@ -49,20 +50,17 @@ const STEP_LABELS: Record<string, string> = {
 
 const PROVIDERS_KEY = ['oidc-providers']
 
-/** Anmeldung ueber OpenID Connect, wie in nexdeck: oben der authentik-Knopf, darunter die Anbieter. */
+/** Anmeldung ueber OpenID Connect, wie in nexdiary: eine Karte, die Anbieter und darunter authentik in einem Schritt. */
 export function AdminSigninSettings() {
   const { settings, query: settingsQuery } = useSettings()
   if (settingsQuery.isPending) return <PageLoading />
   const base = (settings?.public_url ?? '').replace(/\/+$/, '')
   return (
-    <div className="flex flex-col gap-6">
-      <AuthentikCard base={base} />
-      <ProvidersCard base={base} />
-    </div>
+    <ProvidersCard base={base} />
   )
 }
 
-function AuthentikCard({ base }: { base: string }) {
+function AuthentikBlock({ base }: { base: string }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [url, setUrl] = useState('')
@@ -87,7 +85,11 @@ function AuthentikCard({ base }: { base: string }) {
   })
 
   return (
-    <Section title={t('signin.authentikTitle')} intro={t('signin.authentikIntro')}>
+    <div className="flex flex-col gap-4 border-t border-ink-700 pt-4">
+      <div>
+        <h3 className="text-sm font-semibold text-mist-200">{t('signin.authentikTitle')}</h3>
+        <p className="mt-1 text-sm text-mist-500">{t('signin.authentikIntro')}</p>
+      </div>
       {!base && <p className="text-sm text-warn-500">{t('signin.authentikNoAddress')}</p>}
       <form
         className="flex flex-col gap-4"
@@ -120,6 +122,7 @@ function AuthentikCard({ base }: { base: string }) {
             {t('signin.authentikRun')}
           </Button>
           <Button type="button" variant="ghost" loading={blueprint.isPending} disabled={!base} onClick={() => blueprint.mutate()}>
+            {!blueprint.isPending && <Symbol name="download" />}
             {t('signin.authentikBlueprint')}
           </Button>
         </div>
@@ -137,7 +140,7 @@ function AuthentikCard({ base }: { base: string }) {
           {run.data.ok && <OkBanner message={t('signin.authentikDone')} />}
         </div>
       )}
-    </Section>
+    </div>
   )
 }
 
@@ -319,6 +322,8 @@ function ProvidersCard({ base }: { base: string }) {
           )}
         </div>
       </form>
+
+      <AuthentikBlock base={base} />
 
       <ConfirmDialog
         open={deleting !== null}
