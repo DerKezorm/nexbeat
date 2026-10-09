@@ -9,7 +9,7 @@ import { useAuth } from '../../auth/useAuth'
 import { Avatar } from '../../components/Avatar'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Button, Card, ErrorBanner, Field, OkBanner, PageLoading, SELECT_CLASS, Toggle } from '../../components/ui'
-import { formatDate } from '../../lib/format'
+import { formatDate, shownEmail } from '../../lib/format'
 import { useTarget } from '../../lib/target'
 import { AdminApiKeys } from './AdminApiKeys'
 
@@ -224,7 +224,8 @@ export function AdminUsersSettings() {
                         {user.requires_approval && <span className="rounded-full bg-warn-500/15 px-2 py-0.5 text-[11px] text-warn-500">{t('users.approvalBadge')}</span>}
                       </p>
                       <p className="truncate text-xs text-mist-500">
-                        @{user.username} · {user.email}
+                        @{user.username}
+                        {shownEmail(user.email) && ` · ${user.email}`}
                       </p>
                     </div>
                     <div className="text-right">

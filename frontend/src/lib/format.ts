@@ -37,3 +37,11 @@ export function formatDuration(seconds: number | null | undefined): string {
   const rest = Math.round(seconds % 60)
   return `${minutes}:${String(rest).padStart(2, '0')}`
 }
+
+/**
+ * Die Mailadresse zum Anzeigen, oder leer. Konten aus einem Anmeldeanbieter ohne Adresse (Entra ID ohne
+ * optionalen Claim) tragen eine Ersatzadresse unter `.invalid`, die niemand sehen soll.
+ */
+export function shownEmail(email: string): string {
+  return email.toLowerCase().endsWith('@oidc.invalid') ? '' : email
+}

@@ -13,7 +13,7 @@ from ..deps import CurrentUser, DbSession, SessionUser
 from ..meldungen import fehler, meldung
 from ..models import User, utcnow
 from ..schemas import LoginIn, MeOut, MeUpdate, PasswordChangeIn, TokenPair, UserOut
-from ..security import decode_token, dummy_hash, hash_password, verify_password
+from ..security import decode_token, dummy_hash, has_usable_password, hash_password, verify_password
 from ..services import anmeldebremse, quota, sitzung, updates
 from ..services.settings_service import load_settings
 from ..services.tokens import normalize_email
@@ -39,6 +39,7 @@ def me_out(db: Session, user: User) -> MeOut:
             "quota": quota.as_dict(state),
             "request_target": settings.target,
             "seen_version": user.seen_version,
+            "has_password": has_usable_password(user.password_hash),
             "update_available": bool(
                 user.is_admin and settings.flag("update_check") and (updates.cached() or _NO_UPDATE).available
             ),
@@ -69,8 +70,9 @@ def login(payload: LoginIn, request: Request, response: Response, db: DbSession)
     wait = anmeldebremse.wait_seconds(key)
     if wait:
         raise _slow_down(wait, "Too many failed sign-ins. Try again later.")
-    # Auch ohne Konto wird geprueft, damit die Antwortzeit nichts verraet.
-    password_ok = verify_password(payload.password, user.password_hash if user else dummy_hash())
+    # Auch ohne Konto (oder ohne Passwort) wird geprueft, damit die Antwortzeit nichts verraet.
+    usable = user is not None and has_usable_password(user.password_hash)
+    password_ok = verify_password(payload.password, user.password_hash if user and usable else dummy_hash()) and usable
     if user is None or not password_ok or not user.is_active:
         anmeldebremse.failed(key)
         raise fehler("invalid_credentials", "Username or password is wrong.", 401)
@@ -134,7 +136,8 @@ def change_password(
     wait = anmeldebremse.wait_seconds(key)
     if wait:
         raise _slow_down(wait, "Too many wrong passwords. Try again later.")
-    if not verify_password(payload.current_password, user.password_hash):
+    # Ein Konto ohne Passwort (ueber einen Anmeldeanbieter entstanden) setzt sein erstes ohne das alte.
+    if has_usable_password(user.password_hash) and not verify_password(payload.current_password, user.password_hash):
         anmeldebremse.failed(key)
         raise fehler("wrong_password", "The current password is wrong.", 400)
     anmeldebremse.succeeded(key)

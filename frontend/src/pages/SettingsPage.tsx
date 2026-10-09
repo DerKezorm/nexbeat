@@ -6,17 +6,19 @@ import { TabRow, type Tab } from '../components/TabRow'
 import { PageTitle } from '../components/ui'
 import { AdminAddressSettings } from './settings/AdminAddressSettings'
 import { AdminServicesSettings } from './settings/AdminServicesSettings'
+import { AdminSigninSettings } from './settings/AdminSigninSettings'
 import { AdminMailSettings } from './settings/AdminMailSettings'
 import { AdminQuotaSettings } from './settings/AdminQuotaSettings'
 import { AdminSourcesSettings } from './settings/AdminSourcesSettings'
 import { AdminUsersSettings } from './settings/AdminUsersSettings'
 
-type TabKey = 'address' | 'mail' | 'lidarr' | 'sources' | 'users' | 'quota'
+type TabKey = 'address' | 'mail' | 'signin' | 'lidarr' | 'sources' | 'users' | 'quota'
 
 /** Was unter "System" liegt: die Anlage selbst, nicht der Alltag. */
 const SYSTEM: Tab<TabKey>[] = [
   { value: 'address', label: 'settings.tabAddress', symbol: 'address' },
   { value: 'mail', label: 'settings.tabMail', symbol: 'mail' },
+  { value: 'signin', label: 'settings.tabSignin', symbol: 'key' },
 ]
 
 /** Was unter "Dienste" liegt: wohin nexbeat sich verbindet. */
@@ -32,6 +34,7 @@ const SERVICES: Tab<TabKey>[] = [
 const FROM_ADDRESS: Record<string, TabKey> = {
   adresse: 'address',
   mail: 'mail',
+  anmeldung: 'signin',
   lidarr: 'lidarr',
   quellen: 'sources',
   benutzer: 'users',
@@ -71,6 +74,7 @@ export function SettingsPage() {
 
       {tab === 'address' && <AdminAddressSettings />}
       {tab === 'mail' && <AdminMailSettings />}
+      {tab === 'signin' && <AdminSigninSettings />}
       {tab === 'lidarr' && <AdminServicesSettings />}
       {tab === 'sources' && <AdminSourcesSettings />}
       {tab === 'users' && <AdminUsersSettings />}

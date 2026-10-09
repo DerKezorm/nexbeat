@@ -8,8 +8,9 @@ import type { Me } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { Button, ErrorBanner, Field, OkBanner, PageTitle, Section, SELECT_CLASS } from '../components/ui'
 import { changeLanguage, isLanguage } from '../i18n'
-import { formatDate } from '../lib/format'
+import { formatDate, shownEmail } from '../lib/format'
 import { ApiKeysSection } from './profile/ApiKeysSection'
+import { ProviderLinksSection } from './profile/ProviderLinksSection'
 
 export function ProfilePage() {
   const { t, i18n } = useTranslation()
@@ -35,12 +36,18 @@ export function ProfilePage() {
   })
 
   if (!user) return null
+  // Konten aus einem Anmeldeanbieter setzen ihr erstes Passwort ohne ein altes.
+  const hasPassword = user.has_password !== false
 
   return (
     <div className="flex flex-col gap-6">
       <PageTitle>{t('profile.title')}</PageTitle>
 
-      <Section title={t('profile.account')} intro={t('profile.accountIntro', { username: user.username, email: user.email })}>
+      <Section title={t('profile.account')} intro={
+          shownEmail(user.email)
+            ? t('profile.accountIntro', { username: user.username, email: user.email })
+            : t('profile.accountIntroNoEmail', { username: user.username })
+        }>
         <form
           className="flex flex-col gap-4"
           onSubmit={(event: FormEvent) => {
@@ -69,7 +76,7 @@ export function ProfilePage() {
         </form>
       </Section>
 
-      <Section title={t('profile.password')} intro={t('profile.passwordIntro')}>
+      <Section title={t('profile.password')} intro={hasPassword ? t('profile.passwordIntro') : t('profile.noPasswordIntro')}>
         <form
           className="flex flex-col gap-4"
           onSubmit={(event: FormEvent) => {
@@ -78,14 +85,16 @@ export function ProfilePage() {
           }}
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label={t('profile.currentPassword')}
-              type="password"
-              value={passwords.current}
-              onChange={(event) => setPasswords({ ...passwords, current: event.target.value })}
-              autoComplete="current-password"
-              required
-            />
+            {hasPassword && (
+              <Field
+                label={t('profile.currentPassword')}
+                type="password"
+                value={passwords.current}
+                onChange={(event) => setPasswords({ ...passwords, current: event.target.value })}
+                autoComplete="current-password"
+                required
+              />
+            )}
             <Field
               label={t('profile.newPassword')}
               type="password"
@@ -101,7 +110,7 @@ export function ProfilePage() {
           {changePassword.isSuccess && <OkBanner message={t('profile.passwordChanged')} />}
           <div>
             <Button type="submit" loading={changePassword.isPending}>
-              {t('profile.changePassword')}
+              {hasPassword ? t('profile.changePassword') : t('profile.setPassword')}
             </Button>
           </div>
         </form>
@@ -120,6 +129,8 @@ export function ProfilePage() {
         </p>
         {user.requires_approval && <p className="text-sm text-warn-500">{t('request.needsApproval')}</p>}
       </Section>
+
+      <ProviderLinksSection />
 
       <ApiKeysSection />
     </div>

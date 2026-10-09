@@ -30,6 +30,8 @@ export type Me = User & {
   seen_version?: string | null
   /** Nur Admins: GitHub kennt eine neuere Fassung. */
   update_available?: boolean
+  /** Falsch bei Konten, die ueber einen Anmeldeanbieter entstanden und noch kein Passwort haben. */
+  has_password?: boolean
 }
 
 export type AboutInfo = {
@@ -47,6 +49,8 @@ export type AppConfig = {
   default_language: 'de' | 'en'
   previews_enabled: boolean
   requests_enabled: boolean
+  /** Eingeschaltete Anmeldeanbieter, je ein Knopf auf der Anmeldeseite. */
+  oidc_providers?: { slug: string; label: string }[]
 }
 
 export type RequestStatus =

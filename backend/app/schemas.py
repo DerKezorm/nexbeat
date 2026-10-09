@@ -65,6 +65,8 @@ class MeOut(UserOut):
     update_available: bool = False
     # Wohin Anfragen gehen, fuer die Texte der Oberflaeche: lidarr, nexcrate oder null.
     request_target: str | None = None
+    # Falsch bei Konten, die ueber einen Anmeldeanbieter entstanden und noch kein Passwort haben.
+    has_password: bool = True
 
 
 class AdminUserOut(UserOut):
@@ -78,7 +80,8 @@ class MeUpdate(BaseModel):
 
 
 class PasswordChangeIn(BaseModel):
-    current_password: str = Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)
+    # Leer erlaubt fuer Konten ohne Passwort (ueber einen Anmeldeanbieter entstanden): Sie setzen ihr erstes.
+    current_password: str = Field(default="", max_length=MAX_PASSWORD_LENGTH)
     new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
 
@@ -139,3 +142,24 @@ class ResetPasswordIn(BaseModel):
 
 class TestMailIn(BaseModel):
     to: str | None = Field(default=None, max_length=255)
+
+
+class OidcProviderIn(BaseModel):
+    # Kurzname, Teil der Rueckleitadresse.
+    slug: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9-]+$")
+    label: str = Field(min_length=1, max_length=80)
+    issuer_url: str = Field(min_length=8, max_length=300, pattern=r"^https?://")
+    client_id: str = Field(min_length=1, max_length=300)
+    # Leer beim Aendern: das gespeicherte bleibt.
+    client_secret: str = Field(default="", max_length=600)
+    scopes: str = Field(default="openid profile email", max_length=200)
+    enabled: bool = True
+    auto_create: bool = True
+    default_role: Role = Role.user
+
+
+class AuthentikSetupIn(BaseModel):
+    """Wo authentik steht, und ein Token, der dort Anwendungen anlegen darf. Der Token wird nicht gespeichert."""
+
+    url: str = Field(min_length=1, max_length=300)
+    token: str = Field(min_length=1, max_length=2000)

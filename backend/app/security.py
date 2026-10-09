@@ -40,10 +40,20 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, password_hash: str) -> bool:
+    if not has_usable_password(password_hash):
+        return False
     try:
         return bcrypt.checkpw(_password_bytes(password), password_hash.encode("utf-8"))
     except ValueError:
         return False
+
+
+#: Steht bei Konten, die ueber einen Anmeldeanbieter entstanden sind. Kein bcrypt-Hash, also passt kein Passwort.
+UNUSABLE_PASSWORD = "!oidc"
+
+
+def has_usable_password(password_hash: str) -> bool:
+    return bool(password_hash) and not password_hash.startswith("!")
 
 
 @cache

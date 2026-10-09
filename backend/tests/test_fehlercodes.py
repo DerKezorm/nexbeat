@@ -15,7 +15,7 @@ I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n"
 
 PATTERNS = [
     re.compile(
-        r"\b(?:fehler|meldung|LidarrError|NexcrateError|MusicBrainzError|RequestProblem|MailError|SettingsError|ApiKeyProblem)\(\s*"
+        r"\b(?:fehler|meldung|LidarrError|NexcrateError|MusicBrainzError|RequestProblem|MailError|SettingsError|ApiKeyProblem|OidcError|refuse)\(\s*"
         r'"([a-z][a-z0-9_]+)"'
     ),
     re.compile(r'_fail\(\s*db,\s*request,\s*"([a-z][a-z0-9_]+)"'),

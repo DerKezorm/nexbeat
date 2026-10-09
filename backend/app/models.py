@@ -12,7 +12,7 @@ from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -160,6 +160,44 @@ class ApiKey(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(default=None)
 
     user: Mapped[User] = relationship()
+
+
+class OidcProvider(Base):
+    """Ein Anmeldeanbieter per OpenID Connect: authentik, Entra ID, Keycloak, Pocket ID und andere."""
+
+    __tablename__ = "oidc_providers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Teil der Rueckleitadresse, also fest, sobald der Anbieter sie kennt.
+    slug: Mapped[str] = mapped_column(String(40), unique=True)
+    label: Mapped[str] = mapped_column(String(80))
+    issuer_url: Mapped[str] = mapped_column(String(300))
+    client_id: Mapped[str] = mapped_column(String(300))
+    # Verschluesselt (``crypto.encrypt``), leer bei oeffentlichen Clients.
+    client_secret: Mapped[str] = mapped_column(String(600), default="")
+    scopes: Mapped[str] = mapped_column(String(200), default="openid profile email")
+    enabled: Mapped[bool] = mapped_column(default=True)
+    # Bei der ersten Anmeldung ein Konto anlegen, mit dieser Rolle.
+    auto_create: Mapped[bool] = mapped_column(default=True)
+    default_role: Mapped[Role] = enum_column(Role, default=Role.user)
+
+
+class OidcLink(Base):
+    """Welche Identitaet bei welchem Anbieter zu welchem Konto gehoert.
+
+    ⚠️ Zugeordnet wird nur ueber ``subject``, nie ueber die Mailadresse: Bei authentik kann jeder seine
+    Adresse selbst aendern, und Entra ID buergt fuer keine. ``email`` steht nur zur Anzeige hier.
+    """
+
+    __tablename__ = "oidc_links"
+    __table_args__ = (UniqueConstraint("provider_id", "subject"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider_id: Mapped[int] = mapped_column(ForeignKey("oidc_providers.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    subject: Mapped[str] = mapped_column(String(300))
+    email: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
 class Setting(Base):
