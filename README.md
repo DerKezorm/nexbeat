@@ -31,6 +31,9 @@ library.
   requests do not count.
 - **Accounts:** invitations and password reset by email, or as a link to pass
   on when no mail server is set up.
+- **Single sign-on:** sign in through authentik, Microsoft Entra ID, Keycloak,
+  Authelia, Pocket ID or any other OpenID Connect provider. authentik is set up
+  in one click (or with a blueprint).
 - **About and updates:** version, source and licence in the footer. After an
   update every account sees once what is new; administrators see when a newer
   version is out.
@@ -129,6 +132,31 @@ The promised interface is under `/api/v1` and described at `/api/docs`:
 Administrators see every token of the installation under Settings > Users.
 Changing the password leaves tokens working; deactivating an account stops
 them.
+
+## Sign-in with OpenID Connect
+
+Under **Settings > System > Sign-in** an administrator adds sign-in providers.
+Each one gets a button on the sign-in page. The return address to enter at the
+provider is `<public address>/api/auth/oidc/<short name>/callback`, so the
+public address under Settings > System > Address has to be set first.
+
+- **authentik in one step:** enter the address of authentik and an API token
+  that may create applications. nexbeat creates the signing key, a scope
+  mapping, the provider and the application, and adds itself as a sign-in
+  provider. The token is not stored. Rather not hand one over? Download the
+  blueprint instead and import it in authentik.
+- **Microsoft Entra ID:** register a web app, enter the return address (Entra
+  only accepts https, except for localhost) and create a client secret. Issuer:
+  `https://login.microsoftonline.com/<tenant ID>/v2.0`, or `common` and
+  `organizations` for several tenants. Entra sends an email address only as
+  the optional claim `email`; nexbeat works without it.
+- **Anything else** that speaks OpenID Connect: issuer URL, client ID and
+  secret.
+
+Accounts are matched by the provider's subject only, never by email address.
+An existing account is linked once under **Profile > Sign-in providers**. Per
+provider, accounts can be created on first sign-in with a chosen role; they
+start without a password and can set one in their profile.
 
 ## Data sources
 

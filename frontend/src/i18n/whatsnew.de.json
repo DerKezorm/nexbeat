@@ -68,6 +68,33 @@
         "Ein Passwortwechsel lässt Token weiterlaufen. Nicht mehr gebrauchte widerrufst du im Profil.",
         "Die Schnittstelle für eigene Skripte steht unter /api/v1 und ist unter /api/docs beschrieben."
       ]
+    },
+    "1.3.0": {
+      "lead": "Anmelden geht jetzt auch über authentik, Microsoft Entra ID, Keycloak, Authelia, Pocket ID und jeden anderen Anbieter mit OpenID Connect. authentik richtet nexbeat dabei mit einem Klick selbst ein.",
+      "sections": [
+        {
+          "title": "Mit deinem Anbieter anmelden",
+          "body": "Auf der Anmeldeseite steht für jeden eingerichteten Anbieter ein eigener Knopf. Hast du schon ein Konto, verknüpfst du es einmal im Profil, danach geht die Anmeldung auch ohne Passwort. Wer über einen Anbieter neu dazukommt, kann sich dort später ein eigenes Passwort setzen.",
+          "where": "Menü an deinem Namen › Profil › Anmeldeanbieter"
+        },
+        {
+          "title": "authentik in einem Schritt",
+          "body": "Mit der Adresse von authentik und einem API-Token legt nexbeat Provider und Anwendung dort selbst an und trägt sich als Anmeldeanbieter ein. Der Token wird nur dafür benutzt und nicht gespeichert. Wer keinen Token herausgeben will, lädt stattdessen einen Blueprint herunter.",
+          "where": "Einstellungen › System › Anmeldung",
+          "admin": true
+        },
+        {
+          "title": "Anbieter selbst eintragen",
+          "body": "Jeder Anbieter mit OpenID Connect lässt sich von Hand eintragen, auch Microsoft Entra ID mit einem oder mehreren Mandanten. Je Anbieter legst du fest, ob neue Konten bei der ersten Anmeldung entstehen und mit welcher Rolle.",
+          "where": "Einstellungen › System › Anmeldung",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Konten werden nur über die Kennung des Anbieters zugeordnet, nie über die Mailadresse. Ein bestehendes Konto kommt nur über die Verknüpfung im Profil an einen Anbieter.",
+        "Ein Anbieter, über den Konten ohne Passwort entstanden sind, lässt sich erst nach einer Rückfrage löschen."
+      ]
     }
   }
 }
