@@ -458,3 +458,190 @@ async def test_only_a_trusted_proxy_is_believed(peer: str, kind: str, header: by
     }
     await wrapped(scope, None, None)
     assert found["scheme"] == seen
+
+
+def test_a_forwarded_sender_feeds_the_brake_only_behind_a_trusted_proxy(admin_client: TestClient, net: Any) -> None:
+    """Die Bremse zaehlt den Besucher hinter dem Proxy, nicht den Proxy (uvicorns ``ProxyHeadersMiddleware``)."""
+    sso = net.add(fakes.FakeProvider())
+    _add(admin_client, sso, "sso")
+    forwarded = {"x-forwarded-for": "198.51.100.4"}
+
+    def refuse_often(trusted: str) -> None:
+        # ``testclient`` ist der Absender, den Starlettes TestClient meldet.
+        stranger = TestClient(behind_proxy(app, trusted), headers=forwarded)
+        for _ in range(anmeldebremse.FREE_ATTEMPTS + 1):
+            started = stranger.get("/api/oidc/sso/start", follow_redirects=False)
+            state = fakes.query_of(started.headers["location"])["state"]
+            stranger.get(f"/api/oidc/sso/callback?code=unknown&state={state}", follow_redirects=False)
+
+    refuse_often("testclient")
+    assert anmeldebremse.wait_seconds(anmeldebremse.oidc_key("198.51.100.4")) > 0
+    assert anmeldebremse.wait_seconds(anmeldebremse.oidc_key("testclient")) == 0
+    anmeldebremse.reset_all()
+    # Ein Absender, dem nicht getraut wird, kann sich keine andere Adresse geben.
+    refuse_often("203.0.113.9")
+    assert anmeldebremse.wait_seconds(anmeldebremse.oidc_key("198.51.100.4")) == 0
+    assert anmeldebremse.wait_seconds(anmeldebremse.oidc_key("testclient")) > 0
+
+
+def test_the_image_starts_the_app_behind_the_proxy_layer() -> None:
+    from app.main import asgi
+    from app.proxy import ForwardedScheme
+
+    assert isinstance(asgi, ForwardedScheme)
+
+
+# --- Gesperrtes Konto, widerrufene Sitzung, Adresse eines fremden Kontos -------------------------------------------------
+
+
+def test_a_blocked_account_cannot_sign_in_through_a_provider(admin_client: TestClient, net: Any) -> None:
+    sso = net.add(fakes.FakeProvider())
+    _add(admin_client, sso, "sso", auto_create=True)
+    first = _round_trip(TestClient(app), sso, "sso")
+    assert first.headers["location"] == "/"
+    with SessionLocal() as db:
+        alex = db.scalar(select(User).where(User.username == "alex"))
+        assert alex is not None
+        alex.is_active = False
+        db.commit()
+    browser = TestClient(app)
+    blocked = _round_trip(browser, sso, "sso")
+    assert blocked.status_code == 303 and blocked.headers["location"] == "/login?error=account_blocked"
+    cookies = blocked.headers.get_list("set-cookie")
+    assert not [c for c in cookies if c.startswith("nexbeat_refresh=") and "Max-Age=0" not in c]
+    assert _who(browser) is None
+    # Wieder freigegeben, geht dieselbe Verknuepfung wieder (das Konto wurde nicht neu angelegt).
+    with SessionLocal() as db:
+        alex = db.scalar(select(User).where(User.username == "alex"))
+        assert alex is not None
+        alex.is_active = True
+        db.commit()
+    again = TestClient(app)
+    assert _round_trip(again, sso, "sso").headers["location"] == "/" and _who(again) == "alex"
+    with SessionLocal() as db:
+        assert len(list(db.scalars(select(User).where(User.username.like("alex%"))))) == 1
+
+
+def test_a_logged_out_session_cannot_link_an_account(admin_client: TestClient, net: Any) -> None:
+    sso = net.add(fakes.FakeProvider())
+    _add(admin_client, sso, "sso")
+    create_user("kim")
+    browser = TestClient(app)
+    headers = auth_headers(browser, "kim")
+    raw = browser.cookies.get("nexbeat_refresh")
+    assert raw
+    url = browser.post("/api/oidc/sso/link", json={"password": USER_PASSWORD}, headers=headers).json()["url"]
+    assert browser.post("/api/auth/logout").status_code == 204
+    # Wer die Kopie des Cookies behielt, ist damit nicht mehr angemeldet.
+    browser.cookies.set("nexbeat_refresh", raw, domain="testserver.local", path="/api")
+    callback = fakes.query_of(url)["redirect_uri"].split("://", 1)[1].split("/", 1)[1]
+    back = browser.get(f"/{callback}", params=sso.authorize(url), follow_redirects=False)
+    assert back.headers["location"] == "/profil?error=oidc_link_mismatch"
+    with SessionLocal() as db:
+        assert list(db.scalars(select(OidcLink))) == []
+
+
+def test_a_new_account_never_takes_the_address_of_another_account(admin_client: TestClient, net: Any) -> None:
+    sso = net.add(fakes.FakeProvider())
+    _add(admin_client, sso, "sso", auto_create=True)
+    kim = create_user("kim")
+    sso.person = {"sub": "person-9", "preferred_username": "newbie", "email": "kim@example.com"}
+    browser = TestClient(app)
+    response = _round_trip(browser, sso, "sso")
+    assert response.headers["location"] == "/" and _who(browser) == "newbie"
+    with SessionLocal() as db:
+        newbie = db.scalar(select(User).where(User.username == "newbie"))
+        assert newbie is not None and newbie.id != kim
+        assert newbie.email == "newbie@oidc.invalid"
+        assert db.get(User, kim).email == "kim@example.com"  # type: ignore[union-attr]
+        assert [link.account_id for link in db.scalars(select(OidcLink))] == [newbie.id]
+
+
+# --- Das Geheimnis liegt verschluesselt ------------------------------------------------------------------------------
+
+
+def test_the_secret_of_a_provider_lies_sealed_in_both_columns(admin_client: TestClient, net: Any) -> None:
+    sso = net.add(fakes.FakeProvider(client_secret="plain-secret-for-the-test"))
+    made = _add(admin_client, sso, "sso")
+
+    def columns() -> tuple[str, str]:
+        with engine.connect() as connection:
+            row = connection.execute(
+                text("SELECT client_secret_enc, client_secret FROM oidc_providers WHERE id = :i"), {"i": made["id"]}
+            ).one()
+        return row[0], row[1]
+
+    for wanted in (sso.client_secret, "another-secret-after-edit"):
+        if wanted != sso.client_secret:
+            body = {"label": "SSO", "issuer": sso.issuer, "client_id": sso.client_id, "client_secret": wanted}
+            assert admin_client.put(f"/api/oidc/admin/providers/{made['id']}", json=body).status_code == 200
+        sealed, for_1_3_0 = columns()
+        # ``gcm:`` mit dem Kontext des Eintrags fuer diese Fassung, ``enc:`` (Fernet) wie 1.3.0 es schrieb und las.
+        assert sealed.startswith("gcm:") and for_1_3_0.startswith("enc:")
+        assert wanted not in sealed and wanted not in for_1_3_0
+        assert decrypt(for_1_3_0) == wanted and unseal(sealed, secret_context(made["id"])) == wanted
+    assert made["id"] and "plain-secret" not in str(made)
+
+
+# --- Das Cookie aus 1.3.0 unter /api/auth ----------------------------------------------------------------------------
+
+
+def _paths(response: Any, name: str) -> tuple[list[str], list[str]]:
+    """Die Pfade, unter denen ``name`` gesetzt, und die, unter denen es geloescht wird (Max-Age=0)."""
+    import re
+
+    setting: list[str] = []
+    deleting: list[str] = []
+    for head in response.headers.get_list("set-cookie"):
+        if not head.startswith(f"{name}="):
+            continue
+        path = re.search(r"[Pp]ath=([^;]+)", head)
+        assert path is not None, head
+        (deleting if "Max-Age=0" in head else setting).append(path.group(1))
+    return setting, deleting
+
+
+def test_a_cookie_of_1_3_0_is_taken_once_and_removed_when_the_session_renews(client: TestClient) -> None:
+    assert client.post("/api/setup/admin", json=ADMIN).status_code == 201
+    login = client.post("/api/auth/login", json={"login": ADMIN["username"], "password": ADMIN["password"]})
+    raw = client.cookies.get("nexbeat_refresh")
+    assert raw and _paths(login, "nexbeat_refresh") == (["/api"], ["/api/auth"])
+    # Der Geraete-Zaehler der Bremse bleibt unter /api/auth: Er braucht nur die Anmeldung mit Passwort.
+    assert _paths(login, "nexbeat_device") == (["/api/auth"], [])
+    # Ein Browser, der noch das alte Cookie hat (Pfad /api/auth) und kein neues.
+    old = TestClient(app)
+    old.cookies.set("nexbeat_refresh", raw, domain="testserver.local", path="/api/auth")
+    renewed = old.post("/api/auth/refresh")
+    assert renewed.status_code == 200, renewed.text
+    assert _paths(renewed, "nexbeat_refresh") == (["/api"], ["/api/auth"])
+    # Nach dem Erneuern bleibt dem Browser genau eins, und zwar das unter /api.
+    assert [(c.name, c.path) for c in old.cookies.jar if c.name == "nexbeat_refresh"] == [("nexbeat_refresh", "/api")]
+
+
+def test_signing_out_removes_the_cookie_under_both_paths_and_ends_the_session(client: TestClient) -> None:
+    assert client.post("/api/setup/admin", json=ADMIN).status_code == 201
+    client.post("/api/auth/login", json={"login": ADMIN["username"], "password": ADMIN["password"]})
+    raw = client.cookies.get("nexbeat_refresh")
+    assert raw
+    out = client.post("/api/auth/logout")
+    assert out.status_code == 204
+    setting, deleting = _paths(out, "nexbeat_refresh")
+    assert setting == [] and sorted(deleting) == ["/api", "/api/auth"]
+    assert not [c for c in client.cookies.jar if c.name == "nexbeat_refresh"]
+    # Eine behaltene Kopie erneuert nichts mehr.
+    thief = TestClient(app)
+    thief.cookies.set("nexbeat_refresh", raw, domain="testserver.local", path="/api")
+    assert thief.post("/api/auth/refresh").status_code == 401
+
+
+def test_the_store_reports_a_deactivated_account_as_blocked() -> None:
+    from app.services.oidc_store import SqlStore
+
+    active = create_user("kim")
+    off = create_user("sam", is_active=False)
+    with SessionLocal() as db:
+        store = SqlStore(db)
+        kim, sam = store.account_state(active), store.account_state(off)
+        assert kim is not None and kim.blocked is False and kim.has_password is True
+        assert sam is not None and sam.blocked is True
+        assert store.account_state(999) is None
