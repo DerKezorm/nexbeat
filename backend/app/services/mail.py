@@ -14,7 +14,7 @@ import smtplib
 import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
-from email.utils import formataddr, make_msgid
+from email.utils import formataddr, formatdate, make_msgid
 
 logger = logging.getLogger("nexbeat.mail")
 
@@ -122,6 +122,9 @@ async def send(config: MailConfig, to: str, subject: str, html: str, text: str) 
     message["From"] = formataddr((config.from_name or "nexbeat", config.from_address))
     message["To"] = to.strip()
     message["Message-ID"] = make_msgid(domain=config.from_address.split("@")[-1])
+    # Pflichtfeld nach RFC 5322. smtplib ergaenzt es nicht, und ohne Date
+    # verwerfen iCloud, Outlook und Gmail die Mail still (Issue #2).
+    message["Date"] = formatdate(localtime=True)
     message["Auto-Submitted"] = "auto-generated"
     message.set_content(text)
     message.add_alternative(html, subtype="html")

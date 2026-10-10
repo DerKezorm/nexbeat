@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
+
 from fastapi.testclient import TestClient
 
 from app.crypto import decrypt
@@ -66,3 +69,14 @@ def test_test_mail_goes_to_the_admin(admin_client: TestClient, mail_ready) -> No
     response = admin_client.post("/api/settings/test-mail", json={})
     assert response.json() == {"sent": True}
     assert mail_ready[0]["To"] == "admin@example.com"
+
+
+def test_mail_carries_a_date_header(admin_client: TestClient, mail_ready) -> None:
+    # Ohne Date verwerfen grosse Anbieter die Mail still, smtplib ergaenzt es nicht (Issue #2).
+    before = datetime.now(UTC) - timedelta(seconds=5)
+    response = admin_client.post("/api/settings/test-mail", json={})
+    assert response.json() == {"sent": True}
+    headers = mail_ready[0].get_all("Date")
+    assert headers is not None and len(headers) == 1
+    sent_at = parsedate_to_datetime(headers[0])
+    assert before <= sent_at <= datetime.now(UTC) + timedelta(seconds=5)
