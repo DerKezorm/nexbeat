@@ -186,22 +186,25 @@ function ProvidersCard({ providers }: { providers: OidcProvider[] }) {
                 setDragged(null)
               }}
             >
-              {!readOnly && providers.length > 1 && (
-                <button
-                  type="button"
-                  className="cursor-grab rounded px-1 text-mist-500 hover:text-mist-200"
-                  aria-label={t('signin.order', { name: entry.label })}
-                  onKeyDown={(event) => {
-                    if (event.key === 'ArrowUp') move(index, index - 1)
-                    if (event.key === 'ArrowDown') move(index, index + 1)
-                  }}
-                >
-                  <span aria-hidden="true">⋮⋮</span>
-                </button>
-              )}
-              <div className="min-w-0 flex-1 basis-full sm:basis-auto">
-                <p className="truncate text-sm font-medium text-mist-100">{entry.label}</p>
-                <p className="truncate text-xs text-mist-500">{entry.issuer}</p>
+              {/* Griff und Name bleiben auch auf dem Handy in einer Zeile. */}
+              <div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
+                {!readOnly && providers.length > 1 && (
+                  <button
+                    type="button"
+                    className="cursor-grab rounded px-1 text-mist-500 hover:text-mist-200"
+                    aria-label={t('signin.order', { name: entry.label })}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ArrowUp') move(index, index - 1)
+                      if (event.key === 'ArrowDown') move(index, index + 1)
+                    }}
+                  >
+                    <span aria-hidden="true">⋮⋮</span>
+                  </button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-mist-100">{entry.label}</p>
+                  <p className="truncate text-xs text-mist-500">{entry.issuer}</p>
+                </div>
               </div>
               <span className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className={'rounded-full px-2 py-0.5 ' + (entry.enabled ? 'bg-ok-500/10 text-ok-500' : 'border border-ink-700 text-mist-500')}>
