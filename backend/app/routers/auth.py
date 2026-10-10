@@ -76,11 +76,23 @@ def login(payload: LoginIn, request: Request, response: Response, db: DbSession)
     if user is None or not password_ok or not user.is_active:
         anmeldebremse.failed(key)
         raise fehler("invalid_credentials", "Username or password is wrong.", 401)
+    if not user.is_admin and not password_login_open(db):
+        # Erst nach der Pruefung: Sonst verriete die Antwort, welche Namen ein Konto haben.
+        raise fehler("password_login_off", "Sign-in with a password is switched off. Use a sign-in provider.", 403)
     anmeldebremse.succeeded(key)
     user.last_login_at = utcnow()
     db.commit()
     sitzung.remember_device(response, request, user)
     return sitzung.start(response, request, user)
+
+
+def password_login_open(db: Session) -> bool:
+    """Bauplan 01: Der Betreiber kann die Anmeldung mit Passwort abschalten, sobald ein Anbieter aktiv ist. Admins
+    melden sich immer mit Passwort an (der Rueckweg, falls der Anbieter ausfaellt). Ist kein Anbieter mehr aktiv,
+    gilt das Passwort wieder fuer alle."""
+    from .oidc import any_active_provider
+
+    return load_settings(db).flag("password_login") or not any_active_provider(db)
 
 
 @router.post("/refresh", response_model=TokenPair, summary="Issue a new access token from the session cookie")

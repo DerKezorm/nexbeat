@@ -163,7 +163,17 @@ class ApiKey(Base):
 
 
 class OidcProvider(Base):
-    """Ein Anmeldeanbieter per OpenID Connect: authentik, Entra ID, Keycloak, Pocket ID und andere."""
+    """Ein Anmeldeanbieter per OpenID Connect: authentik, Entra ID, Keycloak, Pocket ID und andere.
+
+    Die Spalten folgen dem Bauplan (01 "Tabellen"), die Namen in der Datenbank aber denen von 1.3.0: Die alte
+    Fassung liest dieselbe Tabelle. Umbenannt haette sie nach einem Rueckweg keinen Anbieter mehr gefunden.
+    Deshalb heisst ``issuer`` in der Datenbank weiter ``issuer_url``, und das Geheimnis steht zweimal da:
+    ``client_secret_enc`` mit dem Kontext des Eintrags (Bauplan), ``client_secret_legacy`` so, wie 1.3.0 es liest.
+
+    ⚠️ Jede neue Spalte hat einen ``server_default``: 1.3.0 legt auf einer Datenbank dieser Fassung weiter
+    Eintraege an und kennt die Spalten nicht. ``redirect_path`` bleibt dabei NULL, daran erkennt der Start einen
+    Eintrag der alten Fassung (``services.oidc_migration``).
+    """
 
     __tablename__ = "oidc_providers"
 
@@ -171,33 +181,55 @@ class OidcProvider(Base):
     # Teil der Rueckleitadresse, also fest, sobald der Anbieter sie kennt.
     slug: Mapped[str] = mapped_column(String(40), unique=True)
     label: Mapped[str] = mapped_column(String(80))
-    issuer_url: Mapped[str] = mapped_column(String(300))
+    issuer: Mapped[str] = mapped_column("issuer_url", String(500))
     client_id: Mapped[str] = mapped_column(String(300))
-    # Verschluesselt (``crypto.encrypt``), leer bei oeffentlichen Clients.
-    client_secret: Mapped[str] = mapped_column(String(600), default="")
-    scopes: Mapped[str] = mapped_column(String(200), default="openid profile email")
+    # Mit dem Kontext ``oidc-provider:<id>`` verschluesselt (``crypto.seal``), leer bei oeffentlichen Clients.
+    client_secret_enc: Mapped[str] = mapped_column(String(4000), default="", server_default="")
+    # Dasselbe Geheimnis fuer 1.3.0 (``crypto.encrypt``), bis die alte Fassung keinen Rueckweg mehr braucht.
+    client_secret_legacy: Mapped[str] = mapped_column("client_secret", String(600), default="")
+    scopes: Mapped[str] = mapped_column(String(500), default="openid profile email")
     enabled: Mapped[bool] = mapped_column(default=True)
-    # Bei der ersten Anmeldung ein Konto anlegen, mit dieser Rolle.
-    auto_create: Mapped[bool] = mapped_column(default=True)
-    default_role: Mapped[Role] = enum_column(Role, default=Role.user)
+    # "Neue Personen bekommen ein Konto", ab Werk aus.
+    auto_create: Mapped[bool] = mapped_column(default=False, server_default="0")
+    # Nur noch fuer 1.3.0, die damit Konten anlegte. Neue Konten sind Mitglieder (Bauplan 01).
+    default_role: Mapped[Role] = enum_column(Role, default=Role.user, server_default=Role.user.value)
+    # nexbeat hat keinen eigenen zweiten Faktor; die Spalte haelt den Bauplan ein und bleibt an.
+    trusts_second_factor: Mapped[bool] = mapped_column(default=True, server_default="1")
+    # "" von Hand, "authentik" vom authentik-Knopf.
+    managed: Mapped[str] = mapped_column(String(20), default="", server_default="")
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Rueckleitpfad, den der Anbieter kennt; "" der Standard ``/api/oidc/<slug>/callback``. NULL: von 1.3.0
+    # angelegt, der Start traegt dann deren Pfad ein.
+    # Ohne Vorgabe, auch beim Nachziehen der Spalte: Bestehende Eintraege bekommen NULL.
+    redirect_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(default=utcnow, nullable=True)
+    # Die Rueckleitadresse, die der authentik-Knopf zuletzt in authentik eingetragen hat.
+    registered_redirect: Mapped[str] = mapped_column(String(500), default="", server_default="")
 
 
 class OidcLink(Base):
     """Welche Identitaet bei welchem Anbieter zu welchem Konto gehoert.
 
-    ⚠️ Zugeordnet wird nur ueber ``subject``, nie ueber die Mailadresse: Bei authentik kann jeder seine
-    Adresse selbst aendern, und Entra ID buergt fuer keine. ``email`` steht nur zur Anzeige hier.
+    ⚠️ Zugeordnet wird nur ueber ``(provider_id, subject)``, nie ueber die Mailadresse: Bei authentik kann jeder
+    seine Adresse selbst aendern, und Entra ID buergt fuer keine. ``email`` steht nur zur Anzeige hier.
+    ``account_id`` heisst in der Datenbank weiter ``user_id`` (1.3.0 liest dieselbe Tabelle).
     """
 
     __tablename__ = "oidc_links"
-    __table_args__ = (UniqueConstraint("provider_id", "subject"),)
+    __table_args__ = (
+        UniqueConstraint("provider_id", "subject"),
+        UniqueConstraint("provider_id", "user_id", name="uq_oidc_links_provider_account"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     provider_id: Mapped[int] = mapped_column(ForeignKey("oidc_providers.id", ondelete="CASCADE"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    account_id: Mapped[int] = mapped_column("user_id", ForeignKey("users.id", ondelete="CASCADE"), index=True)
     subject: Mapped[str] = mapped_column(String(300))
+    # Das tatsaechliche ``iss`` des Tokens (bei Entra mit ``common`` der echte Mandant).
+    issuer: Mapped[str] = mapped_column(String(500), default="", server_default="")
     email: Mapped[str] = mapped_column(String(300), default="")
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(default=None, nullable=True)
 
 
 class Setting(Base):

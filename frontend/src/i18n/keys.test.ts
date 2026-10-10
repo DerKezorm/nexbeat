@@ -1,12 +1,21 @@
 import { MAIN_GENRES } from '../lib/genres'
-import de from './de.json'
+import { oidcWording } from '../vendor/nexoidc/oidc'
+import moduleDe from '../vendor/nexoidc/oidc.de.json'
+import own from './de.json'
+
+// Die Texte, wie die App sie laedt: die eigenen und die des Anmeldemoduls (`i18n/index.ts`).
+const de = { ...own, ...oidcWording(moduleDe, { singleAccount: false }) }
 
 const sources = import.meta.glob('../**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 
 function exists(path: string): boolean {
   let node: unknown = de
   for (const part of path.split('.')) {
-    if (!node || typeof node !== 'object' || !(part in node)) return false
+    if (!node || typeof node !== 'object' || !(part in node)) {
+      // Mehrzahl: gefragt wird der Schluessel ohne Endung, mit `count` (i18next waehlt `_one` oder `_other`).
+      const plural = node && typeof node === 'object' && `${part}_one` in node && `${part}_other` in node
+      return Boolean(plural) && path.endsWith(part)
+    }
     node = (node as Record<string, unknown>)[part]
   }
   return typeof node === 'string'

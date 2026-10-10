@@ -11,7 +11,9 @@ export function useSettings() {
     queryFn: () => api.get<AppSettings>('/api/settings'),
   })
   const save = useMutation({
-    mutationFn: (patch: Partial<Record<keyof AppSettings, unknown>>) => api.put<AppSettings>('/api/settings', patch),
+    // `confirm_address`: bestaetigt die Rueckfrage, wenn die oeffentliche Adresse Rueckleitadressen aendert.
+    mutationFn: (patch: Partial<Record<keyof AppSettings | 'confirm_address', unknown>>) =>
+      api.put<AppSettings>('/api/settings', patch),
     onSuccess: (data) => {
       queryClient.setQueryData(['settings'], data)
       void queryClient.invalidateQueries({ queryKey: ['discover'] })

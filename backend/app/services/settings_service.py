@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from ..crypto import decrypt, encrypt, mask
 from ..models import Setting
+from ..vendor.nexoidc.flow import clean_public_url
 from .mail import SECURITY_MODES, MailConfig
 
 DEFAULTS: dict[str, str] = {
@@ -54,6 +55,8 @@ DEFAULTS: dict[str, str] = {
     "quota_period": "week",
     # Einmal am Tag bei GitHub nach einer neueren Fassung fragen. Ab Werk an, abschaltbar auf "Ueber nexbeat".
     "update_check": "true",
+    # Anmeldung mit Passwort. Aus wirkt nur, solange ein Anbieter aktiv ist; Admins duerfen immer (Bauplan 01).
+    "password_login": "true",
 }
 
 SECRET_KEYS = frozenset(
@@ -67,7 +70,7 @@ SECRET_KEYS = frozenset(
         "nexcrate_pairing",
     }
 )
-BOOL_KEYS = frozenset({"lidarr_dry_run", "source_listenbrainz", "source_deezer", "update_check"})
+BOOL_KEYS = frozenset({"lidarr_dry_run", "source_listenbrainz", "source_deezer", "update_check", "password_login"})
 INT_KEYS = frozenset({"smtp_port", "lidarr_quality_profile_id", "lidarr_metadata_profile_id", "quota_default_limit"})
 CHOICES: dict[str, tuple[str, ...]] = {
     "smtp_security": SECURITY_MODES,
@@ -208,7 +211,15 @@ def _normalize(key: str, raw: Any) -> str:
         return str(int(value))
     if key in CHOICES and value not in CHOICES[key]:
         raise SettingsError("invalid_setting", key)
-    if key in ("public_url", "lidarr_url", "nexcrate_url"):
+    if key == "public_url":
+        # Nie lockerer als das Anmeldemodul: Die Adresse landet in Rueckleitadressen, Cookie-Pfaden und Links.
+        if not value:
+            return ""
+        try:
+            return clean_public_url(value)
+        except ValueError as error:
+            raise SettingsError("invalid_setting", key) from error
+    if key in ("lidarr_url", "nexcrate_url"):
         if value and not value.startswith(("http://", "https://")):
             raise SettingsError("invalid_setting", key)
         return value.rstrip("/")
@@ -235,6 +246,24 @@ def save_settings(db: Session, updates: dict[str, Any], *, internal: bool = Fals
     db.commit()
     forget(db)
     return load_settings(db)
+
+
+def read_public_url() -> str:
+    """Fuer das Anmeldemodul: die oeffentliche Adresse, wie die Einstellung sie gerade haelt ("" fuer keine)."""
+    from ..db import SessionLocal
+
+    with SessionLocal() as db:
+        return load_settings(db).public_url
+
+
+def store_public_url(url: str) -> None:
+    """Fuer das Anmeldemodul: eine in der authentik-Karte bestaetigte Adresse speichern, sofort und fuer sich.
+
+    Die Rueckfrage (``authentik.public_url_guard``) hat das Modul vorher gestellt."""
+    from ..db import SessionLocal
+
+    with SessionLocal() as db:
+        save_settings(db, {"public_url": url})
 
 
 def ensure_webhook_secret(db: Session) -> str:

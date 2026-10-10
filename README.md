@@ -135,28 +135,42 @@ them.
 
 ## Sign-in with OpenID Connect
 
-Under **Settings > System > Sign-in** an administrator adds sign-in providers.
-Each one gets a button on the sign-in page. The return address to enter at the
-provider is `<public address>/api/auth/oidc/<short name>/callback`, so the
-public address under Settings > System > Address has to be set first.
+Under **Settings > System > Sign-in** an administrator finds three cards:
 
+- **Sign-in:** password sign-in (it can be switched off once a provider is
+  active; administrators can always use their password) and the public address.
+- **Sign-in providers:** any provider that speaks OpenID Connect, several at
+  once, each with a button on the sign-in page in the order of the list. The
+  redirect address to enter at the provider is
+  `<public address>/api/oidc/<short name>/callback`; the form shows it with a
+  copy button. Providers set up in nexbeat 1.3.0 keep the address they know,
+  `/api/auth/oidc/<short name>/callback`.
 - **authentik in one step:** enter the address of authentik and an API token
-  that may create applications. nexbeat creates the signing key, a scope
-  mapping, the provider and the application, and adds itself as a sign-in
+  that may create applications. nexbeat creates the provider and the
+  application with authentik's own mappings and enters itself as a sign-in
   provider. The token is not stored. Rather not hand one over? Download the
-  blueprint instead and import it in authentik.
-- **Microsoft Entra ID:** register a web app, enter the return address (Entra
-  only accepts https, except for localhost) and create a client secret. Issuer:
-  `https://login.microsoftonline.com/<tenant ID>/v2.0`, or `common` and
-  `organizations` for several tenants. Entra sends an email address only as
-  the optional claim `email`; nexbeat works without it.
-- **Anything else** that speaks OpenID Connect: issuer URL, client ID and
-  secret.
+  blueprint instead and import it in authentik. Without a public address the
+  card suggests the one your browser uses and saves it first.
+
+**Microsoft Entra ID:** register a web app, enter the redirect address (Entra
+only accepts https, except for localhost) and create a client secret. Issuer:
+`https://login.microsoftonline.com/<tenant ID>/v2.0`, or `common` and
+`organizations` for several tenants. Entra sends an email address only as the
+optional claim `email`; nexbeat works without it.
 
 Accounts are matched by the provider's subject only, never by email address.
-An existing account is linked once under **Profile > Sign-in providers**. Per
-provider, accounts can be created on first sign-in with a chosen role; they
-start without a password and can set one in their profile.
+An existing account links itself under **Profile > Sign-in providers**, with
+its password once more. New people come in through an invitation (the
+invitation page has a button per provider) or, per provider, through "New
+people get an account"; such accounts start as members without a password and
+can set one in their profile.
+
+**Behind a reverse proxy that ends TLS** nexbeat takes the scheme
+(`X-Forwarded-Proto`) only from the addresses in `FORWARDED_ALLOW_IPS` (the
+setting for trusted proxies, default `127.0.0.1`, comma separated, `*` for
+all). It reads the rightmost value, the one your proxy wrote. Setting the public
+address is enough for sign-in itself; trusting the proxy also keeps the session
+cookie `Secure` and silences the warning in the authentik card.
 
 ## Data sources
 

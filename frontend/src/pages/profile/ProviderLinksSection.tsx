@@ -3,83 +3,110 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
-import { api, errorMessage, storedError } from '../../api/client'
-import { Button, ErrorBanner, OkBanner, Section } from '../../components/ui'
+import { api, errorMessage } from '../../api/client'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { Button, ErrorBanner, Field, OkBanner, Section } from '../../components/ui'
+import { oidcErrorKey } from '../../vendor/nexoidc/oidc'
 
 type Link = { slug: string; label: string; linked: boolean }
 
-const LINKS_KEY = ['oidc-links']
+const LINKS_KEY = ['oidc-me']
 
 /**
- * Das eigene Konto mit einem Anmeldeanbieter verknuepfen, wie in nexdeck.
+ * Mein Konto, Anmeldeanbieter (Bauplan 04): je aktivem Anbieter eine Zeile mit Zustand und "Verknuepfen" oder
+ * "Loesen". Verknuepfen fragt das eigene Passwort noch einmal (Bauplan 01), dann geht es zum Anbieter.
  *
- * ⚠️ Nur so kommt ein bestehendes Konto an einen Anbieter, nie ueber die Mailadresse. Der Ruecksprung
- * landet wieder hier, mit `oidc_linked` oder `oidc_error` in der Adresse.
+ * ⚠️ Nur so kommt ein bestehendes Konto an einen Anbieter, nie ueber die Mailadresse. Die Rueckkehr landet wieder
+ * hier, mit `linked` oder `error` in der Adresse.
  */
-export function ProviderLinksSection() {
+export function ProviderLinksSection({ hasPassword }: { hasPassword: boolean }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [params, setParams] = useSearchParams()
-  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
-  const links = useQuery({ queryKey: LINKS_KEY, queryFn: () => api.get<Link[]>('/api/oidc/links') })
+  const [arrived] = useState(() => ({ linked: params.get('linked'), error: oidcErrorKey(params.get('error')) }))
+  const [asking, setAsking] = useState<Link | null>(null)
+  const [password, setPassword] = useState('')
+  const links = useQuery({ queryKey: LINKS_KEY, queryFn: () => api.get<Link[]>('/api/oidc/me') })
 
-  const linkedSlug = params.get('oidc_linked')
-  const failure = params.get('oidc_error')
   useEffect(() => {
-    if (!linkedSlug && !failure) return
-    if (failure) setNotice({ ok: false, text: storedError(failure) ?? failure })
-    setParams({}, { replace: true })
+    if (params.has('linked') || params.has('error')) setParams({}, { replace: true })
     // Nur beim Ankommen, nicht bei jedem Neuzeichnen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  // Die Beschriftung kennt erst die Liste; solange sie laedt, steht der Kurzname da.
-  const [arrivedFrom] = useState(linkedSlug)
-  const arrivedLabel = links.data?.find((entry) => entry.slug === arrivedFrom)?.label ?? arrivedFrom
 
   const start = useMutation({
-    mutationFn: (slug: string) => api.post<{ url: string }>(`/api/oidc/links/${encodeURIComponent(slug)}`),
+    mutationFn: (slug: string) => api.post<{ url: string }>(`/api/oidc/${encodeURIComponent(slug)}/link`, { password }),
     onSuccess: ({ url }) => window.location.assign(url),
   })
   const unlink = useMutation({
-    mutationFn: (slug: string) => api.delete<void>(`/api/oidc/links/${encodeURIComponent(slug)}`),
+    mutationFn: (slug: string) => api.delete<void>(`/api/oidc/${encodeURIComponent(slug)}/link`),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: LINKS_KEY }),
   })
 
   if (!links.data || links.data.length === 0) return null
+  const linked = links.data.filter((entry) => entry.linked)
+  const only = !hasPassword && linked.length === 1 ? linked[0] : null
+  const arrivedLabel = links.data.find((entry) => entry.slug === arrived.linked)?.label ?? arrived.linked
 
   return (
-    <Section title={t('profile.providers')} intro={t('profile.providersIntro')}>
-      {arrivedFrom && !notice && <OkBanner message={t('profile.providerLinkedOk', { label: arrivedLabel })} />}
-      {notice && !notice.ok && <ErrorBanner message={notice.text} />}
-      {start.isError && <ErrorBanner message={errorMessage(start.error)} />}
+    <Section title={t('oidc.account.title')} intro={t('oidc.account.text')}>
+      {arrived.linked && !arrived.error && <OkBanner message={t('profile.providerLinkedOk', { label: arrivedLabel })} />}
+      {arrived.error && <ErrorBanner message={t(arrived.error)} />}
       {unlink.isError && <ErrorBanner message={errorMessage(unlink.error)} />}
-      <ul className="flex flex-col gap-2">
+      {only && <p className="text-sm text-mist-400">{t('oidc.account.only', { name: only.label })}</p>}
+      <ul className="flex flex-col gap-2" data-testid="provider-links">
         {links.data.map((entry) => (
           <li key={entry.slug} className="flex flex-wrap items-center gap-3 rounded-xl border border-ink-700 px-4 py-3">
             <span className="flex-1 text-sm font-medium text-mist-100">{entry.label}</span>
-            {entry.linked && <span className="text-xs text-mist-500">{t('profile.providerLinked')}</span>}
+            <span className={'text-xs ' + (entry.linked ? 'text-ok-500' : 'text-mist-500')}>
+              {entry.linked ? t('oidc.account.linked') : t('oidc.account.notLinked')}
+            </span>
             {entry.linked ? (
               <Button
                 type="button"
                 variant="ghost"
                 loading={unlink.isPending && unlink.variables === entry.slug}
+                disabled={only?.slug === entry.slug}
                 onClick={() => unlink.mutate(entry.slug)}
               >
-                {t('profile.providerUnlink')}
+                {t('oidc.account.unlink')}
               </Button>
             ) : (
               <Button
                 type="button"
                 variant="ghost"
-                loading={start.isPending && start.variables === entry.slug}
-                onClick={() => start.mutate(entry.slug)}
+                onClick={() => {
+                  start.reset()
+                  setPassword('')
+                  setAsking(entry)
+                }}
               >
-                {t('profile.providerLink')}
+                {t('oidc.account.link')}
               </Button>
             )}
           </li>
         ))}
       </ul>
+      <ConfirmDialog
+        open={asking !== null}
+        title={t('oidc.account.link')}
+        description={t('oidc.account.text')}
+        confirmLabel={t('oidc.account.link')}
+        loading={start.isPending}
+        error={start.isError ? errorMessage(start.error) : null}
+        onCancel={() => setAsking(null)}
+        onConfirm={() => asking && password && start.mutate(asking.slug)}
+      >
+        <div className="mt-4">
+          <Field
+            label={t('profile.currentPassword')}
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
     </Section>
   )
 }

@@ -7,6 +7,7 @@
  */
 
 import i18n from '../i18n'
+import { oidcErrorKey, oidcFormErrorKey } from '../vendor/nexoidc/oidc'
 
 let accessToken: string | null = null
 let onSessionLost: (() => void) | null = null
@@ -66,7 +67,10 @@ export function translateError(detail: Record<string, unknown>, status: number):
   const special = SPECIAL_CASES[code]
   if (special) return special(detail)
   const key = `errors.byCode.${code}`
-  return i18n.exists(key) ? i18n.t(key, { ...detail }) : fallback
+  if (i18n.exists(key)) return i18n.t(key, { ...detail })
+  // Die Kennungen des Anmeldemoduls haben ihre Saetze dort (Bauplan 04), in jeder App dieselben.
+  const shared = oidcErrorKey(code) ?? oidcFormErrorKey(code)
+  return shared ? i18n.t(shared) : fallback
 }
 
 /** Die wenigen Meldungen, deren Satz nicht durch blosses Einsetzen entsteht. */
@@ -161,6 +165,32 @@ export const api = {
     send<T>(path, { ...options, method: 'PATCH', body }, true),
   delete: <T>(path: string, options: Omit<RequestOptions, 'method'> = {}) =>
     send<T>(path, { ...options, method: 'DELETE' }, true),
+}
+
+/**
+ * Eine Datei vom Server, mit dem Zugangs-Token (ein schlichter Link nimmt den Kopf nicht mit). Der Name kommt aus
+ * `Content-Disposition`, sonst `fallbackName`.
+ */
+export async function download(path: string, fallbackName: string): Promise<void> {
+  const fetchIt = () =>
+    fetch(path, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, credentials: 'same-origin' })
+  let response: Response
+  try {
+    response = await fetchIt()
+    if (response.status === 401 && (await refreshAccessToken())) response = await fetchIt()
+  } catch {
+    throw new ApiError(0, i18n.t('errors.network'), 'network')
+  }
+  if (!response.ok) {
+    const info = await parseError(response)
+    throw new ApiError(response.status, info.message, info.code, info.data)
+  }
+  const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? fallbackName
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(await response.blob())
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 export async function restoreSession(): Promise<boolean> {

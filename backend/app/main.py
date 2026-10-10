@@ -18,6 +18,7 @@ from .config import get_settings
 from .db import SessionLocal, init_db
 from .meldungen import meldung
 from .middleware import RequestIdMiddleware, configure_logging
+from .proxy import behind_proxy, trusted_proxies
 from .routers import (
     about,
     api_keys,
@@ -35,7 +36,22 @@ from .routers import (
 )
 from .routers import settings as settings_router
 from .services import http
-from .services.settings_service import ensure_webhook_secret
+from .services.settings_service import ensure_webhook_secret, read_public_url, store_public_url
+from .vendor import nexoidc
+
+#: Das gemeinsame Anmeldemodul, vor der ersten Anfrage (Bauplan "Anmeldung mit OIDC und authentik").
+nexoidc.configure(
+    nexoidc.AppConfig(
+        app_name="nexbeat",
+        server_secret=lambda: get_settings().resolved_secret_key(),
+        api_prefix="/api",
+        public_url=read_public_url,
+        save_public_url=store_public_url,
+        login_page="/login",
+        account_page="/profil",
+        home="/",
+    )
+)
 
 logger = logging.getLogger("nexbeat")
 
@@ -46,6 +62,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     init_db()
     with SessionLocal() as db:
         ensure_webhook_secret(db)
+    # Den TLS-Kontext des Anmeldemoduls einmal ausserhalb der Ereignisschleife lesen.
+    await nexoidc.warm()
     stop = asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
     if not get_settings().disable_background:
@@ -138,3 +156,7 @@ def _mount_frontend(target: FastAPI, dist: Path) -> None:
 
 
 _mount_frontend(app, get_settings().frontend_dist)
+
+#: Was uvicorn im Abbild startet (``--no-proxy-headers``): ``app`` hinter der Behandlung der vertrauten Proxys
+#: (``FORWARDED_ALLOW_IPS``, ab Werk 127.0.0.1, wie uvicorn selbst). Siehe ``proxy.py``.
+asgi = behind_proxy(app, trusted_proxies())

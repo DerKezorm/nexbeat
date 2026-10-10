@@ -1,10 +1,16 @@
 """Die Sitzung im Browser und der eine Ort, an dem sie entsteht.
 
 Wie in Nexview: Das Erneuerungs-Token verlaesst das Backend nur als
-HttpOnly-Cookie unter ``/api/auth``. Der Zugangs-Token steht im
+HttpOnly-Cookie unter ``/api``. Der Zugangs-Token steht im
 Antwortkoerper, lebt nur im Arbeitsspeicher der Seite und faehrt als
-``Authorization``-Kopf mit. Damit braucht nur ein Endpunkt einen CSRF-Schutz,
-und den gibt ``SameSite=Lax``.
+``Authorization``-Kopf mit. Gelesen wird das Cookie nur von der Erneuerung,
+dem Abmelden und der Rueckkehr von einem Anmeldeanbieter beim Verknuepfen;
+den CSRF-Schutz gibt ``SameSite=Lax``.
+
+Bis 1.3.0 lag es unter ``/api/auth``. Die Rueckkehr vom Anbieter
+(``/api/oidc/<slug>/callback``) haette es dort nie bekommen, und sie muss
+wissen, wer im Browser angemeldet ist. Jede neue Sitzung loescht das alte
+Cookie unter ``/api/auth`` mit.
 
 ⚠️ Jeder Weg zu einer Sitzung geht durch ``start``: Erst-Einrichtung, Anmeldung,
 Erneuerung, Passwortwechsel.
@@ -46,8 +52,12 @@ from ..security import (
 logger = logging.getLogger("nexbeat.sitzung")
 
 COOKIE_NAME = "nexbeat_refresh"
-COOKIE_PATH = "/api/auth"
+COOKIE_PATH = "/api"
+#: Wo das Cookie bis 1.3.0 lag. Es geht mit jeder neuen Sitzung und beim Abmelden.
+LEGACY_COOKIE_PATH = "/api/auth"
 DEVICE_COOKIE = "nexbeat_device"
+#: Das Geraete-Cookie braucht nur die Anmeldung mit Passwort.
+DEVICE_PATH = "/api/auth"
 DEVICE_DAYS = 365
 
 
@@ -75,7 +85,19 @@ def start(response: Response, request: Request, user: User, session_id: str | No
         samesite="lax",
         secure=cookie_secure(request),
     )
+    _drop_legacy(response, request)
     return TokenPair(access_token=create_access_token(user.id), expires_in=access_token_expires_in())
+
+
+def _drop_legacy(response: Response, request: Request) -> None:
+    """Das Cookie aus 1.3.0 (Pfad ``/api/auth``) weg. Der Browser schickte sonst zwei mit demselben Namen."""
+    response.delete_cookie(
+        COOKIE_NAME,
+        path=LEGACY_COOKIE_PATH,
+        httponly=True,
+        samesite="lax",
+        secure=cookie_secure(request),
+    )
 
 
 def end(response: Response, request: Request) -> None:
@@ -87,6 +109,7 @@ def end(response: Response, request: Request) -> None:
         samesite="lax",
         secure=cookie_secure(request),
     )
+    _drop_legacy(response, request)
 
 
 def read(request: Request) -> str | None:
@@ -133,7 +156,7 @@ def remember_device(response: Response, request: Request, user: User) -> None:
         DEVICE_COOKIE,
         create_device_token(user.id, device_id, DEVICE_DAYS),
         max_age=DEVICE_DAYS * 24 * 60 * 60,
-        path=COOKIE_PATH,
+        path=DEVICE_PATH,
         httponly=True,
         samesite="lax",
         secure=cookie_secure(request),

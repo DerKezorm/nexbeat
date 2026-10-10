@@ -6,11 +6,11 @@ import { TabRow, type Tab } from '../components/TabRow'
 import { PageTitle } from '../components/ui'
 import { AdminAddressSettings } from './settings/AdminAddressSettings'
 import { AdminServicesSettings } from './settings/AdminServicesSettings'
-import { AdminSigninSettings } from './settings/AdminSigninSettings'
 import { AdminMailSettings } from './settings/AdminMailSettings'
 import { AdminQuotaSettings } from './settings/AdminQuotaSettings'
 import { AdminSourcesSettings } from './settings/AdminSourcesSettings'
 import { AdminUsersSettings } from './settings/AdminUsersSettings'
+import { SignInCards } from './settings/SignInCards'
 
 type TabKey = 'address' | 'mail' | 'signin' | 'lidarr' | 'sources' | 'users' | 'quota'
 
@@ -74,7 +74,7 @@ export function SettingsPage() {
 
       {tab === 'address' && <AdminAddressSettings />}
       {tab === 'mail' && <AdminMailSettings />}
-      {tab === 'signin' && <AdminSigninSettings />}
+      {tab === 'signin' && <SignInCards />}
       {tab === 'lidarr' && <AdminServicesSettings />}
       {tab === 'sources' && <AdminSourcesSettings />}
       {tab === 'users' && <AdminUsersSettings />}

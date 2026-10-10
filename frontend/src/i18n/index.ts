@@ -8,14 +8,26 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
+import { oidcWording, type OidcWording } from '../vendor/nexoidc/oidc'
+
 export const SUPPORTED_LANGUAGES = ['de', 'en'] as const
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
 
 const STORAGE_KEY = 'nexbeat.language'
 
-const TEXTS: Record<Language, () => Promise<{ default: Record<string, unknown> }>> = {
-  de: () => import('./de.json'),
-  en: () => import('./en.json'),
+type Texts = Record<string, unknown>
+
+/**
+ * Die Texte einer Sprache: die eigenen von nexbeat und die des gemeinsamen Anmeldemoduls (Namensraum `oidc`,
+ * Bauplan 04, wortgleich in allen Apps). `{{app}}` darin setzt `defaultVariables` unten.
+ */
+const TEXTS: Record<Language, () => Promise<Texts>> = {
+  de: async () => merged((await import('./de.json')).default, (await import('../vendor/nexoidc/oidc.de.json')).default),
+  en: async () => merged((await import('./en.json')).default, (await import('../vendor/nexoidc/oidc.en.json')).default),
+}
+
+function merged(own: Texts, module: OidcWording): Texts {
+  return { ...own, ...oidcWording(module, { singleAccount: false }) }
 }
 
 export function isLanguage(value: unknown): value is Language {
@@ -34,17 +46,16 @@ function initialLanguage(): Language {
 
 async function load(language: Language): Promise<void> {
   if (i18n.hasResourceBundle(language, 'translation')) return
-  const { default: texts } = await TEXTS[language]()
-  i18n.addResourceBundle(language, 'translation', texts)
+  i18n.addResourceBundle(language, 'translation', await TEXTS[language]())
 }
 
 export async function startI18n(language: Language = initialLanguage()): Promise<void> {
-  const { default: texts } = await TEXTS[language]()
+  const texts = await TEXTS[language]()
   await i18n.use(initReactI18next).init({
     resources: { [language]: { translation: texts } },
     lng: language,
     fallbackLng: false,
-    interpolation: { escapeValue: false },
+    interpolation: { escapeValue: false, defaultVariables: { app: 'nexbeat' } },
   })
   document.documentElement.lang = language
 }

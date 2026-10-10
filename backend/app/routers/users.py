@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -18,19 +20,31 @@ from ..schemas import (
     UserOut,
     UserUpdate,
 )
+from ..security import has_usable_password
 from ..services import accounts, quota, tokens
 from ..services.mail import valid_address
 from ..services.settings_service import AppSettings, load_settings
 from ..services.tokens import normalize_email
+from .oidc import links_by_account
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 MAX_QUOTA = 10_000
 
 
-def _out(db: Session, settings: AppSettings, user: User) -> AdminUserOut:
+def _out(
+    db: Session, settings: AppSettings, user: User, links: dict[int, list[dict[str, Any]]] | None = None
+) -> AdminUserOut:
     state = quota.state(db, user, settings)
-    return AdminUserOut.model_validate({**UserOut.model_validate(user).model_dump(), "quota": quota.as_dict(state)})
+    linked = (links if links is not None else links_by_account(db)).get(user.id, [])
+    return AdminUserOut.model_validate(
+        {
+            **UserOut.model_validate(user).model_dump(),
+            "quota": quota.as_dict(state),
+            "providers": linked,
+            "has_password": has_usable_password(user.password_hash),
+        }
+    )
 
 
 def _get_user(db: Session, user_id: int) -> User:
@@ -103,7 +117,8 @@ def withdraw_invitation(invitation_id: int, _admin: AdminUser, db: DbSession) ->
 def list_users(_admin: AdminUser, db: DbSession) -> list[AdminUserOut]:
     settings = load_settings(db)
     users = db.scalars(select(User).order_by(User.role, func.lower(User.username)))
-    return [_out(db, settings, user) for user in users]
+    links = links_by_account(db)
+    return [_out(db, settings, user, links) for user in users]
 
 
 @router.patch("/{user_id}", response_model=AdminUserOut, summary="Change role, status, approval or quota")

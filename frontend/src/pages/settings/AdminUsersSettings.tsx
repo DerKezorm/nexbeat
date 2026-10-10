@@ -113,6 +113,9 @@ export function AdminUsersSettings() {
   const [editing, setEditing] = useState<number | null>(null)
   const [deleting, setDeleting] = useState<User | null>(null)
   const [linkFor, setLinkFor] = useState<{ id: number; delivery: Delivery } | null>(null)
+  // Eine Verknuepfung eines Kontos loesen, mit dem eigenen Passwort (Bauplan 01, "Verknuepfen und Loesen").
+  const [unlinking, setUnlinking] = useState<{ user: User; provider: { id: number; label: string } } | null>(null)
+  const [password, setPassword] = useState('')
 
   const users = useQuery({ queryKey: ['users'], queryFn: () => api.get<User[]>('/api/users') })
   const invitations = useQuery({ queryKey: ['invitations'], queryFn: () => api.get<Invitation[]>('/api/users/invitations') })
@@ -135,6 +138,15 @@ export function AdminUsersSettings() {
   const resetQuota = useMutation({
     mutationFn: (id: number) => api.post<User>(`/api/users/${id}/quota/reset`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  })
+  const unlink = useMutation({
+    mutationFn: ({ user, provider }: { user: User; provider: { id: number } }) =>
+      api.delete<void>(`/api/oidc/admin/accounts/${user.id}/links/${provider.id}`, { body: { password } }),
+    onSuccess: async () => {
+      setUnlinking(null)
+      setPassword('')
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
   })
   const remove = useMutation({
     mutationFn: (id: number) => api.delete<void>(`/api/users/${id}`),
@@ -227,6 +239,15 @@ export function AdminUsersSettings() {
                         @{user.username}
                         {shownEmail(user.email) && ` · ${user.email}`}
                       </p>
+                      {(user.providers ?? []).length > 0 && (
+                        <p className="mt-1 flex flex-wrap gap-1.5" data-testid="user-providers">
+                          {(user.providers ?? []).map((provider) => (
+                            <span key={provider.id} className="rounded-full border border-ink-700 px-2 py-0.5 text-[11px] text-mist-400">
+                              {provider.label}
+                            </span>
+                          ))}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold tabular-nums">{quota.limit === null ? '∞' : `${quota.used}/${quota.limit}`}</p>
@@ -246,6 +267,20 @@ export function AdminUsersSettings() {
                         <Button variant="ghost" className="text-xs" loading={resetQuota.isPending} onClick={() => resetQuota.mutate(user.id)}>
                           {t('users.resetQuota')}
                         </Button>
+                        {(user.providers ?? []).map((provider) => (
+                          <Button
+                            key={provider.id}
+                            variant="ghost"
+                            className="text-xs"
+                            onClick={() => {
+                              unlink.reset()
+                              setPassword('')
+                              setUnlinking({ user, provider })
+                            }}
+                          >
+                            {t('users.unlinkProvider', { name: provider.label })}
+                          </Button>
+                        ))}
                         {user.id !== me?.id && (
                           <Button
                             variant="ghost"
@@ -281,6 +316,30 @@ export function AdminUsersSettings() {
         onCancel={() => setDeleting(null)}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
       />
+
+      <ConfirmDialog
+        open={unlinking !== null}
+        title={t('users.unlinkProvider', { name: unlinking?.provider.label ?? '' })}
+        description={t('users.unlinkText', {
+          name: unlinking?.provider.label ?? '',
+          account: unlinking?.user.display_name || unlinking?.user.username,
+        })}
+        confirmLabel={t('oidc.account.unlink')}
+        loading={unlink.isPending}
+        error={unlink.isError ? errorMessage(unlink.error) : null}
+        onCancel={() => setUnlinking(null)}
+        onConfirm={() => unlinking && password && unlink.mutate(unlinking)}
+      >
+        <div className="mt-4">
+          <Field
+            label={t('profile.currentPassword')}
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
 
       <AdminApiKeys />
     </div>

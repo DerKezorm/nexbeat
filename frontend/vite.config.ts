@@ -24,7 +24,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
-    exclude: ['node_modules/**', 'dist/**'],
+    // e2e/ gehoert Playwright (`playwright.config.ts`), nicht vitest.
+    exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
   },
   server: {
     // Fester Port: Ist er belegt, bricht Vite ab, statt still auf einen anderen auszuweichen.

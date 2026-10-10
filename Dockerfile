@@ -63,4 +63,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # ⚠️ Ein Arbeitsprozess: SQLite, und der Abgleich mit Lidarr darf nur einmal laufen.
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--workers", "1"]
+# Hinter einem Proxy, der TLS beendet: FORWARDED_ALLOW_IPS nennt die Proxys, deren X-Forwarded-Proto gilt
+# (ab Werk 127.0.0.1). Die Schicht dafuer steht in app/proxy.py, deshalb --no-proxy-headers und app.main:asgi.
+CMD ["uvicorn", "app.main:asgi", "--host", "0.0.0.0", "--workers", "1", "--no-proxy-headers"]

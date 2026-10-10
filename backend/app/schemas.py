@@ -69,8 +69,17 @@ class MeOut(UserOut):
     has_password: bool = True
 
 
+class LinkedProviderOut(BaseModel):
+    id: int
+    slug: str
+    label: str
+
+
 class AdminUserOut(UserOut):
     quota: QuotaOut
+    # Die Anbieter, mit denen das Konto verknuepft ist (Marken in der Kontenliste, Bauplan 04).
+    providers: list[LinkedProviderOut] = []
+    has_password: bool = True
 
 
 class MeUpdate(BaseModel):
@@ -142,24 +151,3 @@ class ResetPasswordIn(BaseModel):
 
 class TestMailIn(BaseModel):
     to: str | None = Field(default=None, max_length=255)
-
-
-class OidcProviderIn(BaseModel):
-    # Kurzname, Teil der Rueckleitadresse.
-    slug: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9-]+$")
-    label: str = Field(min_length=1, max_length=80)
-    issuer_url: str = Field(min_length=8, max_length=300, pattern=r"^https?://")
-    client_id: str = Field(min_length=1, max_length=300)
-    # Leer beim Aendern: das gespeicherte bleibt.
-    client_secret: str = Field(default="", max_length=600)
-    scopes: str = Field(default="openid profile email", max_length=200)
-    enabled: bool = True
-    auto_create: bool = True
-    default_role: Role = Role.user
-
-
-class AuthentikSetupIn(BaseModel):
-    """Wo authentik steht, und ein Token, der dort Anwendungen anlegen darf. Der Token wird nicht gespeichert."""
-
-    url: str = Field(min_length=1, max_length=300)
-    token: str = Field(min_length=1, max_length=2000)

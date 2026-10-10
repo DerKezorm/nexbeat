@@ -1,418 +1,404 @@
-"""Anmelden ueber OpenID Connect, das eigene Konto verknuepfen und die Anbieter verwalten.
+"""Anmelden ueber OpenID Connect, das eigene Konto verknuepfen, die Anbieter verwalten, der authentik-Knopf.
 
-Gebaut wie in nexdeck. Anmeldung und Ruecksprung liegen unter ``/api/auth``, damit das Sitzungs-Cookie
-(Pfad ``/api/auth``) im Ruecksprung gesetzt werden kann. Jeder Ausgang des Ruecksprungs ist eine
-Weiterleitung in die Oberflaeche mit einer Kennung in der Adresse, nie JSON.
+Der Ablauf selbst steht im gemeinsamen Modul ``app.vendor.nexoidc`` (Bauplan "Anmeldung mit OIDC und authentik"),
+hier nur, was nexbeat dazugibt: Sitzung, Bremse, Passwort, Rechte und die Antworten. Pfade:
+
+| Methode | Pfad | Wer |
+|---|---|---|
+| GET | ``/api/oidc/providers`` | alle: Kurzname und Name der aktiven Anbieter (Anmelde- und Einladungsseite) |
+| GET, POST | ``/api/oidc/admin/providers`` | Admin: die Liste, einen anlegen |
+| PUT, DELETE | ``/api/oidc/admin/providers/{id}`` | Admin: speichern, entfernen |
+| GET | ``/api/oidc/admin/providers/{id}/impact?issuer=`` | Admin: Zahlen fuer die beiden Rueckfragen |
+| PUT | ``/api/oidc/admin/providers/order`` | Admin: Reihenfolge |
+| GET | ``/api/oidc/{slug}/start[?invite=]`` | alle: zum Anbieter |
+| GET | ``/api/oidc/{slug}/callback`` | alle: zurueck vom Anbieter |
+| GET | ``/api/auth/oidc/{slug}/callback`` | alle: dasselbe fuer die Anbieter aus 1.3.0 (``redirect_path``) |
+| GET | ``/api/oidc/me`` | angemeldet: die aktiven Anbieter mit ``linked`` |
+| POST, DELETE | ``/api/oidc/{slug}/link`` | angemeldet im Browser: verknuepfen (mit Passwort), loesen |
+| DELETE | ``/api/oidc/admin/accounts/{konto}/links/{anbieter}`` | Admin, mit eigenem Passwort |
+| POST | ``/api/oidc/authentik/setup`` | Admin: der Knopf, immer 200 |
+| GET, POST | ``/api/oidc/authentik/address`` | Admin: was die authentik-Karte zur Adresse zeigt; "Nur uebernehmen" |
+| GET | ``/api/oidc/authentik/blueprint`` | Admin: ``nexbeat-authentik.yaml`` |
+
+⚠️ Die Rueckkehr ist eine Weiterleitung des Browsers ohne ``Authorization``-Kopf. Wer dort angemeldet ist, sagt das
+Sitzungs-Cookie ``nexbeat_refresh``; es liegt deshalb seit dieser Fassung unter ``/api`` (``sitzung.COOKIE_PATH``).
 """
 
 from __future__ import annotations
 
 import logging
-import re
+from dataclasses import asdict
+from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import func, select
+from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import __version__
-from ..crypto import decrypt, encrypt
 from ..deps import AdminUser, DbSession, SessionUser
 from ..meldungen import fehler
 from ..models import OidcLink, OidcProvider, User, utcnow
-from ..schemas import AuthentikSetupIn, OidcProviderIn
-from ..security import UNUSABLE_PASSWORD, has_usable_password
-from ..services import authentik_setup, oidc, sitzung
-from ..services.settings_service import load_settings
-from ..services.tokens import normalize_email
+from ..security import decode_token, has_usable_password, verify_password
+from ..services import anmeldebremse, sitzung
+from ..services.oidc_store import SqlStore
+from ..vendor.nexoidc import OidcError, ProviderInvalid, accounts, authentik, flow, providers
+from ..vendor.nexoidc.attempt import read as read_attempt
+from ..vendor.nexoidc.config import current
 
 router = APIRouter(tags=["oidc"])
 logger = logging.getLogger("nexbeat.oidc")
 
-#: Wohin ein Verknuepfungsversuch zurueckfuehrt, mit ``oidc_linked`` oder ``oidc_error`` in der Adresse.
-PROFILE_PAGE = "/profil"
-LOGIN_PAGE = "/login"
-#: Ersatzadresse fuer Konten, deren Anbieter keine (oder eine schon vergebene) Adresse nennt. ``.invalid``
-#: ist reserviert und kann nie zugestellt werden.
-PLACEHOLDER_DOMAIN = "oidc.invalid"
-EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+API = "/api"
 
 
-def _enabled_provider(db: Session, slug: str) -> OidcProvider:
-    provider = db.scalar(select(OidcProvider).where(OidcProvider.slug == slug, OidcProvider.enabled.is_(True)))
-    if provider is None:
-        raise fehler("oidc_unknown_provider", "There is no such sign-in provider.", 404)
-    return provider
+class ProviderIn(BaseModel):
+    label: str = Field(max_length=200)
+    slug: str = Field(default="", max_length=100)
+    issuer: str = Field(max_length=600)
+    client_id: str = Field(max_length=300)
+    client_secret: str = Field(default="", max_length=2000)
+    scopes: str = Field(default="openid profile email", max_length=500)
+    enabled: bool = True
+    auto_create: bool = False
+    trusts_second_factor: bool = True
 
 
-def _to_app(path: str, **params: str) -> RedirectResponse:
-    query = "&".join(f"{key}={value}" for key, value in params.items())
-    return RedirectResponse(f"{path}{'?' + query if query else ''}", status_code=303)
+class PasswordIn(BaseModel):
+    password: str = Field(default="", max_length=200)
 
 
-def _redirect_uri(db: Session, slug: str) -> str:
-    return oidc.redirect_uri(load_settings(db).public_url, slug)
+class SetupIn(BaseModel):
+    url: str = Field(min_length=1, max_length=500)
+    token: str = Field(min_length=1, max_length=2000)
+    confirm_issuer_change: bool = False
+    #: Die Adresse, die der Betreiber in der Karte bestaetigt hat (die des Browsers), solange nexbeat keine hat.
+    public_url: str = Field(default="", max_length=600)
 
 
-def _attempt_cookie(response: RedirectResponse | JSONResponse, request: Request, value: str) -> None:
-    response.set_cookie(
-        oidc.COOKIE_NAME,
-        value,
-        max_age=oidc.ATTEMPT_MINUTES * 60,
-        path=oidc.COOKIE_PATH,
-        httponly=True,
-        samesite="lax",
-        secure=sitzung.cookie_secure(request),
-    )
+class AddressIn(BaseModel):
+    public_url: str = Field(max_length=600)
+    confirm: bool = False
 
 
-def _drop_attempt(response: RedirectResponse) -> RedirectResponse:
-    response.delete_cookie(oidc.COOKIE_NAME, path=oidc.COOKIE_PATH)
-    return response
+class OrderIn(BaseModel):
+    ids: list[int] = Field(max_length=200)
 
 
-# -- Anmelden ----------------------------------------------------------------
+def _form_error(error: ProviderInvalid) -> Any:
+    return fehler(error.code, error.message, 422, field=error.field)
 
 
-@router.get("/api/auth/oidc/{slug}/login", summary="Start a sign-in at an identity provider")
-async def oidc_login(slug: str, request: Request, db: DbSession) -> RedirectResponse:
-    provider = _enabled_provider(db, slug)
-    try:
-        document = await oidc.discovery(provider.issuer_url)
-        redirect = _redirect_uri(db, slug)
-    except oidc.OidcError as failure:
-        logger.warning("OIDC sign-in via %r could not start: %s", slug, failure.message)
-        return _to_app(LOGIN_PAGE, oidc_error=failure.code)
-    attempt = oidc.new_attempt()
-    response = RedirectResponse(
-        oidc.authorization_url(document, provider.client_id, redirect, provider.scopes, attempt), status_code=302
-    )
-    _attempt_cookie(response, request, oidc.pack_state(slug, attempt))
-    return response
+def _admin_view(store: SqlStore, entry: Any, request: Request) -> dict[str, Any]:
+    return providers.admin_view(entry, str(request.base_url), len(store.links_of_provider(entry.id)))
 
 
-def _free_username(db: Session, wanted: str, subject: str) -> str | None:
-    """Ein freier Benutzername aus dem Wunsch des Anbieters, notfalls mit Zusatz."""
-    base = wanted if len(wanted) >= 3 else f"user-{re.sub(r'[^a-zA-Z0-9]', '', subject)[:8] or 'oidc'}"
-    candidate = base
-
-    def taken(name: str) -> bool:
-        return db.scalar(select(User.id).where(func.lower(User.username) == name.lower())) is not None
-
-    number = 2
-    while taken(candidate):
-        candidate = f"{base[:56]}-{number}"
-        number += 1
-        if number > 50:
-            return None
-    return candidate
+# -- Bremse und Sitzung --------------------------------------------------------
 
 
-def _address_for(db: Session, claimed: str, username: str) -> str | None:
-    """Die Adresse fuers neue Konto. ``None``: Ein anderes Konto hat sie schon.
+def sender(request: Request) -> str:
+    """Wer fragt: die Adresse, die uvicorn als Absender nennt (hinter einem vertrauten Proxy der Besucher)."""
+    return request.client.host if request.client else "?"
 
-    ⚠️ Ein vorhandenes Konto mit derselben Adresse wird **nicht** uebernommen. Wer es hat, meldet sich mit
-    Passwort an und verknuepft es unter Profil.
-    """
-    address = normalize_email(claimed)
-    if not EMAIL_PATTERN.match(address) or len(address) > 255:
-        return f"{username.lower()}@{PLACEHOLDER_DOMAIN}"
-    if db.scalar(select(User.id).where(User.email == address)) is not None:
+
+def braked(request: Request) -> bool:
+    return anmeldebremse.wait_seconds(anmeldebremse.oidc_key(sender(request))) > 0
+
+
+def session_user(request: Request, db: Session) -> User | None:
+    """Das Konto der Browsersitzung (Cookie ``nexbeat_refresh``), wie ``/api/auth/refresh`` es pruefte."""
+    raw = sitzung.read(request)
+    content = decode_token(raw, "refresh") if raw else None
+    if raw is None or content is None:
         return None
-    return address
+    user = db.get(User, content.user_id)
+    if user is None or not user.is_active or not sitzung.still_valid(content, user):
+        return None
+    return None if sitzung.revoked(db, raw, content) else user
 
 
-@router.get("/api/auth/oidc/{slug}/callback", summary="Return from the identity provider")
-async def oidc_callback(slug: str, request: Request, db: DbSession) -> RedirectResponse:
-    provider = _enabled_provider(db, slug)
-    attempt = oidc.unpack_state(request.cookies.get(oidc.COOKIE_NAME))
-    linking = attempt is not None and attempt.get("purpose") == "link"
+def _to_response(redirect: flow.Redirect) -> RedirectResponse:
+    response = RedirectResponse(redirect.location, status_code=303)
+    _cookie(response, redirect.cookie)
+    return response
 
-    def refuse(code: str, reason: str) -> RedirectResponse:
-        logger.warning("OIDC callback refused for %r: %s", slug, reason)
-        return _drop_attempt(_to_app(PROFILE_PAGE if linking else LOGIN_PAGE, oidc_error=code))
 
-    code = request.query_params.get("code")
-    state = request.query_params.get("state")
-    if request.query_params.get("error"):
-        return refuse("oidc_denied", f"provider returned {request.query_params.get('error')!r}")
-    if attempt is None or attempt.get("slug") != slug or not code or not state or attempt.get("state") != state:
-        return refuse("oidc_state_mismatch", "state or cookie does not match the running attempt")
-    try:
-        document = await oidc.discovery(provider.issuer_url)
-        redirect = _redirect_uri(db, slug)
-        secret = decrypt(provider.client_secret) if provider.client_secret else ""
-        tokens = await oidc.exchange(document, provider.client_id, secret, redirect, code, str(attempt["verifier"]))
-        id_token = tokens.get("id_token")
-        if not isinstance(id_token, str) or not id_token:
-            raise oidc.OidcError("oidc_bad_token", "The provider sent no ID token.")
-        payload = await oidc.claims(document, provider.client_id, id_token, str(attempt["nonce"]), provider.issuer_url)
-        info = await oidc.userinfo(document, str(tokens.get("access_token") or ""))
-    except oidc.OidcError as failure:
-        return refuse(failure.code, failure.message)
-    subject = str(payload.get("sub") or "")
-    if not subject:
-        # ⚠️ Ohne diese Pruefung waere die leere Zeichenkette der Schluessel der Identitaet, und die zweite
-        # Person ohne ``sub`` kaeme ins Konto der ersten.
-        return refuse("oidc_bad_token", "the ID token has no subject")
-    claimed = str(payload.get("email") or info.get("email") or "")
-    if linking:
-        return _finish_link(db, provider, attempt, subject, claimed, refuse)
-
-    link = db.scalar(select(OidcLink).where(OidcLink.provider_id == provider.id, OidcLink.subject == subject))
-    if link is not None:
-        user = db.get(User, link.user_id)
+def _cookie(response: Response, cookie: flow.Cookie) -> None:
+    if cookie.max_age == 0:
+        response.delete_cookie(cookie.name, path=cookie.path, secure=cookie.secure, httponly=True, samesite="lax")
     else:
-        if not provider.auto_create:
-            return refuse("oidc_no_account", "no linked account and creating accounts is off")
-        preferred = str(payload.get("preferred_username") or info.get("preferred_username") or claimed or "")
-        username = _free_username(db, oidc.username_from(preferred), subject)
-        if username is None:
-            return refuse("oidc_name_taken", "no free user name could be made from the provider's claims")
-        address = _address_for(db, claimed, username)
-        if address is None:
-            return refuse("oidc_email_taken", "an account with this address exists; it has to be linked under Profile")
-        display = str(payload.get("name") or info.get("name") or username)
-        user = User(
-            username=username,
-            email=address,
-            password_hash=UNUSABLE_PASSWORD,
-            role=provider.default_role,
-            display_name=display.strip()[:128],
-            seen_version=__version__,
+        response.set_cookie(
+            cookie.name,
+            cookie.value,
+            max_age=cookie.max_age,
+            path=cookie.path,
+            httponly=cookie.http_only,
+            samesite="lax",
+            secure=cookie.secure,
         )
-        db.add(user)
-        db.flush()
-        db.add(OidcLink(provider_id=provider.id, user_id=user.id, subject=subject[:300], email=claimed[:300]))
-        db.commit()
-        logger.info("OIDC created the account %r via %r.", user.username, slug)
-    if user is None or not user.is_active:
-        return refuse("oidc_disabled", "the linked account is disabled or gone")
-    user.last_login_at = utcnow()
-    db.commit()
-    response = _drop_attempt(_to_app("/"))
-    sitzung.remember_device(response, request, user)
-    sitzung.start(response, request, user)
-    logger.info("%s signed in via %r.", user.username, slug)
-    return response
 
 
-def _finish_link(
-    db: Session, provider: OidcProvider, attempt: dict, subject: str, email: str, refuse
-) -> RedirectResponse:
-    """Die Identitaet an das Konto haengen, das darum gebeten hat, statt jemanden anzumelden.
-
-    ⚠️ Nur so, nie ueber die Adresse: Bei authentik kann jeder seine Adresse selbst aendern, und wer die des
-    Admins eintraegt, kaeme sonst in dessen Konto.
-    """
-    user = db.get(User, int(attempt.get("user_id") or 0))
-    if user is None or not user.is_active:
-        return refuse("oidc_disabled", "the account that asked to link is disabled or gone")
-    taken = db.scalar(select(OidcLink).where(OidcLink.provider_id == provider.id, OidcLink.subject == subject))
-    if taken is not None and taken.user_id != user.id:
-        return refuse("oidc_taken", f"that identity is linked to another account already (user id {taken.user_id})")
-    if taken is None:
-        # Eine Identitaet je Anbieter und Konto: erneut verknuepfen ersetzt die alte.
-        for old in db.scalars(select(OidcLink).where(OidcLink.provider_id == provider.id, OidcLink.user_id == user.id)):
-            db.delete(old)
-        db.add(OidcLink(provider_id=provider.id, user_id=user.id, subject=subject[:300], email=email[:300]))
-        db.commit()
-    logger.info("%s linked their account to %r.", user.username, provider.slug)
-    return _drop_attempt(_to_app(PROFILE_PAGE, oidc_linked=provider.slug))
+# -- Oeffentlich: Anbieter, Start, Rueckkehr ------------------------------------
 
 
-# -- Eigene Verknuepfungen -----------------------------------------------------
-
-
-@router.get("/api/oidc/links", summary="The sign-in providers and whether this account is linked to each")
-def my_links(user: SessionUser, db: DbSession) -> list[dict]:
-    linked = {link.provider_id for link in db.scalars(select(OidcLink).where(OidcLink.user_id == user.id))}
-    return [
-        {"slug": provider.slug, "label": provider.label, "linked": provider.id in linked}
-        for provider in db.scalars(select(OidcProvider).where(OidcProvider.enabled.is_(True)).order_by(OidcProvider.id))
-    ]
-
-
-@router.post("/api/oidc/links/{slug}", summary="Start linking this account to an identity provider")
-async def link_start(slug: str, request: Request, user: SessionUser, db: DbSession) -> JSONResponse:
-    """Antwortet mit der Adresse, zu der es geht, und setzt dabei das Cookie des Versuchs.
-
-    Ein POST mit Zugangs-Token, kein Link zum Folgen: So kann keine fremde Seite in jemandes Browser eine
-    Verknuepfung anstossen.
-    """
-    provider = _enabled_provider(db, slug)
-    try:
-        document = await oidc.discovery(provider.issuer_url)
-        redirect = _redirect_uri(db, slug)
-    except oidc.OidcError as failure:
-        raise fehler(failure.code, failure.message, 502) from None
-    attempt = oidc.new_attempt()
-    response = JSONResponse(
-        {"url": oidc.authorization_url(document, provider.client_id, redirect, provider.scopes, attempt)}
-    )
-    _attempt_cookie(response, request, oidc.pack_state(slug, attempt, purpose="link", user_id=user.id))
-    return response
-
-
-@router.delete("/api/oidc/links/{slug}", status_code=204, summary="Undo the link to an identity provider")
-def link_remove(slug: str, user: SessionUser, db: DbSession) -> None:
-    provider = db.scalar(select(OidcProvider).where(OidcProvider.slug == slug))
-    if provider is None:
-        raise fehler("oidc_unknown_provider", "There is no such sign-in provider.", 404)
-    links = list(db.scalars(select(OidcLink).where(OidcLink.user_id == user.id)))
-    mine = [link for link in links if link.provider_id == provider.id]
-    if mine and not has_usable_password(user.password_hash) and len(links) == len(mine):
-        # ⚠️ Der letzte Weg in ein Konto ohne Passwort.
-        raise fehler("oidc_would_lock_out", "This is the only way into this account. Set a password first.", 409)
-    for link in mine:
-        db.delete(link)
-    db.commit()
-
-
-# -- Verwaltung ----------------------------------------------------------------
-
-
-def _authentik_redirect(db: Session) -> str:
-    try:
-        return _redirect_uri(db, authentik_setup.PROVIDER_SLUG)
-    except oidc.OidcError as failure:
-        raise fehler(failure.code, failure.message, 422) from None
-
-
-@router.post("/api/oidc/authentik/setup", summary="Set up provider and application in authentik with a one-time token")
-async def authentik_setup_run(body: AuthentikSetupIn, admin: AdminUser, db: DbSession) -> dict:
-    """⚠️ Der Token gilt nur fuer diesen Lauf: nicht gespeichert, nicht protokolliert, nicht zurueckgegeben."""
-    url = body.url.strip().rstrip("/")
-    if not url.lower().startswith(("http://", "https://")):
-        raise fehler("oidc_bad_url", "The authentik address must start with http:// or https://.", 422)
-    redirect = _authentik_redirect(db)
-    logger.info("authentik setup started for %s by %s.", url, admin.username)
-    result = await authentik_setup.setup(db, url, body.token.strip(), redirect)
-    return result.as_dict()
-
-
-@router.get("/api/oidc/authentik/blueprint", summary="A blueprint that creates the same objects in authentik")
-def authentik_blueprint(_admin: AdminUser, db: DbSession) -> dict[str, str]:
-    """Als JSON statt als Datei: Der Zugangs-Token reist im Kopf, und den setzt ein schlichter Link nicht."""
-    return {"filename": "nexbeat-authentik.yaml", "content": authentik_setup.blueprint(_authentik_redirect(db))}
-
-
-def _provider_out(db: Session, provider: OidcProvider) -> dict:
-    linked = db.scalar(select(func.count()).select_from(OidcLink).where(OidcLink.provider_id == provider.id)) or 0
-    return {
-        "id": provider.id,
-        "slug": provider.slug,
-        "label": provider.label,
-        "issuer_url": provider.issuer_url,
-        "client_id": provider.client_id,
-        "has_secret": bool(provider.client_secret),
-        "scopes": provider.scopes,
-        "enabled": provider.enabled,
-        "auto_create": provider.auto_create,
-        "default_role": provider.default_role.value,
-        "linked_accounts": int(linked),
-    }
-
-
-@router.get("/api/oidc/providers", summary="List identity providers")
-def list_providers(_admin: AdminUser, db: DbSession) -> list[dict]:
-    return [_provider_out(db, provider) for provider in db.scalars(select(OidcProvider).order_by(OidcProvider.id))]
-
-
-def _slug_taken(db: Session, slug: str, except_id: int | None = None) -> bool:
-    query = select(OidcProvider.id).where(OidcProvider.slug == slug)
-    if except_id is not None:
-        query = query.where(OidcProvider.id != except_id)
-    return db.scalar(query) is not None
-
-
-@router.post("/api/oidc/providers", status_code=201, summary="Add an identity provider")
-def create_provider(body: OidcProviderIn, _admin: AdminUser, db: DbSession) -> dict:
-    if _slug_taken(db, body.slug):
-        raise fehler("oidc_slug_taken", "That short name is taken.", 409)
-    provider = OidcProvider(
-        slug=body.slug,
-        label=body.label.strip(),
-        issuer_url=body.issuer_url.strip().rstrip("/"),
-        client_id=body.client_id.strip(),
-        client_secret=encrypt(body.client_secret.strip()) if body.client_secret.strip() else "",
-        scopes=body.scopes.strip() or "openid profile email",
-        enabled=body.enabled,
-        auto_create=body.auto_create,
-        default_role=body.default_role,
-    )
-    db.add(provider)
-    db.commit()
-    return _provider_out(db, provider)
-
-
-@router.patch("/api/oidc/providers/{provider_id}", summary="Change an identity provider")
-def patch_provider(provider_id: int, body: OidcProviderIn, _admin: AdminUser, db: DbSession) -> dict:
-    provider = db.get(OidcProvider, provider_id)
-    if provider is None:
-        raise fehler("oidc_unknown_provider", "There is no such sign-in provider.", 404)
-    if _slug_taken(db, body.slug, provider_id):
-        raise fehler("oidc_slug_taken", "That short name is taken.", 409)
-    issuer = body.issuer_url.strip().rstrip("/")
-    if issuer != provider.issuer_url.rstrip("/"):
-        # ⚠️ Ein ``sub`` bedeutet nur beim Aussteller etwas, der es vergeben hat. Ueber einen Wechsel behalten,
-        # kaeme ein zufaellig gleiches ``sub`` des neuen in ein fremdes Konto.
-        gone = list(db.scalars(select(OidcLink).where(OidcLink.provider_id == provider.id)))
-        for link in gone:
-            db.delete(link)
-        if gone:
-            logger.warning(
-                "The issuer of %r changed; %d link(s) to the old one were removed.", provider.slug, len(gone)
-            )
-        oidc.forget_discovery(provider.issuer_url)
-    provider.slug = body.slug
-    provider.label = body.label.strip()
-    provider.issuer_url = issuer
-    provider.client_id = body.client_id.strip()
-    if body.client_secret.strip():
-        provider.client_secret = encrypt(body.client_secret.strip())
-    provider.scopes = body.scopes.strip() or "openid profile email"
-    provider.enabled = body.enabled
-    provider.auto_create = body.auto_create
-    provider.default_role = body.default_role
-    db.commit()
-    return _provider_out(db, provider)
-
-
-@router.delete("/api/oidc/providers/{provider_id}", status_code=204, summary="Remove an identity provider")
-def delete_provider(provider_id: int, _admin: AdminUser, db: DbSession, force: bool = False) -> None:
-    """⚠️ Mit dem Anbieter gehen seine Verknuepfungen (``ondelete=CASCADE``).
-
-    Ein Konto, das ueber ihn entstand, hat kein Passwort und sonst keinen Weg hinein. Erst zaehlen und die
-    Zahl nennen; ``force=true`` loescht trotzdem.
-    """
-    provider = db.get(OidcProvider, provider_id)
-    if provider is None:
-        raise fehler("oidc_unknown_provider", "There is no such sign-in provider.", 404)
-    if not force:
-        stranded = sorted(
-            user.username
-            for link in db.scalars(select(OidcLink).where(OidcLink.provider_id == provider.id))
-            if (user := db.get(User, link.user_id)) is not None
-            and not has_usable_password(user.password_hash)
-            and db.scalar(select(func.count()).select_from(OidcLink).where(OidcLink.user_id == link.user_id)) == 1
-        )
-        if stranded:
-            raise fehler(
-                "oidc_provider_strands",
-                f"{len(stranded)} account(s) have no password and no other provider: {', '.join(stranded[:5])}.",
-                409,
-                count=len(stranded),
-                names=", ".join(stranded[:5]),
-            )
-    db.delete(provider)
-    db.commit()
-    oidc.forget_discovery(provider.issuer_url)
+@router.get(f"{API}/oidc/providers", summary="The active sign-in providers, for the sign-in and invitation pages")
+def public_providers_route(db: DbSession) -> list[dict[str, str]]:
+    return providers.public_list(SqlStore(db))
 
 
 def public_providers(db: Session) -> list[dict[str, str]]:
-    """Fuer die Anmeldeseite: nur Kurzname und Beschriftung der eingeschalteten Anbieter."""
+    return providers.public_list(SqlStore(db))
+
+
+@router.get(f"{API}/oidc/{{slug}}/start", summary="Start a sign-in at an identity provider")
+async def start(slug: str, request: Request, db: DbSession, invite: str | None = None) -> RedirectResponse:
+    store = SqlStore(db)
+    try:
+        if braked(request):
+            raise OidcError("too_many_attempts", "sender is braked")
+        redirect = await flow.begin(store, slug, request_base=str(request.base_url), invite=invite)
+    except OidcError as error:
+        return _to_response(flow.refused(error, None))
+    return _to_response(redirect)
+
+
+async def _returned(slug: str, request: Request, db: Session) -> RedirectResponse:
+    cookie = request.cookies.get(current().cookie_name)
+    store = SqlStore(db)
+    try:
+        if braked(request):
+            raise OidcError("too_many_attempts", "sender is braked")
+        arrival = await flow.finish(store, slug, cookie=cookie, params=dict(request.query_params))
+        if arrival.started.purpose == "link":
+            account = session_user(request, db)
+            accounts.link(store, arrival, account.id if account else None)
+            return _to_response(flow.arrived(arrival, flow.linked_page(slug)))
+        signed = accounts.sign_in(store, arrival)
+    except OidcError as error:
+        # ⚠️ Nur eine Rueckkehr mit gueltigem Anlauf-Cookie zaehlt fuer die Bremse. Sonst sperrte jeder mit
+        # ``?error=``, einem erfundenen Kurznamen oder Muell alle anderen hinter demselben Proxy aus.
+        if error.code not in ("oidc_state_mismatch", "too_many_attempts") and read_attempt(cookie) is not None:
+            anmeldebremse.failed(anmeldebremse.oidc_key(sender(request)))
+        return _to_response(flow.refused(error, cookie))
+    user = db.get(User, signed.account_id)
+    if user is None or not user.is_active:
+        return _to_response(flow.refused(OidcError("account_blocked", "account gone or blocked"), cookie))
+    user.last_login_at = utcnow()
+    db.commit()
+    response = _to_response(flow.arrived(arrival))
+    sitzung.remember_device(response, request, user)
+    sitzung.start(response, request, user)
+    return response
+
+
+@router.get(f"{API}/oidc/callback", summary="Return from the provider of the entry oidc")
+async def legacy_callback(request: Request, db: DbSession) -> RedirectResponse:
+    return await _returned("oidc", request, db)
+
+
+@router.get(f"{API}/auth/oidc/{{slug}}/callback", summary="Return from a provider set up in nexbeat 1.3.0")
+async def old_callback(slug: str, request: Request, db: DbSession) -> RedirectResponse:
+    """Die Adresse, die die Anbieter aus nexbeat 1.3.0 kennen (``redirect_path`` ihres Eintrags)."""
+    return await _returned(slug, request, db)
+
+
+@router.get(f"{API}/oidc/{{slug}}/callback", summary="Return from the identity provider")
+async def callback(slug: str, request: Request, db: DbSession) -> RedirectResponse:
+    return await _returned(slug, request, db)
+
+
+# -- Mein Konto ----------------------------------------------------------------
+
+
+@router.get(f"{API}/oidc/me", summary="The active providers and whether this account is linked to each")
+def my_providers(user: SessionUser, db: DbSession) -> list[dict[str, Any]]:
+    store = SqlStore(db)
+    linked = {link.provider_id for link in store.links_of_account(user.id)}
     return [
-        {"slug": provider.slug, "label": provider.label}
-        for provider in db.scalars(select(OidcProvider).where(OidcProvider.enabled.is_(True)).order_by(OidcProvider.id))
+        {"slug": entry.slug, "label": entry.label, "linked": entry.id in linked}
+        for entry in store.list_providers()
+        if entry.enabled
     ]
+
+
+@router.post(f"{API}/oidc/{{slug}}/link", summary="Start linking this account; the password confirms it")
+async def link_start(
+    slug: str, payload: PasswordIn, request: Request, user: SessionUser, db: DbSession
+) -> JSONResponse:
+    """Antwortet mit der Adresse, zu der es geht, und setzt dabei das Anlauf-Cookie.
+
+    Ein POST mit Zugangs-Token und Passwort, kein Link: So stoesst keine fremde Seite eine Verknuepfung an.
+    """
+    if braked(request):
+        raise fehler("too_many_attempts", "Too many attempts. Try again later.", 429)
+    key = anmeldebremse.password_change_key(user.id)
+    if anmeldebremse.wait_seconds(key):
+        raise fehler("too_many_attempts", "Too many wrong passwords. Try again later.", 429)
+    if not has_usable_password(user.password_hash) or not verify_password(payload.password, user.password_hash):
+        anmeldebremse.failed(key)
+        raise fehler("wrong_password", "The password is wrong.", 400)
+    anmeldebremse.succeeded(key)
+    try:
+        redirect = await flow.begin(SqlStore(db), slug, request_base=str(request.base_url), link_account_id=user.id)
+    except OidcError as error:
+        raise fehler(error.code, error.message, 409) from error
+    response = JSONResponse({"url": redirect.location})
+    _cookie(response, redirect.cookie)
+    return response
+
+
+@router.delete(f"{API}/oidc/{{slug}}/link", status_code=204, summary="Undo the link to an identity provider")
+def link_remove(slug: str, user: SessionUser, db: DbSession) -> None:
+    store = SqlStore(db)
+    entry = store.provider_by_slug(slug)
+    if entry is None:
+        raise fehler("oidc_not_configured", "This provider is not set up.", 404)
+    try:
+        accounts.unlink(store, user.id, entry.id)
+    except OidcError as error:
+        raise fehler(error.code, error.message, 409) from error
+
+
+@router.delete(
+    f"{API}/oidc/admin/accounts/{{account_id}}/links/{{provider_id}}",
+    status_code=204,
+    summary="Remove an account's link, with the administrator's own password",
+)
+def operator_unlink(account_id: int, provider_id: int, payload: PasswordIn, admin: AdminUser, db: DbSession) -> None:
+    key = anmeldebremse.password_change_key(admin.id)
+    if anmeldebremse.wait_seconds(key):
+        raise fehler("too_many_attempts", "Too many wrong passwords. Try again later.", 429)
+    if not has_usable_password(admin.password_hash) or not verify_password(payload.password, admin.password_hash):
+        anmeldebremse.failed(key)
+        raise fehler("wrong_password", "The password is wrong.", 400)
+    anmeldebremse.succeeded(key)
+    try:
+        accounts.unlink(SqlStore(db), account_id, provider_id)
+    except OidcError as error:
+        raise fehler(error.code, error.message, 409) from error
+    logger.info("Link of account %s to provider %s removed by=%s", account_id, provider_id, admin.username)
+
+
+# -- Anbieterliste -------------------------------------------------------------
+
+
+@router.get(f"{API}/oidc/admin/providers", summary="The sign-in providers, never a secret")
+def admin_providers(request: Request, _admin: AdminUser, db: DbSession) -> list[dict[str, Any]]:
+    store = SqlStore(db)
+    return [_admin_view(store, entry, request) for entry in store.list_providers()]
+
+
+@router.post(f"{API}/oidc/admin/providers", status_code=201, summary="Add a sign-in provider")
+async def add_provider(payload: ProviderIn, request: Request, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    store = SqlStore(db)
+    try:
+        created = await providers.create(store, providers.Form(**payload.model_dump()))
+    except ProviderInvalid as error:
+        raise _form_error(error) from error
+    return providers.admin_view(created, str(request.base_url), 0)
+
+
+@router.put(f"{API}/oidc/admin/providers/order", summary="Put the sign-in buttons in order")
+def order(payload: OrderIn, _admin: AdminUser, db: DbSession) -> list[dict[str, str]]:
+    store = SqlStore(db)
+    providers.reorder(store, payload.ids)
+    return providers.public_list(store)
+
+
+@router.put(f"{API}/oidc/admin/providers/{{provider_id}}", summary="Save a sign-in provider")
+async def save_provider(
+    provider_id: int, payload: ProviderIn, request: Request, _admin: AdminUser, db: DbSession
+) -> dict[str, Any]:
+    store = SqlStore(db)
+    try:
+        saved, dropped = await providers.update(store, provider_id, providers.Form(**payload.model_dump()))
+    except ProviderInvalid as error:
+        raise _form_error(error) from error
+    return {**_admin_view(store, saved, request), "dropped": dropped}
+
+
+@router.get(f"{API}/oidc/admin/providers/{{provider_id}}/impact", summary="Numbers for the two confirmations")
+def impact(provider_id: int, _admin: AdminUser, db: DbSession, issuer: str = "") -> dict[str, Any]:
+    store = SqlStore(db)
+    if store.get_provider(provider_id) is None:
+        raise fehler("provider_unknown", "This provider no longer exists.", 404)
+    removal = providers.removal_impact(store, provider_id)
+    change = providers.issuer_change_impact(store, provider_id, issuer) if issuer else 0
+    return {"issuer_change": change, **asdict(removal)}
+
+
+@router.delete(f"{API}/oidc/admin/providers/{{provider_id}}", summary="Remove a sign-in provider and its links")
+def remove_provider(provider_id: int, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    try:
+        return asdict(providers.remove(SqlStore(db), provider_id))
+    except ProviderInvalid as error:
+        raise _form_error(error) from error
+
+
+# -- authentik -----------------------------------------------------------------
+
+
+@router.post(f"{API}/oidc/authentik/setup", summary="Set up provider and application in authentik with a token")
+async def authentik_setup(payload: SetupIn, request: Request, admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    """⚠️ Das Token gilt nur fuer diesen Lauf: nicht gespeichert, nicht protokolliert, nicht zurueckgegeben."""
+    logger.info("authentik setup started by=%s", admin.username)
+    result = await authentik.setup(
+        SqlStore(db),
+        payload.url,
+        payload.token,
+        str(request.base_url),
+        confirm_issuer_change=payload.confirm_issuer_change,
+        public_url=payload.public_url,
+        headers=request.headers,
+    )
+    return result.as_dict()
+
+
+@router.get(f"{API}/oidc/authentik/address", summary="What the authentik card shows about the public address")
+def authentik_address(request: Request, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    return authentik.address_view(SqlStore(db), str(request.base_url), request.headers)
+
+
+@router.post(f"{API}/oidc/authentik/address", summary="Save the public address the authentik card suggests")
+def authentik_save_address(payload: AddressIn, request: Request, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    try:
+        return authentik.save_public_url(
+            SqlStore(db), payload.public_url, str(request.base_url), confirm=payload.confirm
+        )
+    except ValueError as error:
+        raise fehler("public_url_invalid", "This is not a usable public address.", 422) from error
+    except authentik.PublicUrlChange as asked:
+        raise fehler("public_url_change", "Saving changes the redirect addresses.", 409, **asked.question) from asked
+    except authentik.PublicUrlNotKept as error:
+        raise fehler("public_url_needed", "The public address could not be stored.", 409) from error
+
+
+@router.get(f"{API}/oidc/authentik/blueprint", summary="A blueprint that creates the same objects in authentik")
+def authentik_blueprint(request: Request, _admin: AdminUser, db: DbSession) -> Response:
+    try:
+        redirect = authentik.blueprint_redirect(SqlStore(db), str(request.base_url))
+    except authentik.PublicUrlNeeded as error:
+        raise fehler("public_url_needed", "Set the public address first.", 409) from error
+    name = authentik.blueprint_filename()
+    return Response(
+        authentik.blueprint(redirect),
+        media_type="application/yaml",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+# -- Fuer andere Router ----------------------------------------------------------
+
+
+def links_by_account(db: Session) -> dict[int, list[dict[str, Any]]]:
+    """Je Konto die Anbieter, mit denen es verknuepft ist (Marken in der Kontenliste)."""
+    labels = {row.id: (row.slug, row.label) for row in db.scalars(select(OidcProvider))}
+    result: dict[int, list[dict[str, Any]]] = {}
+    for link in db.scalars(select(OidcLink).order_by(OidcLink.provider_id)):
+        slug, label = labels.get(link.provider_id, ("", ""))
+        result.setdefault(link.account_id, []).append({"id": link.provider_id, "slug": slug, "label": label})
+    return result
+
+
+def any_active_provider(db: Session) -> bool:
+    return any(entry.enabled for entry in SqlStore(db).list_providers())

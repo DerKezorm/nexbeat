@@ -12,6 +12,9 @@ from pathlib import Path
 
 APP = Path(__file__).resolve().parent.parent / "app"
 I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n"
+#: Die Saetze des gemeinsamen Anmeldemoduls (Bauplan 04) stehen in seinen eigenen Sprachdateien, unter
+#: ``oidc.error`` und ``oidc.formError``. Das Modul selbst (``app/vendor``) wird an seiner Quelle geprueft.
+MODULE_I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "vendor" / "nexoidc"
 
 PATTERNS = [
     re.compile(
@@ -43,6 +46,8 @@ def codes_in_source() -> set[str]:
 
     found: set[str] = set(REMOTE_CODES.values())
     for path in APP.rglob("*.py"):
+        if "vendor" in path.relative_to(APP).parts:
+            continue
         text = path.read_text(encoding="utf-8")
         for pattern in PATTERNS:
             found.update(pattern.findall(text))
@@ -53,13 +58,19 @@ def by_code(language: str) -> dict[str, str]:
     return json.loads((I18N / f"{language}.json").read_text(encoding="utf-8"))["errors"]["byCode"]
 
 
+def module_codes(language: str) -> set[str]:
+    wording = json.loads((MODULE_I18N / f"oidc.{language}.json").read_text(encoding="utf-8"))["oidc"]
+    return set(wording["error"]) | set(wording["formError"])
+
+
 def test_every_code_is_translated_in_both_languages() -> None:
     codes = codes_in_source()
     # Bodenschwelle: Ein kaputtes Suchmuster faende sonst nichts und bestuende.
     assert len(codes) >= 45, sorted(codes)
     for language in ("de", "en"):
-        translated = by_code(language)
+        translated = set(by_code(language)) | module_codes(language)
         assert sorted(code for code in codes if code not in translated) == [], language
+
 
 
 def test_translations_are_not_empty() -> None:

@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { api, errorMessage } from '../api/client'
+import { useAuth } from '../auth/useAuth'
 import { AuthFrame } from '../components/AuthFrame'
+import { ProviderButtons } from '../components/ProviderButtons'
 import { Button, Card, ErrorBanner, Field, OkBanner, PageLoading } from '../components/ui'
 
 function BackToLogin() {
@@ -17,9 +19,13 @@ function BackToLogin() {
   )
 }
 
-/** Einladung annehmen: Name und Passwort waehlen. Danach geht es zur normalen Anmeldung. */
+/**
+ * Einladung annehmen: Name und Passwort waehlen, danach geht es zur normalen Anmeldung. Oder ueber einen
+ * Anmeldeanbieter weiter: Die Einladung reist mit und gilt fuer die Identitaet, die dort zurueckkommt (Bauplan 01).
+ */
 export function InvitationPage() {
   const { t } = useTranslation()
+  const { config } = useAuth()
   const { token = '' } = useParams()
   const [form, setForm] = useState({ username: '', display_name: '', password: '' })
 
@@ -94,6 +100,7 @@ export function InvitationPage() {
               <Button type="submit" loading={accept.isPending} className="mt-1 w-full">
                 {t('onboarding.createAccount')}
               </Button>
+              <ProviderButtons providers={config?.oidc_providers ?? []} invite={token} />
             </form>
           </>
         )}

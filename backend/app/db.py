@@ -2,6 +2,8 @@
 
 Es gibt kein Alembic. Neue Tabellen legt ``create_all`` an, neue Spalten
 ``_add_missing_columns``. Umbenennen oder Loeschen passiert nie automatisch.
+Was die Anmeldung ueber Anbieter beim Start nachzieht, steht in
+``services/oidc_migration.py``.
 """
 
 from __future__ import annotations
@@ -57,6 +59,9 @@ def get_db() -> Iterator[Session]:
 def init_db() -> None:
     Base.metadata.create_all(engine)
     _add_missing_columns()
+    from .services import oidc_migration
+
+    oidc_migration.run(engine)
 
 
 def _sql_literal(value: Any) -> str:
@@ -78,7 +83,11 @@ def _add_missing_columns() -> None:
                 if column.name in existing:
                     continue
                 default = None
-                if column.default is not None and not callable(column.default.arg):
+                server_default = getattr(column.server_default, "arg", None)
+                if isinstance(server_default, str):
+                    # Dieselbe Vorgabe wie in einer frisch angelegten Tabelle.
+                    default = server_default
+                elif column.default is not None and not callable(column.default.arg):
                     default = column.default.arg
                 if not column.nullable and default is None:
                     # ⚠️ Lieber laut abbrechen als eine Pflichtspalte ohne Wert

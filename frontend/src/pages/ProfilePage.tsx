@@ -116,6 +116,8 @@ export function ProfilePage() {
         </form>
       </Section>
 
+      <ProviderLinksSection hasPassword={hasPassword} />
+
       <Section title={t('profile.quota')}>
         <p className="text-sm text-mist-300">
           {user.quota.limit === null
@@ -130,7 +132,6 @@ export function ProfilePage() {
         {user.requires_approval && <p className="text-sm text-warn-500">{t('request.needsApproval')}</p>}
       </Section>
 
-      <ProviderLinksSection />
 
       <ApiKeysSection />
     </div>

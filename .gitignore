@@ -34,3 +34,7 @@ playwright-report/
 test-results/
 coverage/
 *.tsbuildinfo
+
+# Playwright (e2e, local only)
+test-results/
+playwright-report/

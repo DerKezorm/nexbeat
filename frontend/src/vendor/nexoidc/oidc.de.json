@@ -1,0 +1,132 @@
+{
+  "oidc": {
+    "login": {
+      "button": "Mit {{name}} anmelden",
+      "or": "oder",
+      "operator": "Als Betreiber mit Passwort anmelden"
+    },
+    "invite": {
+      "button": "Weiter mit {{name}}"
+    },
+    "admin": {
+      "signInTitle": "Anmeldung",
+      "password": "Anmeldung mit Passwort",
+      "passwordHint": "Aus: Nur die Anbieter lassen herein. Du als Betreiber kannst dich immer mit deinem Passwort anmelden.",
+      "address": "Öffentliche Adresse",
+      "addressHint": "Die Adresse, unter der man {{app}} erreicht. Einladungen, Anbieter und Links in Mails nutzen sie.",
+      "addressChangeConfirm": "authentik kennt noch die Rückleitadresse {{address}}. Nach dem Speichern geht die Anmeldung über authentik erst wieder, wenn du den Knopf unter „authentik in einem Schritt“ noch einmal ausführst.",
+      "addressChangeHand_one": "Bei {{count}} von Hand eingetragenen Anbieter musst du die Rückleitadresse dort selbst anpassen.",
+      "addressChangeHand_other": "Bei {{count}} von Hand eingetragenen Anbietern musst du die Rückleitadresse dort selbst anpassen.",
+      "providersTitle": "Anmeldeanbieter",
+      "providersText": "Jeder Anbieter, der OpenID Connect spricht: authentik, Microsoft Entra ID, Keycloak, Authelia, Pocket ID. Jeder bekommt einen Knopf auf der Anmeldeseite.",
+      "empty": "Noch kein Anbieter. Richte authentik unten in einem Schritt ein oder trag einen Anbieter von Hand ein.",
+      "add": "Anbieter hinzufügen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "removeConfirm_one": "„{{name}}“ entfernen? {{count}} Konto verliert die Verknüpfung, für {{only}} davon ist es der einzige Weg herein.",
+      "removeConfirm_other": "„{{name}}“ entfernen? {{count}} Konten verlieren die Verknüpfung, für {{only}} davon ist es der einzige Weg herein.",
+      "active": "aktiv",
+      "inactive": "aus",
+      "managed": "über authentik eingerichtet",
+      "label": "Name auf dem Knopf",
+      "slug": "Kurzname",
+      "slugHint": "Teil der Rückleitadresse, lässt sich später nicht ändern.",
+      "issuer": "Aussteller (Issuer)",
+      "issuerHint": "authentik: https://auth.example.com/application/o/{{app}}/. Microsoft Entra ID: https://login.microsoftonline.com/MANDANTEN-ID/v2.0, für mehrere Mandanten common oder organizations. Entra nimmt als Rückleitadresse nur https an (außer localhost) und schickt die Mailadresse nur als optionalen Claim email.",
+      "clientId": "Client-ID",
+      "secret": "Client-Geheimnis",
+      "secretKept": "gespeichert, leer lassen zum Behalten",
+      "redirect": "Rückleitadresse für den Anbieter",
+      "enabled": "Aktiv",
+      "autoCreate": "Neue Personen bekommen ein Konto",
+      "autoCreateHint": "Aus: Nur Eingeladene und Konten, die sich verknüpft haben, kommen über diesen Anbieter herein. An: Wer dort ein Konto hat, bekommt hier eines als Mitglied.",
+      "trustsSecondFactor": "Der Anbieter prüft den zweiten Faktor selbst",
+      "trustsSecondFactorHint": "Aus: Wer hier einen zweiten Faktor hat, wird nach der Anmeldung über den Anbieter noch nach dem Code gefragt.",
+      "scopes": "Bereiche (Scopes)",
+      "issuerChangeConfirm_one": "Ein anderer Aussteller ist ein anderer Anbieter. {{count}} Konto muss sich danach neu verknüpfen.",
+      "issuerChangeConfirm_other": "Ein anderer Aussteller ist ein anderer Anbieter. {{count}} Konten müssen sich danach neu verknüpfen."
+    },
+    "authentik": {
+      "title": "authentik in einem Schritt",
+      "text": "Mit einem API-Token, das Anwendungen anlegen darf, richtet {{app}} Anbieter und Anwendung in authentik selbst ein. Das Token wird nur dafür benutzt und nicht gespeichert.",
+      "url": "Adresse von authentik",
+      "token": "API-Token",
+      "run": "Einrichten",
+      "blueprint": "Stattdessen Blueprint herunterladen",
+      "asking": "Einen Moment, authentik wird gefragt. Das kann bis zu 20 Sekunden dauern.",
+      "noAddress": "Noch keine öffentliche Adresse. Du erreichst {{app}} gerade unter dieser Adresse, und authentik leitet nach der Anmeldung dorthin zurück:",
+      "adopt": "Übernehmen und einrichten",
+      "adoptOnly": "Nur übernehmen",
+      "proxyWarning": "Am Server kommt diese Anfrage als {{address}} an. Steht {{app}} hinter einem Proxy, muss der das Schema weitergeben (X-Forwarded-Proto) und {{app}} ihm trauen (Einstellung für vertraute Proxys, siehe Anleitung).",
+      "stale": "authentik kennt noch die alte Rückleitadresse {{address}}. Bis du den Knopf noch einmal mit einem Token ausführst, geht die Anmeldung über authentik nicht.",
+      "step": {
+        "reached": "Verbindung zu authentik",
+        "signingKey": "Schlüssel zum Signieren",
+        "mapping": "Zuordnungen für Name und Adresse",
+        "provider": "Anbieter",
+        "application": "Anwendung",
+        "filled": "Einstellungen hier",
+        "binding": "Nur dein Konto"
+      },
+      "why": {
+        "unreachable": "authentik ist unter dieser Adresse nicht erreichbar. Prüf die Adresse und ob {{app}} dieses Netz erreicht.",
+        "unusable": "Diese Adresse lässt sich nicht verwenden. Prüf, wie sie geschrieben ist.",
+        "token": "authentik hat das Token nicht angenommen (Antwort {{status}}). Prüf, ob es gilt und die nötigen Rechte hat.",
+        "malformed": "Das Token enthält Zeichen, die kein Token hat. Kopier es noch einmal aus authentik.",
+        "answered": "Unter dieser Adresse antwortet etwas, aber nicht authentik wie erwartet (Antwort {{status}}). Prüf die Adresse; die ganze Antwort steht im Log.",
+        "slug": "In authentik gehören alle Slugs, die {{app}} seiner Anwendung geben würde, schon anderen Anwendungen. Benenne den Anbieter von {{app}} dort um und versuch es noch einmal.",
+        "coupled": "Solange {{app}} gekoppelt ist, kommt die Anmeldung über die Kopplung. Entkopple zuerst, dann richte authentik hier ein.",
+        "issuer_change_one": "Das ist ein anderes authentik als bisher, also ein anderer Aussteller. {{count}} Konto muss sich danach neu verknüpfen.",
+        "issuer_change_other": "Das ist ein anderes authentik als bisher, also ein anderer Aussteller. {{count}} Konten müssen sich danach neu verknüpfen.",
+        "public_url_needed": "{{app}} hat noch keine öffentliche Adresse. Übernimm die vorgeschlagene, dann richtet {{app}} authentik damit ein."
+      }
+    },
+    "account": {
+      "title": "Anmeldeanbieter",
+      "text": "Verknüpfe dein Konto mit einem Anbieter, dann kannst du dich auch dort anmelden. Dein Passwort bestätigt, dass du es bist.",
+      "linked": "Verknüpft",
+      "notLinked": "Nicht verknüpft",
+      "link": "Verknüpfen",
+      "unlink": "Lösen",
+      "only": "Dieses Konto meldet sich nur über {{name}} an."
+    },
+    "error": {
+      "oidc_not_configured": "Dieser Anbieter ist nicht eingerichtet.",
+      "oidc_provider_unreachable": "Der Anbieter ist gerade nicht erreichbar.",
+      "oidc_provider_invalid": "Die Antwort des Anbieters ist nicht verständlich.",
+      "oidc_issuer_mismatch": "Der Anbieter nennt sich anders als eingetragen.",
+      "oidc_state_mismatch": "Die Anmeldung ist abgelaufen oder kam von woanders. Versuch es noch einmal.",
+      "oidc_provider_error": "Der Anbieter hat die Anmeldung abgebrochen.",
+      "oidc_token_refused": "Der Anbieter hat den Code nicht eingelöst.",
+      "oidc_token_invalid": "Die Antwort des Anbieters war ungültig.",
+      "oidc_no_signing_key": "Der Anbieter unterschreibt ohne Schlüssel. Wähl dort einen Signierschlüssel für den Provider.",
+      "oidc_no_account": "Für dich gibt es hier kein Konto. Bitte um eine Einladung, oder melde dich mit Passwort an und verknüpfe dein Konto unter Mein Konto, Sicherheit.",
+      "oidc_subject_taken": "Diese Identität ist schon mit einem anderen Konto verknüpft.",
+      "oidc_only_account": "Dieses Konto meldet sich nur über diesen Anbieter an. Die letzte Verknüpfung bleibt.",
+      "oidc_link_mismatch": "Diese Verknüpfung gehört zu einem anderen Konto.",
+      "invite_invalid": "Die Einladung ist abgelaufen oder schon benutzt.",
+      "account_blocked": "Dieses Konto ist gesperrt. Wende dich an den Betreiber.",
+      "too_many_attempts": "Zu viele Versuche. Warte einen Moment und versuch es dann noch einmal."
+    },
+    "formError": {
+      "slug_invalid": "Der Kurzname nimmt a bis z, Ziffern und Bindestriche, höchstens 40 Zeichen.",
+      "slug_taken": "Diesen Kurznamen hat schon ein anderer Eintrag.",
+      "label_required": "Gib einen Namen für den Knopf ein.",
+      "issuer_invalid": "Der Aussteller muss mit http:// oder https:// beginnen.",
+      "client_id_required": "Gib die Client-ID ein.",
+      "client_secret_invalid": "Das Client-Geheimnis ist zu lang.",
+      "scopes_invalid": "Die Bereiche müssen openid enthalten.",
+      "provider_managed": "Dieser Anbieter kommt über eine Kopplung und ändert sich nur dort.",
+      "provider_unknown": "Diesen Anbieter gibt es nicht mehr."
+    },
+    "single": {
+      "admin": {
+        "passwordHint": "Aus: Auch du meldest dich dann nur über einen Anbieter an. Zurück geht es an diesem Schalter oder, wenn kein Anbieter mehr hereinlässt, mit einem Befehl am Server.",
+        "addressHint": "Die Adresse, unter der du {{app}} erreichst. Die Anbieter schicken dich nach der Anmeldung dorthin zurück."
+      },
+      "error": {
+        "oidc_no_account": "Diese Identität ist hier nicht verknüpft. Herein kommt nur die Identität, die mit dem Konto von {{app}} verknüpft ist."
+      }
+    }
+  }
+}

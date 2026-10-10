@@ -7,12 +7,13 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..deps import AdminUser, DbSession
 from ..meldungen import fehler
 from ..models import LibraryArtist
+from ..routers.oidc import any_active_provider
 from ..schemas import TestMailIn
 from ..services import (
     cache,
@@ -28,8 +29,10 @@ from ..services import (
 from ..services.lidarr import LidarrError
 from ..services.mail import MailConfig, MailError
 from ..services.nexcrate import NexcrateError
+from ..services.oidc_store import SqlStore
 from ..services.settings_service import (
     SettingsError,
+    _normalize,
     delete_secret,
     delete_secret_internal,
     ensure_webhook_secret,
@@ -37,6 +40,7 @@ from ..services.settings_service import (
     public_settings,
     save_settings,
 )
+from ..vendor.nexoidc import authentik
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -50,8 +54,43 @@ def read_settings(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
     return public_settings(load_settings(db))
 
 
+def _guard_public_url(payload: dict[str, Any], request: Request, db: DbSession) -> None:
+    """Aendert sich die oeffentliche Adresse, fragt erst das Anmeldemodul (Bauplan 04, Karte 1): Kennt authentik noch
+    die alte Rueckleitadresse oder gibt es aktive Anbieter von Hand, antwortet die Route 409 und speichert nichts,
+    bis die Seite mit ``confirm_address`` bestaetigt. Auch Leeren fragt."""
+    confirm = bool(payload.pop("confirm_address", False))
+    if "public_url" not in payload:
+        return
+    try:
+        wanted = _normalize("public_url", payload["public_url"])
+    except SettingsError as error:
+        raise _settings_error(error) from error
+    if wanted == load_settings(db).public_url:
+        return
+    try:
+        question = authentik.public_url_guard(SqlStore(db), wanted, str(request.base_url), confirm=confirm)
+    except ValueError as error:
+        raise _settings_error(SettingsError("invalid_setting", "public_url")) from error
+    if question is not None:
+        raise fehler("public_url_change", "Saving changes the redirect addresses.", 409, **question)
+
+
+def _check_password_login(payload: dict[str, Any], db: DbSession) -> None:
+    """Passwort-Anmeldung aus nur, solange ein Anbieter aktiv ist (Bauplan 01)."""
+    if "password_login" not in payload:
+        return
+    try:
+        wanted = _normalize("password_login", payload["password_login"])
+    except SettingsError as error:
+        raise _settings_error(error) from error
+    if wanted == "false" and not any_active_provider(db):
+        raise fehler("password_login_needs_provider", "Switch a sign-in provider on first.", 409)
+
+
 @router.put("", summary="Change some settings")
-def update_settings(payload: dict[str, Any], _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+def update_settings(payload: dict[str, Any], request: Request, _admin: AdminUser, db: DbSession) -> dict[str, Any]:
+    _guard_public_url(payload, request, db)
+    _check_password_login(payload, db)
     before = load_settings(db).mode
     try:
         settings = save_settings(db, payload)

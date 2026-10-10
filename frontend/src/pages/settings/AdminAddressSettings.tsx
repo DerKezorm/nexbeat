@@ -3,7 +3,10 @@ import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { errorMessage } from '../../api/client'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Button, ErrorBanner, Field, OkBanner, PageLoading, Section, SELECT_CLASS } from '../../components/ui'
+import { AddressQuestion } from '../../components/AddressQuestion'
+import { questionOf, type AddressQuestionValues } from '../../lib/addressQuestion'
 import { useSettings } from './useSettings'
 
 export function AdminAddressSettings() {
@@ -11,6 +14,13 @@ export function AdminAddressSettings() {
   const { query, settings, save } = useSettings()
   const [draft, setDraft] = useState({ public_url: '', default_language: 'de' })
   const filled = useRef(false)
+  // Dieselbe Rueckfrage wie unter Anmeldung (Bauplan 04, Karte 1): Kennt ein Anbieter die bisherige Adresse, fragt
+  // der Server, bevor er speichert.
+  const [question, setQuestion] = useState<AddressQuestionValues | null>(null)
+  const submit = (confirm: boolean) => {
+    setQuestion(null)
+    save.mutate(confirm ? { ...draft, confirm_address: true } : draft, { onError: (error) => setQuestion(questionOf(error)) })
+  }
 
   // Nur einmal vorbelegen, sonst setzt ein Hintergrund-Abgleich mitten im Tippen zurueck.
   useEffect(() => {
@@ -27,7 +37,7 @@ export function AdminAddressSettings() {
         className="flex flex-col gap-4"
         onSubmit={(event: FormEvent) => {
           event.preventDefault()
-          save.mutate(draft)
+          submit(false)
         }}
       >
         <Field
@@ -49,7 +59,7 @@ export function AdminAddressSettings() {
           </select>
           <span className="text-xs text-mist-500">{t('address.languageHint')}</span>
         </label>
-        {save.isError && <ErrorBanner message={errorMessage(save.error)} />}
+        {save.isError && questionOf(save.error) === null && <ErrorBanner message={errorMessage(save.error)} />}
         {save.isSuccess && <OkBanner message={t('common.saved')} />}
         <div>
           <Button type="submit" loading={save.isPending}>
@@ -57,6 +67,15 @@ export function AdminAddressSettings() {
           </Button>
         </div>
       </form>
+      <ConfirmDialog
+        open={question !== null}
+        title={t('oidc.admin.address')}
+        description={question ? <AddressQuestion question={question} /> : null}
+        confirmLabel={t('common.save')}
+        loading={save.isPending}
+        onCancel={() => setQuestion(null)}
+        onConfirm={() => submit(true)}
+      />
     </Section>
   )
 }

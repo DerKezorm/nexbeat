@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from .. import __version__
 from ..deps import DbSession, has_any_user
+from ..routers.auth import password_login_open
 from ..routers.oidc import public_providers
 from ..services.settings_service import load_settings
 
@@ -30,4 +31,6 @@ def public_config(db: DbSession) -> dict[str, Any]:
         "previews_enabled": settings.flag("source_deezer"),
         "requests_enabled": settings.requests_ready,
         "oidc_providers": public_providers(db),
+        # Aus: Die Anmeldeseite zeigt nur die Knoepfe und klein "Als Betreiber mit Passwort anmelden".
+        "password_login": password_login_open(db),
     }

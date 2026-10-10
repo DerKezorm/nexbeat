@@ -21,6 +21,9 @@ export type User = {
   created_at: string
   last_login_at: string | null
   quota: Quota
+  /** Nur in der Kontenliste: die Anbieter, mit denen das Konto verknuepft ist. */
+  providers?: { id: number; slug: string; label: string }[]
+  has_password?: boolean
 }
 
 export type Me = User & {
@@ -51,6 +54,8 @@ export type AppConfig = {
   requests_enabled: boolean
   /** Eingeschaltete Anmeldeanbieter, je ein Knopf auf der Anmeldeseite. */
   oidc_providers?: { slug: string; label: string }[]
+  /** Aus: Die Anmeldeseite zeigt nur die Knoepfe der Anbieter und klein den Weg des Betreibers. */
+  password_login?: boolean
 }
 
 export type RequestStatus =
@@ -292,6 +297,50 @@ export type AppSettings = {
   listenbrainz_token_set: boolean
   quota_default_limit: number | null
   quota_period: 'day' | 'week' | 'month'
+  password_login: boolean
+}
+
+/** Ein Eintrag der Anbieterliste, wie der Betreiber ihn sieht (`providers.admin_view` des Anmeldemoduls). */
+export type OidcProvider = {
+  id: number
+  slug: string
+  label: string
+  issuer: string
+  client_id: string
+  has_secret: boolean
+  scopes: string
+  enabled: boolean
+  auto_create: boolean
+  trusts_second_factor: boolean
+  managed: string
+  position: number
+  redirect_uri: string
+  registered_redirect_uri: string
+  redirect_stale: boolean
+  links: number
+  editable: boolean
+}
+
+export type OidcProviderForm = {
+  label: string
+  slug?: string
+  issuer: string
+  client_id: string
+  client_secret: string
+  scopes: string
+  enabled: boolean
+  auto_create: boolean
+  trusts_second_factor: boolean
+}
+
+/** Die Antwort des authentik-Knopfs (`SetupResult.as_dict`). */
+export type AuthentikResult = {
+  ok: boolean
+  steps: { key: string; ok: boolean; reason?: string; status?: number; detail?: string }[]
+  count?: number
+  links_dropped?: number
+  public_url?: string
+  address?: import('../vendor/nexoidc/oidc').AuthentikAddress
 }
 
 /** Ein Metadatenprofil mit dem, was es zulaesst, in Lidarrs Namen. */

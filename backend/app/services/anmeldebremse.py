@@ -55,6 +55,15 @@ def login_key(login: str) -> str:
     return f"login:{login.strip().lower()}"
 
 
+def oidc_key(sender: str) -> str:
+    """Start und Rueckkehr bei einem Anmeldeanbieter: Ein Konto steht dort noch nicht fest, also je Absender.
+
+    ⚠️ Gefuettert nur von Rueckkehrern mit gueltigem Anlauf-Cookie (``routers/oidc.py``). Hinter einem Proxy, dem
+    nexbeat nicht traut, teilen sich alle Besucher einen Absender; ein Fremder ohne Anlauf sperrt so niemanden aus.
+    """
+    return f"oidc:{sender}"
+
+
 def password_change_key(user_id: int) -> str:
     return f"password:{user_id}"
 
