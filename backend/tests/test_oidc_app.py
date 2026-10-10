@@ -21,12 +21,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, select, text
 
-from app.crypto import encrypt, unseal
+from app.crypto import decrypt, encrypt, unseal
 from app.db import SessionLocal, engine, init_db
 from app.main import app
 from app.models import Base, OidcLink, OidcProvider, User
 from app.proxy import behind_proxy, forwarded_scheme
 from app.services import anmeldebremse, oidc_migration
+from app.services.settings_service import SettingsError, save_settings
 from app.vendor import nexoidc
 from app.vendor.nexoidc import attempt, protocol, secret_context
 from tests.conftest import ADMIN, USER_PASSWORD, auth_headers, create_user
@@ -219,7 +220,8 @@ def test_a_secret_changed_in_1_3_0_is_taken_over_at_the_next_start(admin_client:
     assert made.status_code == 201, made.text
     row = _row("sso")
     assert unseal(row.client_secret_enc, secret_context(row.id)) == "a"
-    # 1.3.0 liest und schreibt nur ``client_secret``.
+    # 1.3.0 liest und schreibt nur ``client_secret``: Dort steht es auch, so wie sie es entschluesselt.
+    assert decrypt(row.client_secret_legacy) == "a"
     with engine.begin() as connection:
         connection.execute(text("UPDATE oidc_providers SET client_secret = :s"), {"s": encrypt(sso.client_secret)})
     init_db()
@@ -369,6 +371,14 @@ def test_saving_or_clearing_the_public_address_asks_while_a_provider_knows_it(
 def test_the_public_address_is_no_laxer_than_the_module(admin_client: TestClient, address: str) -> None:
     refused = admin_client.put("/api/settings", json={"public_url": address})
     assert refused.status_code == 422 and refused.json()["detail"]["code"] == "invalid_setting"
+    # Auch ohne die Rueckfrage davor (``store_public_url`` des Moduls speichert ueber denselben Weg).
+    with SessionLocal() as db, pytest.raises(SettingsError):
+        save_settings(db, {"public_url": address})
+
+
+def test_the_public_address_is_stored_as_the_module_writes_it(admin_client: TestClient) -> None:
+    saved = admin_client.put("/api/settings", json={"public_url": "HTTPS://Music.Example.com/nexbeat/"})
+    assert saved.status_code == 200 and saved.json()["public_url"] == "https://music.example.com/nexbeat"
 
 
 def test_password_sign_in_switches_off_only_with_an_active_provider(admin_client: TestClient, net: Any) -> None:
