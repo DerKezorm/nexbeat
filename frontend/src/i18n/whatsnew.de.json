@@ -95,6 +95,40 @@
         "Konten werden nur über die Kennung des Anbieters zugeordnet, nie über die Mailadresse. Ein bestehendes Konto kommt nur über die Verknüpfung im Profil an einen Anbieter.",
         "Ein Anbieter, über den Konten ohne Passwort entstanden sind, lässt sich erst nach einer Rückfrage löschen."
       ]
+    },
+    "1.4.0": {
+      "lead": "Die Anmeldung über einen Anbieter ist jetzt in allen nexbeat-Apps dieselbe: mehrere Anbieter nebeneinander, eine sicherere Rückkehr in die App und eine Rückfrage, bevor sich die öffentliche Adresse ändert.",
+      "sections": [
+        {
+          "title": "Einladungen über einen Anbieter",
+          "body": "Die Einladungsseite hat jetzt für jeden Anbieter einen Knopf. Wer einer Einladung folgt, macht mit seinem Anbieter weiter und kommt mit den Rechten der Einladung herein. Ein bestehendes Konto im Profil zu verknüpfen verlangt noch einmal dein Passwort.",
+          "where": "Menü an deinem Namen › Profil › Anmeldeanbieter"
+        },
+        {
+          "title": "Drei Karten für die Anmeldung",
+          "body": "Die Einstellungen zeigen jetzt die Anmeldung mit der öffentlichen Adresse, die Liste der Anbieter in der Reihenfolge der Knöpfe und den authentik-Schritt. Die Anmeldung mit Passwort lässt sich abschalten, sobald ein Anbieter aktiv ist; Administratoren können ihr Passwort immer nutzen. Wer die öffentliche Adresse ändert oder leert, wird vorher gefragt, wenn ein Anbieter sie kennt, denn mit ihr ändert sich die Rücksprungadresse jedes Anbieters.",
+          "where": "Einstellungen › System › Anmeldung",
+          "admin": true
+        },
+        {
+          "title": "Neue Konten sind immer Mitglieder",
+          "body": "Wer über einen Anbieter neu dazukommt, wird Mitglied, auch dort, wo in 1.3.0 für den Anbieter eine andere Rolle eingestellt war. Administratorrechte kommen nur aus einer Einladung. Anbieter aus 1.3.0 laufen weiter und behalten ihre Rücksprungadresse.",
+          "where": "Einstellungen › System › Anmeldung",
+          "admin": true
+        },
+        {
+          "title": "Hinter einem Reverse-Proxy",
+          "body": "nexbeat übernimmt das Schema (http oder https) einer Anfrage nur von den Proxys, die in der Einstellung FORWARDED_ALLOW_IPS stehen (Standard 127.0.0.1, durch Komma getrennt, * für alle). Hinter einem Proxy, der TLS beendet, trägst du dort seine Adresse ein. Bisher war das nicht nötig, prüfe es also nach dem Update.",
+          "where": "Umgebungsvariable FORWARDED_ALLOW_IPS",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Das Sitzungs-Cookie liegt jetzt unter /api, damit die Rückkehr vom Anbieter weiß, wer angemeldet ist. Nach dem Update musst du dich eventuell einmal neu anmelden.",
+        "Mails tragen jetzt einen Date-Header; große Mailanbieter hatten sie sonst kommentarlos verworfen (Issue #2).",
+        "API-Token, etwa für nexdeck, funktionieren unverändert weiter."
+      ]
     }
   }
 }

@@ -95,6 +95,40 @@
         "Accounts are matched only by the provider's ID for a person, never by email address. An existing account gets to a provider only through the link in the profile.",
         "A provider through which accounts without a password were created can only be deleted after a confirmation."
       ]
+    },
+    "1.4.0": {
+      "lead": "Signing in through a provider is now the same in every nexbeat app: several providers side by side, a safer return to the app, and a question before the public address changes.",
+      "sections": [
+        {
+          "title": "Invitations through a provider",
+          "body": "The invitation page now has a button for each provider. Whoever follows an invitation continues with their provider and comes in with the rights the invitation carries. Linking an existing account in your profile asks for your password once more.",
+          "where": "Menu at your name › Profile › Sign-in providers"
+        },
+        {
+          "title": "Three cards for sign-in",
+          "body": "Settings now show the sign-in with its public address, the list of providers in the order of the buttons, and the authentik step. Password sign-in can be switched off once a provider is active; administrators can always use their password. Changing or clearing the public address asks first when a provider knows it, because the return address of every provider changes with it.",
+          "where": "Settings › System › Sign-in",
+          "admin": true
+        },
+        {
+          "title": "New accounts are always members",
+          "body": "People who join through a provider become members, also where 1.3.0 had set another role for that provider. The rights of an administrator come only from an invitation. Providers set up in 1.3.0 keep working and keep their return address.",
+          "where": "Settings › System › Sign-in",
+          "admin": true
+        },
+        {
+          "title": "Behind a reverse proxy",
+          "body": "nexbeat takes the scheme (http or https) of a request only from the proxies named in the setting FORWARDED_ALLOW_IPS (default 127.0.0.1, comma separated, * for all). Behind a proxy that ends TLS, add its address there. Nothing else was needed before, so check this after the update.",
+          "where": "Environment variable FORWARDED_ALLOW_IPS",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "The session cookie now lives under /api so the return from a provider sees who is signed in. You may have to sign in once more after the update.",
+        "Mails now carry a Date header; large mail providers had dropped them without a word (issue #2).",
+        "API tokens, for example for nexdeck, keep working unchanged."
+      ]
     }
   }
 }
