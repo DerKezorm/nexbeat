@@ -129,6 +129,19 @@
         "Mails now carry a Date header; large mail providers had dropped them without a word (issue #2).",
         "API tokens, for example for nexdeck, keep working unchanged."
       ]
+    },
+    "1.4.1": {
+      "lead": "A small repair release: nexbeat now trusts no proxy until you name it.",
+      "sections": [
+        {
+          "title": "Trusted proxies are empty by default",
+          "body": "FORWARDED_ALLOW_IPS used to default to 127.0.0.1. It is now empty, so nexbeat takes the scheme and the sender of a request from no proxy until you add its address (addresses or networks such as 172.16.0.0/12, comma separated, * for all). With a bridge network, as on most NAS, nothing changes. If nexbeat runs with host networking behind a proxy on the same machine, add that proxy there, otherwise the session cookie loses Secure and the authentik card warns.",
+          "where": "Environment variable FORWARDED_ALLOW_IPS",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Also",
+      "small": []
     }
   }
 }

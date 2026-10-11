@@ -129,6 +129,19 @@
         "Mails tragen jetzt einen Date-Header; große Mailanbieter hatten sie sonst kommentarlos verworfen (Issue #2).",
         "API-Token, etwa für nexdeck, funktionieren unverändert weiter."
       ]
+    },
+    "1.4.1": {
+      "lead": "Ein kleines Reparatur-Release: nexbeat traut jetzt keinem Proxy, bis du ihn nennst.",
+      "sections": [
+        {
+          "title": "Vertraute Proxys ab Werk leer",
+          "body": "FORWARDED_ALLOW_IPS stand ab Werk auf 127.0.0.1. Jetzt ist die Einstellung leer: nexbeat übernimmt Schema und Absender einer Anfrage von keinem Proxy, bis du seine Adresse einträgst (Adressen oder Netze wie 172.16.0.0/12, durch Komma getrennt, * für alle). Mit einem Bridge-Netz, wie auf den meisten NAS, ändert sich nichts. Läuft nexbeat mit Host-Netz hinter einem Proxy auf demselben Rechner, trägst du diesen Proxy dort ein, sonst verliert das Sitzungs-Cookie Secure und die authentik-Karte warnt.",
+          "where": "Umgebungsvariable FORWARDED_ALLOW_IPS",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": []
     }
   }
 }
