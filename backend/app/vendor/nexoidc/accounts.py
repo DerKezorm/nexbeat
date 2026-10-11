@@ -30,6 +30,9 @@ from .model import AccountState, Identity, Link, Store
 #: ``SignedIn.invitation``: what became of an invitation that came along with a known link.
 INVITATION_ACCEPTED = "accepted"
 INVITATION_INVALID = "invalid"
+#: How often a new account is tried when the store refuses it because a return at the same moment wrote first.
+CREATE_ATTEMPTS = 3
+
 #: How far numbering goes when a name is taken (``max-2``, ``max-3`` …) before the module gives up.
 NAME_TRIES = 1000
 FALLBACK_NAME = "user"
@@ -125,21 +128,30 @@ def sign_in(store: Store, arrival: Arrival) -> SignedIn:
             "oidc_no_account",
             f"no account for this identity at provider {provider.slug} (address {protocol.masked(identity.email)})",
         )
-    try:
-        name = name_for(identity, store.clean_name, store.name_taken)
-        account_id = store.create_account(name, invite=invite, email=identity.email)
-        store.add_link(
-            Link(
-                provider_id=provider.id,
-                subject=identity.subject,
-                account_id=account_id,
-                issuer=identity.issuer,
-                email=identity.email,
+    for attempt in range(CREATE_ATTEMPTS):
+        try:
+            name = name_for(identity, store.clean_name, store.name_taken)
+            account_id = store.create_account(name, invite=invite, email=identity.email)
+            store.add_link(
+                Link(
+                    provider_id=provider.id,
+                    subject=identity.subject,
+                    account_id=account_id,
+                    issuer=identity.issuer,
+                    email=identity.email,
+                )
             )
-        )
-    except Exception:
-        store.rollback()
-        raise
+        except Exception:
+            store.rollback()
+            # Checking and writing are two steps: a second return of the same new identity (or another one with the
+            # same name) may have written in between and the store refused ours (a unique key). The same identity is
+            # then known, and signs in; a name that was taken meanwhile is chosen again. Anything else is raised.
+            if invite is None and store.find_link(provider.id, identity.subject) is not None:
+                return sign_in(store, arrival)
+            if invite is not None or attempt == CREATE_ATTEMPTS - 1:
+                raise
+            continue
+        break
     store.commit()
     _log().info(
         "Account created via OIDC provider=%s (%s) name=%s",

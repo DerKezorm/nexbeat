@@ -7,7 +7,7 @@ from typing import Any
 import oidc_fakes as fakes
 import pytest
 from conftest import add_in_store
-from oidc_contract import error_in, link_person, location, round_trip
+from oidc_contract import entry, error_in, form_of, link_person, location, round_trip
 
 COMMON = f"{fakes.ENTRA}/common/v2.0"
 
@@ -168,6 +168,11 @@ def test_12_a_new_account_is_named_after_the_part_before_the_at(adapter: Any, en
         browser, response = round_trip(adapter, entra, "entra")
         assert error_in(response) == "oidc_no_account" and adapter.who(browser) is None
         return
-    key = adapter.make_invite("member")
-    browser, response = round_trip(adapter, entra, "entra", invite=key)
+    if adapter.has_invitations:
+        browser, response = round_trip(adapter, entra, "entra", invite=adapter.make_invite("member"))
+    else:
+        # No invitations (1.0.12): the provider makes the account itself.
+        item = entry(adapter, "entra")
+        assert adapter.save_provider(item["id"], form_of(item, auto_create=True)).status_code == 200
+        browser, response = round_trip(adapter, entra, "entra")
     assert location(response) == adapter.home and adapter.who(browser) == "max"

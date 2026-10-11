@@ -1,7 +1,9 @@
 """Contract, Bauplan 05 "Konten", Pflichttests 13 to 22, through the app's own routes and store.
 
 Apps with one account (Bauplan 06) answer 15 to 17 with "a foreign identity is refused" instead; the tests branch
-on ``adapter.single_account`` and never skip.
+on ``adapter.single_account`` and never skip. Apps with several accounts and no invitations (nexdeck,
+``has_invitations`` False, since 1.0.12) skip the tests of an invitation, with the reason, and make the account
+without a password through ``auto_create`` instead.
 """
 
 from __future__ import annotations
@@ -38,6 +40,17 @@ def set_auto_create(adapter: Any, slug: str, value: bool) -> None:
     item = entry(adapter, slug)
     response = adapter.save_provider(item["id"], form_of(item, auto_create=value))
     assert response.status_code == 200, response.text
+
+
+#: Why the tests of an invitation do not run in an app without invitations (Bauplan 04, "Apps ohne Einladungen").
+NO_INVITATIONS = "the app has no invitations (has_invitations False, Bauplan 04 'Apps ohne Einladungen')"
+
+
+def needs_invitations(adapter: Any) -> None:
+    """Skip a test of an invitation in an app with several accounts and no invitations. Apps with one account have
+    none either, but their tests check the refusal instead and run."""
+    if not adapter.has_invitations and not adapter.single_account:
+        pytest.skip(NO_INVITATIONS)
 
 
 # --- 13 -----------------------------------------------------------------------------------------------------------
@@ -89,6 +102,7 @@ def test_15_without_link_invitation_or_auto_create_nobody_comes_in(
 def test_16_an_invitation_through_the_provider_makes_the_account_with_its_rights_once(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
+    needs_invitations(adapter)
     if adapter.single_account:
         # Bauplan 06: no invitations; a foreign identity is refused.
         assert error_in(start(adapter, adapter.browser(), "sso", invite="any-key")) == "invite_invalid"
@@ -106,6 +120,7 @@ def test_16_an_invitation_through_the_provider_makes_the_account_with_its_rights
 def test_16_two_returning_at_once_with_one_invitation_make_one_account(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
+    needs_invitations(adapter)
     if adapter.single_account:
         assert error_in(start(adapter, adapter.browser(), "sso", invite="any-key")) == "invite_invalid"
         return
@@ -134,6 +149,7 @@ def test_16_two_returning_at_once_with_one_invitation_make_one_account(
 def test_16_a_known_identity_with_an_invitation_signs_in_and_takes_its_rights_once(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
+    needs_invitations(adapter)
     if adapter.single_account:
         # Bauplan 06: no invitations, not even for the one account's own identity.
         adapter.make_account("owner")
@@ -158,6 +174,7 @@ def test_16_a_known_identity_with_an_invitation_signs_in_and_takes_its_rights_on
 def test_16_a_known_and_a_new_identity_at_once_with_one_invitation_use_it_once(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
+    needs_invitations(adapter)
     if adapter.single_account:
         assert error_in(start(adapter, adapter.browser(), "sso", invite="any-key")) == "invite_invalid"
         return
@@ -203,6 +220,45 @@ def test_17_auto_create_makes_a_member(adapter: Any, sso: fakes.FakeProvider, wi
         return
     assert location(response) == adapter.home and adapter.who(browser) == "alex"
     assert adapter.rights_of("alex") == "member"
+
+
+def test_17b_the_same_new_identity_returning_twice_at_once_makes_one_account_and_one_link(
+    adapter: Any, sso: fakes.FakeProvider, with_sso: dict
+) -> None:
+    """The race of 16 without an invitation, for every app: auto_create checks "no link yet" and then writes, and two
+    returns of one new identity may both pass the check."""
+    if adapter.only_authentik:
+        with adapter.store() as store:
+            row = store.provider_by_slug("sso")
+        _set_in_store(adapter, row, auto_create=True)
+    else:
+        set_auto_create(adapter, "sso", True)
+    sso.person = {"sub": "person-1", "preferred_username": "alex"}
+    ready = []
+    for _ in (1, 2):
+        browser = adapter.browser()
+        ready.append((browser, sso.authorize(location(start(adapter, browser, "sso")))))
+    answers: list[Any] = [None, None]
+
+    def back(index: int) -> None:
+        browser, params = ready[index]
+        answers[index] = oidc_contract.come_back(adapter, browser, "sso", params)
+
+    threads = [threading.Thread(target=back, args=(index,)) for index in (0, 1)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+    assert all(answer is not None for answer in answers)
+    if adapter.single_account:
+        # Bauplan 06: auto_create is off inside; a foreign identity is refused, twice.
+        assert [error_in(answer) for answer in answers] == ["oidc_no_account"] * 2
+        assert [adapter.who(browser) for browser, _ in ready] == [None, None]
+        return
+    # At least one is in; the other is in as well or told no, but never a second account or a second link.
+    assert "alex" in [adapter.who(browser) for browser, _ in ready]
+    assert adapter.account_names().count("alex") == 1
+    assert len(links_of(adapter, "alex")) == 1
 
 
 def _set_in_store(adapter: Any, row: Any, **changes: Any) -> None:
@@ -274,8 +330,13 @@ def test_18_the_last_link_of_an_account_without_password_stays(
         adapter.sign_in_with_password(browser, "owner")
         assert adapter.unlink(browser, "sso").status_code in (200, 204)
         return
-    key = adapter.make_invite("member")
-    browser, _ = round_trip(adapter, sso, "sso", invite=key)
+    if adapter.has_invitations:
+        browser, _ = round_trip(adapter, sso, "sso", invite=adapter.make_invite("member"))
+    else:
+        # No invitations (1.0.12): the provider makes the account without a password itself, then stops again.
+        set_auto_create(adapter, "sso", True)
+        browser, _ = round_trip(adapter, sso, "sso")
+        set_auto_create(adapter, "sso", False)
     assert adapter.who(browser) == "alex"
     refused = adapter.unlink(browser, "sso")
     assert refused.status_code == 409 and adapter.error_code(refused) == "oidc_only_account"

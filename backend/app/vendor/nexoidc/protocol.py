@@ -95,9 +95,9 @@ def _placeholder_pattern(published: str) -> re.Pattern[str] | None:
 
 def _comparable(issuer: str) -> str:
     """An issuer as ``same_issuer`` compares it: ``normalize_issuer``, then scheme and host in small letters (they name
-    the same server in any case, RFC 3986 6.2.2.1). Userinfo, path, query and fragment stay exactly as written: a path
-    may tell two issuers apart by its letters. Taken apart by hand, not with ``urlsplit``, which drops tabs and line
-    breaks and would make ``/tab<TAB>x`` look like ``/tabx``."""
+    the same server in any case, RFC 3986, "Case Normalization"). Userinfo, path, query and fragment stay exactly as
+    written: a path may tell two issuers apart by its letters. Taken apart by hand, not with ``urlsplit``, which drops
+    tabs and line breaks and would make ``/tab<TAB>x`` look like ``/tabx``."""
     issuer = normalize_issuer(issuer)
     scheme, separator, rest = issuer.partition("://")
     if not separator or not scheme:
@@ -498,8 +498,8 @@ async def verify_token(
             claims.get("iss"),
         )
         raise invalid
-    # ``azp`` must be this client whenever it is present (OIDC Core 3.1.3.7): a token for another application that
-    # merely mentions this one in ``aud`` would pass otherwise.
+    # ``azp`` must be this client whenever it is present (OIDC Core, "ID Token Validation"): a token for another
+    # application that merely mentions this one in ``aud`` would pass otherwise.
     if "azp" in claims and claims.get("azp") != client_id:
         _log().warning("OIDC: %s carries azp %r, which is not this client", purpose, claims.get("azp"))
         raise invalid

@@ -1,33 +1,33 @@
 {
   "files": {
-    "backend/app/vendor/nexoidc/__init__.py": "sha256-nkv5rDX9W1PhyW9UpErjUdUf3sPwjOhnLTTvDTsoQiI=",
-    "backend/app/vendor/nexoidc/accounts.py": "sha256-virx5LdFS+btMc3//pobhGI9MzeNMIfa6T/0q15Cotg=",
+    "backend/app/vendor/nexoidc/__init__.py": "sha256-cbNf14J/vGiuqLiE1MSXPrKfbxiCbEiS8Ng95P87nc4=",
+    "backend/app/vendor/nexoidc/accounts.py": "sha256-Xg843ZFuaO/oB+KDbVTt4rEW7T4cfz4dWpip9yd4gy8=",
     "backend/app/vendor/nexoidc/attempt.py": "sha256-+6/Q1D/bqkSv/bsbMS3r4nrV41cre04CSyerq6iynaA=",
-    "backend/app/vendor/nexoidc/authentik.py": "sha256-vqPkNrm8LgzPs8w4idUBvz0DZ/Q9JqK6N6sEkV2qUCQ=",
+    "backend/app/vendor/nexoidc/authentik.py": "sha256-ubw3hZz3K6y8KOTL+3PpGmpVKHGWuMBobe/L5vblY4c=",
     "backend/app/vendor/nexoidc/config.py": "sha256-O7JcLFvEEDmh+DE6fNkpBk415y6/8BWvMHvR3U1uTOk=",
     "backend/app/vendor/nexoidc/coupling.py": "sha256-rps2tDJahGdcCrh42h0fK/JonwaAWl9kNz/09rURlhU=",
     "backend/app/vendor/nexoidc/errors.py": "sha256-FJkm7kniZ90gBRPtvZiaWwG7D28vhXpxcGL2G9aPHwQ=",
     "backend/app/vendor/nexoidc/flow.py": "sha256-s5Mzr05qCdANoH89eWsyw9c2AyqTFADsu/4snpFsesI=",
     "backend/app/vendor/nexoidc/migrate.py": "sha256-qlp1S+MX5vXgy7mdtkzqtnpgEMItlZxy4lvtm1nUYnk=",
     "backend/app/vendor/nexoidc/model.py": "sha256-FHEZMTMwtvV786sehaFtDVALrT9XXgIJOe+eJ9CrZdA=",
-    "backend/app/vendor/nexoidc/protocol.py": "sha256-AaLtK6sphaw52WjyRKV6DinraTpvFCXq5LuUcXN3jyQ=",
+    "backend/app/vendor/nexoidc/protocol.py": "sha256-41AXjuE0+xyAFkU7nmtE/EyA8FIhAx8pWWw9qLsnl0o=",
     "backend/app/vendor/nexoidc/providers.py": "sha256-V1ZGAX0emzA9OOqjkddrNXBYBtbirdoWDAI2IVQNaDE=",
     "backend/app/vendor/nexoidc/tls.py": "sha256-Qb+c/KKuAA5/bhfRnoB0I6cY8PEchLtC5px4Nh4aGa8=",
     "backend/tests/nexoidc/conftest.py": "sha256-mIgfLrl12RYsWgewrqBIXRct1l0TQwByLm3wINTOA/o=",
-    "backend/tests/nexoidc/oidc_contract.py": "sha256-Ba4dXNwJJ9mOubHst7xzHaDc2xlqYIh+p+P8bibdB8A=",
+    "backend/tests/nexoidc/oidc_contract.py": "sha256-tCMlqXPGpWZfhWqqLWhXbnnWzvmiPL3Xph75E2xPRe0=",
     "backend/tests/nexoidc/oidc_fakes.py": "sha256-lbo7g/eZzWuWHSqAafTLY8P7JxPzCecEWjNFkzBy59U=",
-    "backend/tests/nexoidc/test_nexoidc_accounts.py": "sha256-SMEAmdzCjNtoJJgaFcMEkS7gbbIjPJFuP5oBgMlzCt0=",
+    "backend/tests/nexoidc/test_nexoidc_accounts.py": "sha256-omcWwsKRl9t8n7yD8omO1eLwysrw5Iyf1zkq6muw4VI=",
     "backend/tests/nexoidc/test_nexoidc_address.py": "sha256-UenTqK7E1X/y7+QSkmun7D0vIKZV8F/muaE9bExpT9g=",
     "backend/tests/nexoidc/test_nexoidc_authentik.py": "sha256-YbvYvCK/x7h82wekRtA471BVMdfy4hxH4JkCw2d4qXs=",
     "backend/tests/nexoidc/test_nexoidc_duties.py": "sha256-WVij+0dYscMKdo6OGJ89CWUs3urKOnBMLCQnqcuFhrc=",
-    "backend/tests/nexoidc/test_nexoidc_entra.py": "sha256-Raa/JmWZOlXy3026PUD2PbSaGHV0vPBKasQwi3i2hO4=",
+    "backend/tests/nexoidc/test_nexoidc_entra.py": "sha256-6FxTlUn7BJW/QV3ada+iUQto8XNr/sn4o/TNs6v2kQQ=",
     "backend/tests/nexoidc/test_nexoidc_flow.py": "sha256-nbtkj585+roXrwIUPkOJiY/HLjQIC9IrwP/5OVwqW2Y=",
     "backend/tests/nexoidc/test_nexoidc_paths.py": "sha256-VwgXHoUFa3zOzB1ItTijVXRWSj2rZ+Uo57ymoSUQ1Vs=",
     "backend/tests/nexoidc/test_nexoidc_vendored.py": "sha256-+EzsD5r5VxwtmcLN9H3PSPBKB76WCNlkfs85wvoLLEw=",
     "backend/tests/nexoidc/test_nexoidc_wayback.py": "sha256-U6vr7wAL1+7zwpTaHJ4ljF7IgNolSa62/fIxL0gzFmo=",
-    "frontend/src/vendor/nexoidc/oidc.de.json": "sha256-bJjTc1pZ7n5Lpoy/U3AH5fxE0VRHDqtre/tPzhyXpaw=",
-    "frontend/src/vendor/nexoidc/oidc.en.json": "sha256-J4yFNUH6W8wOAee14Vu5c5HQMp6HYkRC1ZQIydCsCiI=",
-    "frontend/src/vendor/nexoidc/oidc.ts": "sha256-hnArswLJrCpVQzRbKHq0PioBKkKuzwK5puTx/ag2/Ho="
+    "frontend/src/vendor/nexoidc/oidc.de.json": "sha256-jYLp+hvJWwE+E8+PwdHqVLC8Xr5RBtjzRDHiWIZHAT0=",
+    "frontend/src/vendor/nexoidc/oidc.en.json": "sha256-lEFB5DehFqsyHY+UzOUOQjAbyiODsgVwinLR4PlQA10=",
+    "frontend/src/vendor/nexoidc/oidc.ts": "sha256-6BnVEr0vkUGXzXCfTCODfFQ9Zen4/ciDA3WlWqgTVSw="
   },
   "module": "oidc",
   "requires": {
@@ -35,5 +35,5 @@
     "pyjwt": "2.15.1"
   },
   "vendor_path": "backend/app/vendor/nexoidc",
-  "version": "1.0.11"
+  "version": "1.0.12"
 }

@@ -35,6 +35,7 @@ class Adapter(StandardAdapter):
     package = "app.vendor.nexoidc"
     api = "/api"
     single_account = False
+    has_invitations = True  # nexbeat has invitations (auth_tokens)
     only_authentik = False
     # Bauplan 06 names nexcanvas, nextasks, nexbrand and nexlore for the Verbund; nexbeat is never coupled.
     supports_coupling = False

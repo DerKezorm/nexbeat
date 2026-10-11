@@ -729,11 +729,12 @@ def _public_url_first(store: Store, confirmed: str, request_base: str) -> str:
 
 
 def _header(headers: Mapping[str, str] | None, name: str) -> str:
-    """The first value of a request header, for the card only (never trusted for an address)."""
+    """The rightmost value of a request header, the one a trusted proxy appended (the rule of the README), for the card
+    only (never trusted for an address)."""
     for key, value in (headers or {}).items():
         if str(key).lower() == name:
-            first = str(value).split(",")[0].strip()[:FORWARDED_MAX]
-            return first if first.isprintable() else ""
+            last = str(value).split(",")[-1].strip()[:FORWARDED_MAX]
+            return last if last.isprintable() else ""
     return ""
 
 

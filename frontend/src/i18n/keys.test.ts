@@ -4,7 +4,7 @@ import moduleDe from '../vendor/nexoidc/oidc.de.json'
 import own from './de.json'
 
 // Die Texte, wie die App sie laedt: die eigenen und die des Anmeldemoduls (`i18n/index.ts`).
-const de = { ...own, ...oidcWording(moduleDe, { singleAccount: false }) }
+const de = { ...own, ...oidcWording(moduleDe, { singleAccount: false, invitations: true }) }
 
 const sources = import.meta.glob('../**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 

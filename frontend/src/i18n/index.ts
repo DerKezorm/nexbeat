@@ -8,7 +8,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
-import { oidcWording, type OidcWording } from '../vendor/nexoidc/oidc'
+import { oidcVariables, oidcWording, type OidcWording } from '../vendor/nexoidc/oidc'
 
 export const SUPPORTED_LANGUAGES = ['de', 'en'] as const
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
@@ -19,7 +19,7 @@ type Texts = Record<string, unknown>
 
 /**
  * Die Texte einer Sprache: die eigenen von nexbeat und die des gemeinsamen Anmeldemoduls (Namensraum `oidc`,
- * Bauplan 04, wortgleich in allen Apps). `{{app}}` darin setzt `defaultVariables` unten.
+ * Bauplan 04, wortgleich in allen Apps). `{{app}}` und `{{slug}}` darin setzt `defaultVariables` unten.
  */
 const TEXTS: Record<Language, () => Promise<Texts>> = {
   de: async () => merged((await import('./de.json')).default, (await import('../vendor/nexoidc/oidc.de.json')).default),
@@ -27,7 +27,7 @@ const TEXTS: Record<Language, () => Promise<Texts>> = {
 }
 
 function merged(own: Texts, module: OidcWording): Texts {
-  return { ...own, ...oidcWording(module, { singleAccount: false }) }
+  return { ...own, ...oidcWording(module, { singleAccount: false, invitations: true }) }
 }
 
 export function isLanguage(value: unknown): value is Language {
@@ -55,7 +55,7 @@ export async function startI18n(language: Language = initialLanguage()): Promise
     resources: { [language]: { translation: texts } },
     lng: language,
     fallbackLng: false,
-    interpolation: { escapeValue: false, defaultVariables: { app: 'nexbeat' } },
+    interpolation: { escapeValue: false, defaultVariables: oidcVariables('nexbeat') },
   })
   document.documentElement.lang = language
 }

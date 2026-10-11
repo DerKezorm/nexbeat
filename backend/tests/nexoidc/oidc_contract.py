@@ -26,6 +26,10 @@ class StandardAdapter:
     api = "/api"
     #: nexcrate, nexsift: one account (Bauplan 06). Then invitations and new accounts are refused instead.
     single_account = False
+    #: The app has invitations (since 1.0.12). False for nexdeck, nexsift and nexcrate: the tests of an invitation are
+    #: skipped with the reason, and what they check besides it is checked through ``auto_create``. Apps with one
+    #: account have none either; they keep their own answers (``single_account``).
+    has_invitations = True
     #: nexsuite: only authentik, no second entry through the form (Bauplan 06). Entries are then made in the store.
     only_authentik = False
     #: The app can be coupled to nexsuite (Bauplan 06). False for the apps with one account (nexcrate, nexsift): they
@@ -92,7 +96,8 @@ class StandardAdapter:
         raise NotImplementedError
 
     def make_invite(self, rights: str) -> str:
-        """APP: an open invitation granting ``rights``; its key. Single account: unused."""
+        """APP: an open invitation granting ``rights``; its key. Single account or ``has_invitations`` False:
+        unused."""
         raise NotImplementedError
 
     def rights_of(self, name: str) -> str | None:

@@ -32,7 +32,7 @@
       "slug": "Kurzname",
       "slugHint": "Teil der Rückleitadresse, lässt sich später nicht ändern.",
       "issuer": "Aussteller (Issuer)",
-      "issuerHint": "authentik: https://auth.example.com/application/o/{{app}}/. Microsoft Entra ID: https://login.microsoftonline.com/MANDANTEN-ID/v2.0, für mehrere Mandanten common oder organizations. Entra nimmt als Rückleitadresse nur https an (außer localhost) und schickt die Mailadresse nur als optionalen Claim email.",
+      "issuerHint": "authentik: https://auth.example.com/application/o/{{slug}}/. Microsoft Entra ID: https://login.microsoftonline.com/MANDANTEN-ID/v2.0, für mehrere Mandanten common oder organizations. Entra nimmt als Rückleitadresse nur https an (außer localhost) und schickt die Mailadresse nur als optionalen Claim email.",
       "clientId": "Client-ID",
       "secret": "Client-Geheimnis",
       "secretKept": "gespeichert, leer lassen zum Behalten",
@@ -100,7 +100,7 @@
       "oidc_token_refused": "Der Anbieter hat den Code nicht eingelöst.",
       "oidc_token_invalid": "Die Antwort des Anbieters war ungültig.",
       "oidc_no_signing_key": "Der Anbieter unterschreibt ohne Schlüssel. Wähl dort einen Signierschlüssel für den Provider.",
-      "oidc_no_account": "Für dich gibt es hier kein Konto. Bitte um eine Einladung, oder melde dich mit Passwort an und verknüpfe dein Konto unter Mein Konto, Sicherheit.",
+      "oidc_no_account": "Für dich gibt es hier kein Konto. Bitte um eine Einladung, oder melde dich mit Passwort an und verknüpfe dein Konto in deinen Kontoeinstellungen.",
       "oidc_subject_taken": "Diese Identität ist schon mit einem anderen Konto verknüpft.",
       "oidc_only_account": "Dieses Konto meldet sich nur über diesen Anbieter an. Die letzte Verknüpfung bleibt.",
       "oidc_link_mismatch": "Diese Verknüpfung gehört zu einem anderen Konto.",
@@ -118,6 +118,15 @@
       "scopes_invalid": "Die Bereiche müssen openid enthalten.",
       "provider_managed": "Dieser Anbieter kommt über eine Kopplung und ändert sich nur dort.",
       "provider_unknown": "Diesen Anbieter gibt es nicht mehr."
+    },
+    "noInvitations": {
+      "admin": {
+        "addressHint": "Die Adresse, unter der man {{app}} erreicht. Die Anbieter schicken nach der Anmeldung dorthin zurück.",
+        "autoCreateHint": "Aus: Nur Konten, die sich verknüpft haben, kommen über diesen Anbieter herein. An: Wer dort ein Konto hat, bekommt hier eines als Mitglied."
+      },
+      "error": {
+        "oidc_no_account": "Für dich gibt es hier kein Konto. Bitte den Betreiber um eines, oder melde dich mit Passwort an und verknüpfe dein Konto in deinen Kontoeinstellungen."
+      }
     },
     "single": {
       "admin": {

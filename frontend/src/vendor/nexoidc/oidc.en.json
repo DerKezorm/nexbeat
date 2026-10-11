@@ -32,7 +32,7 @@
       "slug": "Short name",
       "slugHint": "Part of the redirect address; it cannot be changed later.",
       "issuer": "Issuer",
-      "issuerHint": "authentik: https://auth.example.com/application/o/{{app}}/. Microsoft Entra ID: https://login.microsoftonline.com/TENANT-ID/v2.0, or common or organizations for several tenants. Entra takes only https redirect addresses (localhost aside) and sends the email address only as the optional claim email.",
+      "issuerHint": "authentik: https://auth.example.com/application/o/{{slug}}/. Microsoft Entra ID: https://login.microsoftonline.com/TENANT-ID/v2.0, or common or organizations for several tenants. Entra takes only https redirect addresses (localhost aside) and sends the email address only as the optional claim email.",
       "clientId": "Client ID",
       "secret": "Client secret",
       "secretKept": "stored, leave empty to keep it",
@@ -100,7 +100,7 @@
       "oidc_token_refused": "The provider did not redeem the code.",
       "oidc_token_invalid": "The provider's answer was not valid.",
       "oidc_no_signing_key": "The provider signs without a key. Choose a signing key for the provider there.",
-      "oidc_no_account": "There is no account for you here. Ask for an invitation, or sign in with your password and link your account under My account, Security.",
+      "oidc_no_account": "There is no account for you here. Ask for an invitation, or sign in with your password and link your account in your account settings.",
       "oidc_subject_taken": "This identity is linked to another account already.",
       "oidc_only_account": "This account signs in through this provider only. The last link stays.",
       "oidc_link_mismatch": "This link belongs to another account.",
@@ -118,6 +118,15 @@
       "scopes_invalid": "The scopes must contain openid.",
       "provider_managed": "This provider comes through a coupling and changes only there.",
       "provider_unknown": "This provider no longer exists."
+    },
+    "noInvitations": {
+      "admin": {
+        "addressHint": "The address people use to reach {{app}}. The providers send people back there after signing in.",
+        "autoCreateHint": "Off: only linked accounts come in through this provider. On: whoever has an account there gets one here as a member."
+      },
+      "error": {
+        "oidc_no_account": "There is no account for you here. Ask the operator for one, or sign in with your password and link your account in your account settings."
+      }
     },
     "single": {
       "admin": {

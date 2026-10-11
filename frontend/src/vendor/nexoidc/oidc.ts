@@ -5,10 +5,11 @@
  *
  * Copied unchanged into every app by `bauplaene/oidc/tools/sync.py`; changed only in `bauplaene/oidc`.
  *
- * The wording files use i18next's `{{app}}` for the name of the app. Set it once, for example
- * `i18n.init({ interpolation: { defaultVariables: { app: 'nexlore' } } })`, and merge the files into the app's
+ * The wording files use i18next's `{{app}}` for the name of the app and `{{slug}}` for the slug the authentik button
+ * gives the app's application (since 1.0.12). Set both once through `oidcVariables`, for example
+ * `i18n.init({ interpolation: { defaultVariables: oidcVariables('nexlore') } })`, and merge the files into the app's
  * resources under the same keys (`oidc.…`) through `oidcWording` (since 1.0.9; it picks the sentences of apps with
- * one account).
+ * one account and, since 1.0.12, of apps without invitations).
  */
 
 /** The error codes of Bauplan 02; each has a sentence under `oidc.error.<code>`. Same order as `errors.CODES`. */
@@ -200,15 +201,38 @@ function overlay(base: OidcWording, over: OidcWording): OidcWording {
  * The words of a wording file as the app merges them into its resources. Apps with one account (nexcrate, nexsift;
  * `AppConfig.single_account`) pass `singleAccount: true`: then the sentences under `oidc.single` take the place of
  * the keys of the same name (`oidc.admin.passwordHint`, `oidc.admin.addressHint`, `oidc.error.oidc_no_account`), so
- * the page asks for the same keys in every app. `oidc.single` itself is not handed on. Counts use i18next's plural
- * forms (`_one`, `_other`): ask for the key without the suffix and pass `count`.
+ * the page asks for the same keys in every app. Apps without invitations (nexdeck, nexsift, nexcrate) pass
+ * `invitations: false` (since 1.0.12, required: a call without it throws): then the sentences under `oidc.noInvitations` take the place of
+ * `oidc.admin.addressHint`, `oidc.admin.autoCreateHint` and `oidc.error.oidc_no_account`; the sentences of one account
+ * go on top of them. Neither `oidc.single` nor `oidc.noInvitations` is handed on. Counts use i18next's plural forms
+ * (`_one`, `_other`): ask for the key without the suffix and pass `count`.
  */
-export function oidcWording(file: OidcWording, options: { singleAccount: boolean }): OidcWording {
+export function oidcWording(
+  file: OidcWording,
+  options: { singleAccount: boolean; invitations: boolean },
+): OidcWording {
+  // A call from before 1.0.12 passes no `invitations`; reading that as "none" would put the sentences of an app without
+  // invitations into an app that has them, unseen (vite and vitest do not check types).
+  if (typeof options?.invitations !== 'boolean') {
+    throw new Error('oidcWording: options.invitations must be true or false (required since 1.0.12)')
+  }
   const root = file.oidc
   if (typeof root !== 'object') return { ...file }
-  const { single, ...words } = root
-  const chosen = options.singleAccount && typeof single === 'object' ? overlay(words, single) : words
+  const { single, noInvitations, ...words } = root
+  let chosen = words
+  if (!options.invitations && typeof noInvitations === 'object') chosen = overlay(chosen, noInvitations)
+  if (options.singleAccount && typeof single === 'object') chosen = overlay(chosen, single)
   return { ...file, oidc: chosen }
+}
+
+/**
+ * What the app sets as i18next's `interpolation.defaultVariables` (since 1.0.12): `app`, the name of the app in the
+ * texts, and `slug`, the slug the authentik button gives the app's application (in `oidc.admin.issuerHint`). The
+ * button takes the server's `AppConfig.app_name`, which is the name in small letters (`Nexview` gives `nexview`);
+ * pass `slug` only when the app's `app_name` is something else.
+ */
+export function oidcVariables(app: string, slug?: string): { app: string; slug: string } {
+  return { app, slug: slug ?? slugFromLabel(app) }
 }
 
 const SPELLED_OUT: Record<string, string> = { ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss', Ä: 'Ae', Ö: 'Oe', Ü: 'Ue' }
