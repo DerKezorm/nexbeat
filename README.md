@@ -167,8 +167,10 @@ can set one in their profile.
 
 **Behind a reverse proxy that ends TLS** nexbeat takes the scheme
 (`X-Forwarded-Proto`) only from the addresses in `FORWARDED_ALLOW_IPS` (the
-setting for trusted proxies, default `127.0.0.1`, comma separated, `*` for
-all). It reads the rightmost value, the one your proxy wrote. Setting the public
+setting for trusted proxies: addresses or networks such as `172.16.0.0/12`,
+comma separated, `*` for all). It is empty by default, so nexbeat trusts no
+sender until you name your proxy. It reads the rightmost value, the one your
+proxy wrote. Setting the public
 address is enough for sign-in itself; trusting the proxy also keeps the session
 cookie `Secure` and silences the warning in the authentik card.
 

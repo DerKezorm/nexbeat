@@ -6,7 +6,7 @@
 - Die Bremse zaehlt nur Rueckkehrer mit gueltigem Anlauf-Cookie.
 - Feste Routen verdecken keinen Anbieter mit dem Kurznamen ``authentik``.
 - Oeffentliche Adresse speichern fragt erst, auch beim Leeren; Passwort-Anmeldung abschaltbar.
-- Das Schema eines vertrauten Proxys: der rechteste Wert, ohne Gross und klein, nur http und https.
+- Das Schema eines vertrauten Proxys: der rechteste Wert, ohne Gross und klein, nur http und https; ab Werk keiner.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from app.crypto import decrypt, encrypt, unseal
 from app.db import SessionLocal, engine, init_db
 from app.main import app
 from app.models import Base, OidcLink, OidcProvider, User
-from app.proxy import behind_proxy, forwarded_scheme
+from app.proxy import behind_proxy, forwarded_scheme, trusted_proxies
 from app.services import anmeldebremse, oidc_migration
 from app.services.settings_service import SettingsError, save_settings
 from app.vendor import nexoidc
@@ -427,6 +427,10 @@ def test_the_account_list_shows_the_links_of_each_account(admin_client: TestClie
         ([(b"X-Forwarded-Proto", b" https ")], "https"),
         ([(b"x-forwarded-proto", b"wss")], None),
         ([(b"x-forwarded-proto", b"gopher")], None),
+        ([(b"x-forwarded-proto", b"https, gopher")], None),
+        # Mehrere Kopfzeilen: der letzte Wert der letzten.
+        ([(b"x-forwarded-proto", b"http"), (b"x-forwarded-proto", b"https")], "https"),
+        ([(b"x-forwarded-proto", b"https"), (b"X-Forwarded-Proto", b"https, http")], "http"),
         ([], None),
     ],
 )
@@ -434,30 +438,91 @@ def test_the_scheme_is_the_rightmost_value_without_regard_to_case(headers: list,
     assert forwarded_scheme(headers) == scheme
 
 
-@pytest.mark.parametrize(
-    ("peer", "kind", "header", "seen"),
-    [
-        ("127.0.0.1", "http", b"http, HTTPS", "https"),
-        ("127.0.0.1", "http", b"wss", "http"),
-        ("127.0.0.1", "websocket", b"https", "wss"),
-        ("203.0.113.9", "http", b"https", "http"),
-    ],
-)
-async def test_only_a_trusted_proxy_is_believed(peer: str, kind: str, header: bytes, seen: str) -> None:
+async def _scheme_seen(trusted: str, peer: str | None, kind: str = "http", header: bytes = b"https") -> str:
     found: dict[str, str] = {}
 
     async def inner(scope: dict, _receive: Any, _send: Any) -> None:
         found["scheme"] = scope["scheme"]
 
-    wrapped = behind_proxy(inner, "127.0.0.1")
     scope = {
         "type": kind,
         "scheme": "ws" if kind == "websocket" else "http",
-        "client": (peer, 5000),
+        "client": None if peer is None else (peer, 5000),
         "headers": [(b"x-forwarded-proto", header), (b"x-forwarded-for", b"198.51.100.4")],
     }
-    await wrapped(scope, None, None)
-    assert found["scheme"] == seen
+    await behind_proxy(inner, trusted)(scope, None, None)
+    return found["scheme"]
+
+
+@pytest.mark.parametrize(
+    ("trusted", "peer", "kind", "header", "seen"),
+    [
+        ("127.0.0.1", "127.0.0.1", "http", b"http, HTTPS", "https"),
+        ("127.0.0.1", "127.0.0.1", "http", b"wss", "http"),
+        ("127.0.0.1", "127.0.0.1", "websocket", b"https", "wss"),
+        ("127.0.0.1", "127.0.0.1", "websocket", b"HTTP", "ws"),
+        ("127.0.0.1", "127.0.0.1", "websocket", b"wss", "ws"),
+        ("127.0.0.1", "203.0.113.9", "http", b"https", "http"),
+        ("127.0.0.1", "203.0.113.9", "websocket", b"https", "ws"),
+        # Netze, mehrere Eintraege, alle.
+        ("172.16.0.0/12", "172.20.0.5", "http", b"https", "https"),
+        ("172.16.0.0/12", "172.32.0.5", "http", b"https", "http"),
+        ("10.0.0.2, 192.168.1.10", "192.168.1.10", "http", b"https", "https"),
+        ("*", "203.0.113.9", "http", b"https", "https"),
+        # Ohne Absender (Unix-Socket) traut nur ``*``, wie uvicorn.
+        ("127.0.0.1", None, "http", b"https", "http"),
+        ("*", None, "http", b"https", "https"),
+    ],
+)
+async def test_only_a_trusted_proxy_is_believed(
+    trusted: str, peer: str | None, kind: str, header: bytes, seen: str
+) -> None:
+    assert await _scheme_seen(trusted, peer, kind, header) == seen
+
+
+@pytest.mark.parametrize("peer", ["127.0.0.1", "::1", "172.17.0.1", "203.0.113.9", None])
+async def test_out_of_the_box_no_sender_is_trusted(monkeypatch: pytest.MonkeyPatch, peer: str | None) -> None:
+    """Bauplan OIDC, "Hinter einem Proxy": die Liste ist leer, bis der Betreiber sie setzt."""
+    monkeypatch.delenv("FORWARDED_ALLOW_IPS", raising=False)
+    assert await _scheme_seen(trusted_proxies(), peer) == "http"
+    monkeypatch.setenv("FORWARDED_ALLOW_IPS", "   ")
+    assert await _scheme_seen(trusted_proxies(), peer) == "http"
+    monkeypatch.setenv("FORWARDED_ALLOW_IPS", " 203.0.113.9 ")
+    assert await _scheme_seen(trusted_proxies(), "203.0.113.9") == "https"
+
+
+@pytest.mark.parametrize(
+    ("trusted", "header", "secure"),
+    [
+        ("testclient", "https", True),
+        ("testclient", "HTTP, https", True),
+        ("testclient", "https, http", False),
+        ("testclient", "gopher", False),
+        ("203.0.113.9", "https", False),
+        ("", "https", False),
+    ],
+)
+def test_the_session_cookie_is_secure_only_by_a_trusted_proxy(trusted: str, header: str, secure: bool) -> None:
+    """``Secure`` an der Sitzung folgt dem Schema, das die Proxy-Schicht gelten laesst, nie dem rohen Kopf."""
+    create_user("lena")
+    visitor = TestClient(behind_proxy(app, trusted), headers={"x-forwarded-proto": header})
+    response = visitor.post("/api/auth/login", json={"login": "lena", "password": USER_PASSWORD})
+    assert response.status_code == 200
+    session = [
+        line
+        for line in response.headers.get_list("set-cookie")
+        if line.startswith("nexbeat_refresh=") and "path=/api;" in line.lower() + ";"
+    ]
+    assert len(session) == 1
+    assert ("; secure" in session[0].lower()) is secure
+
+
+def test_the_image_starts_uvicorn_without_its_own_proxy_handling() -> None:
+    """Ohne ``--no-proxy-headers`` laege uvicorns Middleware aussen und glaubte ``127.0.0.1`` den rohen Kopf."""
+    dockerfile = (Path(__file__).resolve().parents[2] / "Dockerfile").read_text(encoding="utf-8")
+    command = [line for line in dockerfile.splitlines() if line.startswith("CMD ")]
+    assert len(command) == 1
+    assert '"app.main:asgi"' in command[0] and '"--no-proxy-headers"' in command[0]
 
 
 def test_a_forwarded_sender_feeds_the_brake_only_behind_a_trusted_proxy(admin_client: TestClient, net: Any) -> None:

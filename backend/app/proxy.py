@@ -8,8 +8,12 @@ und Kleinschreibung, und nur ``http`` oder ``https``. Bei einem WebSocket wird d
 Absender (``X-Forwarded-For``) setzt weiter uvicorns ``ProxyHeadersMiddleware``; ihr Schema (sie naehme auch ``wss``
 fuer eine gewoehnliche Anfrage) wird danach wieder durch dieses ersetzt.
 
-Vertraut wird denselben Adressen wie bisher: ``FORWARDED_ALLOW_IPS`` (uvicorns eigene Einstellung), ab Werk
-``127.0.0.1``. Das Abbild startet uvicorn deshalb mit ``--no-proxy-headers`` und ``app.main:asgi``.
+Vertraut wird den Adressen in ``FORWARDED_ALLOW_IPS`` (uvicorns eigene Einstellung: Adressen, Netze wie
+``172.16.0.0/12``, ``*`` fuer alle), fuer Schema und Absender gleich. Ab Werk keinem (Bauplan OIDC, "Hinter einem
+Proxy"): bis 1.4.0 galt uvicorns Vorgabe ``127.0.0.1``. Im Container mit eigenem Netz kommt von dort nur der Container
+selbst, mit ``network_mode: host`` oder ohne Container aber jedes Programm auf dem Rechner, und das gab sich so ein
+anderes Schema und fuer die Bremse eine andere Adresse. Das Abbild startet uvicorn mit ``--no-proxy-headers`` und
+``app.main:asgi``; sonst laege uvicorns eigene Middleware aussen und glaubte ``127.0.0.1`` doch.
 """
 
 from __future__ import annotations
@@ -24,7 +28,8 @@ Scope = dict[str, Any]
 Receive = Callable[[], Awaitable[dict[str, Any]]]
 Send = Callable[[dict[str, Any]], Awaitable[None]]
 
-DEFAULT_TRUSTED = "127.0.0.1"
+#: Ab Werk wird keinem Absender getraut.
+DEFAULT_TRUSTED = ""
 
 
 def trusted_proxies() -> str:
@@ -55,7 +60,8 @@ class ForwardedScheme:
         if scope["type"] in ("http", "websocket"):
             scheme = scope.get("scheme", "http")
             client = scope.get("client")
-            if client and client[0] in self.trusted:
+            # Wie in uvicorns Middleware: ohne Absender (Unix-Socket) traut nur ``*``.
+            if (client[0] if client else None) in self.trusted:
                 forwarded = forwarded_scheme(scope["headers"])
                 if forwarded is not None:
                     scheme = forwarded.replace("http", "ws") if scope["type"] == "websocket" else forwarded

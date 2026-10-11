@@ -158,5 +158,5 @@ def _mount_frontend(target: FastAPI, dist: Path) -> None:
 _mount_frontend(app, get_settings().frontend_dist)
 
 #: Was uvicorn im Abbild startet (``--no-proxy-headers``): ``app`` hinter der Behandlung der vertrauten Proxys
-#: (``FORWARDED_ALLOW_IPS``, ab Werk 127.0.0.1, wie uvicorn selbst). Siehe ``proxy.py``.
+#: (``FORWARDED_ALLOW_IPS``, ab Werk keine). Siehe ``proxy.py``.
 asgi = behind_proxy(app, trusted_proxies())
