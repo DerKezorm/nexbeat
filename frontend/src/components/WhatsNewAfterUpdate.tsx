@@ -8,7 +8,7 @@ import { entryFor, latestVersion, unseen } from '../lib/whatsnew'
 import { WhatsNewDialog } from './WhatsNewDialog'
 
 /**
- * Nach einem Update einmal "Was ist neu" zeigen, jedem Konto (entschieden am 22.09.2026).
+ * Nach einem Update einmal "Was ist neu" zeigen, jedem Konto.
  *
  * ⚠️ Das Fenster geht sofort zu, der Vermerk an den Server folgt. In nexdeck wartete jeder Ausgang auf die Antwort,
  * und ohne Server oder mit abgelaufener Sitzung liess sich das Fenster nicht schliessen. Scheitert der Vermerk, kommt

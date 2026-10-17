@@ -23,7 +23,7 @@ Vor dem ersten Aufruf an Lidarr steht ``lidarr_pending`` in der Datenbank. Brich
 Uebergabe ab oder antwortet Lidarr nicht rechtzeitig, bringt der Abgleich sie zu Ende,
 sobald klar ist, was angekommen ist (``_resume_now``).
 
-Ganzer Kuenstler, entschieden am 12.09.2026: zaehlt als eine Anfrage, Freigabe
+Ganzer Kuenstler: zaehlt als eine Anfrage, Freigabe
 wie bei Alben. Ueberwacht werden alle Alben ohne Zusatztyp und alle kuenftigen
 Veroeffentlichungen (``monitorNewItems: all``). Bei kuenftigen filtert Lidarr
 nicht nach Art, das tut nur sein Metadatenprofil.
@@ -32,7 +32,7 @@ nicht nach Art, das tut nur sein Metadatenprofil.
 Die Anfrage bleibt mit der Kennung ``dry_run`` stehen und laesst sich spaeter erneut senden.
 Der Probelauf gilt im NEX-Modus genauso.
 
-NEX-Modus (seit 22.09.2026, ``docs/plan-nexcrate.md``): Die Anfrage geht als
+NEX-Modus: Die Anfrage geht als
 ``POST /api/v1/requests`` an nexcrate, mit ``origin`` ``nexbeat:request:<nummer>``. nexcrate
 nimmt sie idempotent an. Ein offener Ausgang (Zeitueberschreitung, nicht erreichbar,
 ueberlastet) laesst die Anfrage deshalb "freigegeben" stehen, und der naechste Abgleich

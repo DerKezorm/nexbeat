@@ -1,6 +1,6 @@
 """Ganzer Kuenstler: alle Studioalben und die kuenftigen, als eine Anfrage.
 
-Entschieden am 12.09.2026: Zaehlt als eine Anfrage, Freigabe wie bei Alben.
+Zaehlt als eine Anfrage, Freigabe wie bei Alben.
 Nur Alben ohne Zusatztyp, also keine EPs, Singles, Live-Mitschnitte oder
 Sammlungen.
 """

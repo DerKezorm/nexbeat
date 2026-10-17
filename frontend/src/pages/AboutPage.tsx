@@ -29,7 +29,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 /**
- * Ueber nexbeat: fuer alle Fassung, Herkunft, Lizenz und "Was ist neu" (entschieden am 22.09.2026).
+ * Ueber nexbeat: fuer alle Fassung, Herkunft, Lizenz und "Was ist neu".
  *
  * ⚠️ Der Schalter fuer die Update-Pruefung steht hier, wo auch ihr Ergebnis erscheint, und die Seite sagt, dass dafuer
  * etwas nach draussen geht. Wie in nexmail: eine Ausnahme, die man verschweigt, ist ein gebrochenes Versprechen.

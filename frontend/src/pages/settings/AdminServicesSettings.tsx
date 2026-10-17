@@ -11,7 +11,7 @@ import { useSettings } from './useSettings'
 type Mode = 'arr' | 'nex'
 
 /**
- * Wohin Anfragen gehen: ARR-Modus (Lidarr) oder NEX-Modus (nexcrate), entschieden am 22.09.2026.
+ * Wohin Anfragen gehen: ARR-Modus (Lidarr) oder NEX-Modus (nexcrate).
  * Genau eins; darunter steht nur der Teil des gewaehlten Programms.
  *
  * Eine Installation, die vor dem Modus schon Lidarr eingetragen hatte, gilt als ARR-Modus, ohne

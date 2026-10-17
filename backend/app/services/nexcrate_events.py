@@ -1,6 +1,6 @@
 """nexcrates Ereignisstrom als Wecker fuer den Abgleich (NEX-Modus).
 
-Entschieden am 22.09.2026: Der Strom weckt, der Abgleich zaehlt. nexbeat glaubt einem Ereignis nichts ausser
+Der Strom weckt, der Abgleich zaehlt. nexbeat glaubt einem Ereignis nichts ausser
 "bei Musik hat sich etwas getan" und sieht dann ueber ``titles/lookup`` selbst nach. Faellt der Strom aus, laeuft
 der Abgleich wie ohne ihn alle zwei Minuten; es geht also nichts verloren, es kommt nur spaeter.
 

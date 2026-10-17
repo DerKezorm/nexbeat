@@ -4,7 +4,7 @@
 fuer ein Album oder einen ganzen Kuenstler. Fassung, Profil, Ordner und Indexer richtet der Betreiber in
 nexcrate ein; fehlt etwas, sagt nexbeat es, statt es anzulegen.
 
-Gemessen am 22.09.2026 gegen eine Wegwerf-Instanz (``docs/plan-nexcrate.md``):
+Gemessen am 22.09.2026 gegen eine Wegwerf-Instanz:
 
 - Eine Anfrage ist idempotent ueber Art und Kennung. Ein zweiter Aufruf antwortet ``unchanged``. Eine
   Uebergabe mit offenem Ausgang wird deshalb einfach noch einmal gesendet.
@@ -37,7 +37,7 @@ SLOW_TIMEOUT = httpx.Timeout(90.0, connect=6.0)
 STREAM_TIMEOUT = httpx.Timeout(connect=6.0, read=60.0, write=10.0, pool=10.0)
 #: Hoechstens so viele Eintraege nimmt ``titles/lookup`` je Aufruf.
 LOOKUP_BATCH = 100
-#: Was ein ganzer Kuenstler bringt (entschieden am 22.09.2026): nur Studioalben, auch kuenftige.
+#: Was ein ganzer Kuenstler bringt: nur Studioalben, auch kuenftige.
 WHOLE_ARTIST = {"albums": "studio", "types": ["studio"]}
 #: Die Rechte, um die nexbeat beim Koppeln bittet. ``operate`` braucht es nicht.
 SCOPES = ["read", "request"]

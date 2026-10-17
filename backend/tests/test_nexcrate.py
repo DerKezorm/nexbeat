@@ -1,4 +1,4 @@
-"""NEX-Modus: Anfragen an nexcrate statt an Lidarr (``docs/plan-nexcrate.md``).
+"""NEX-Modus: Anfragen an nexcrate statt an Lidarr.
 
 Die Attrappe steht auf HTTP-Ebene (``tests/fake_nexcrate.py``), also laufen Client, Fehlerform und
 Stromformat echt.
@@ -136,7 +136,7 @@ def test_a_whole_artist_asks_for_studio_albums_only(
     sent = fake_nexcrate.requests_sent()
     assert sent[0]["kind"] == "artist"
     assert sent[0]["ref"] == f"mbid:{ARTIST}"
-    # Entschieden am 22.09.2026: nur Studioalben. nexcrates Vorgabe waeren Studioalben und EPs.
+    # Nur Studioalben. nexcrates Vorgabe waeren Studioalben und EPs.
     assert sent[0]["artist"] == {"albums": "studio", "types": ["studio"]}
 
 
