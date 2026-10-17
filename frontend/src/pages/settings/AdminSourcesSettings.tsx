@@ -19,7 +19,7 @@ export function AdminSourcesSettings() {
   const queryClient = useQueryClient()
   const { query, settings, save } = useSettings()
   const filled = useRef(false)
-  const [draft, setDraft] = useState({ source_listenbrainz: true, source_deezer: true })
+  const [draft, setDraft] = useState({ source_listenbrainz: true, source_deezer: false })
   // Bleibt leer: Ein versehentliches Speichern soll den Schluessel nicht ersetzen.
   const [token, setToken] = useState('')
 

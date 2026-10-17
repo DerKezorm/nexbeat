@@ -48,7 +48,7 @@ DEFAULTS: dict[str, str] = {
     "request_mode_changed_at": "",
     "webhook_secret": "",
     "source_listenbrainz": "true",
-    "source_deezer": "true",
+    "source_deezer": "false",
     "lastfm_api_key": "",
     "listenbrainz_token": "",
     "quota_default_limit": "10",

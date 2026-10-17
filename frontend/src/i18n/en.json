@@ -429,7 +429,7 @@
     "intro": "Where nexbeat gets recommendations, images and previews. Every source is a way out of your network and can be switched off.",
     "musicbrainz": "Search, discography and covers. Always on, without it there is no identity.",
     "listenbrainz": "Similar artists and trends from open data, no key needed. Switched off, there are no recommendations.",
-    "deezer": "Artist images and 30 second previews. The interface answers without a key but is not officially open. Switched off, only images and previews are missing.",
+    "deezer": "Artist images and 30 second previews. Off by default: the interface answers without a key but is not officially open, so it is your call. Switched off, only images and previews are missing.",
     "listenbrainzToken": "ListenBrainz token (optional)",
     "listenbrainzTokenHint": "ListenBrainz now shares some popularity data only with a token. You find it in your settings on listenbrainz.org after signing in.",
     "listenbrainzTokenCheck": "Check token",

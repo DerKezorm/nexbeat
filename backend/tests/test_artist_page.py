@@ -136,7 +136,7 @@ def test_popularity_without_token_is_named(admin_client: TestClient) -> None:
     assert response.json()["detail"]["code"] == "listenbrainz_token_required"
 
 
-def test_popular_similar_and_top_tracks_come_on_their_own(admin_client: TestClient) -> None:
+def test_popular_similar_and_top_tracks_come_on_their_own(admin_client: TestClient, deezer_on: None) -> None:
     transport, _seen = _sources()
     http.use_transport(transport)
 

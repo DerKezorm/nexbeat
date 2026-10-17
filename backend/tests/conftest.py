@@ -36,6 +36,7 @@ from app.models import Base, User  # noqa: E402
 from app.routers import onboarding  # noqa: E402
 from app.security import hash_password  # noqa: E402
 from app.services import anmeldebremse, deezer, http, lidarr, mail, musicbrainz  # noqa: E402
+from app.services.settings_service import save_settings  # noqa: E402
 from tests.fakes import FakeLidarr  # noqa: E402
 
 ADMIN = {"username": "admin", "email": "admin@example.com", "password": "admin-password-123", "language": "de"}
@@ -164,6 +165,13 @@ def fake_lidarr(admin_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> Fa
     # Dieselbe Pruefung wie der echte Client (eingetragen und ARR-Modus), nur mit der Attrappe dahinter.
     monkeypatch.setattr(lidarr, "client_for", lambda settings: fake if real(settings) is not None else None)
     return fake
+
+
+@pytest.fixture
+def deezer_on() -> None:
+    """Deezer ist ab Werk aus; Tests fuer Bilder und Hoerproben schalten es ein wie ein Betreiber."""
+    with SessionLocal() as db:
+        save_settings(db, {"source_deezer": True})
 
 
 @pytest.fixture

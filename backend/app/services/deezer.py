@@ -1,8 +1,9 @@
 """Deezer: Kuenstlerbilder und 30-Sekunden-Hoerproben.
 
-⚠️ Rechtlich eine Grauzone. Die API antwortet ohne Token, aber das
-Entwicklerportal vergibt seit etwa Mitte 2025 keine Tokens mehr. Deshalb ist
-Deezer in den Einstellungen abschaltbar, und nichts in nexbeat haengt davon ab.
+Optional und ab Werk aus. Die Schnittstelle antwortet ohne Token, das
+Entwicklerportal vergibt seit etwa Mitte 2025 keine neuen Tokens. Ob nexbeat sie
+fragt, entscheidet der Betreiber in den Einstellungen, und nichts in nexbeat
+haengt davon ab.
 
 Deezer kennt keine MusicBrainz-Kennungen. Die Zuordnung laeuft ueber den Verweis auf die
 Deezer-Seite, den MusicBrainz bei vielen Kuenstlern fuehrt (``catalog.deezer_artist_for``), sonst

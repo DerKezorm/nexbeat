@@ -2,7 +2,7 @@
 
 Find music and request it from Lidarr or nexcrate with one click.
 
-![Discover: recommendations based on the library, plus what is trending this week](docs/screenshots/discover.png)
+![Discover: recommendations based on the library, plus genres to browse](docs/screenshots/discover.png)
 
 nexbeat is a small, self-hosted companion to Lidarr, built in the spirit of
 [Nexview](https://github.com/DerKezorm/nexview): accounts with invitations,
@@ -51,7 +51,7 @@ owner confirms it there. A key made by hand works too. nexbeat changes nothing
 in nexcrate's settings either. Switching modes hands open requests to the new
 program once.
 
-![An artist page with discography, most listened albums and similar artists](docs/screenshots/artist.png)
+![An artist page with most played albums and top tracks](docs/screenshots/artist.png)
 
 ## Running with Docker
 
@@ -177,7 +177,9 @@ cookie `Secure` and silences the warning in the authentik card.
 ## Data sources
 
 MusicBrainz, Cover Art Archive and ListenBrainz (open data). Artist images and
-previews come from the public Deezer API and can be switched off.
+30 second previews can come from Deezer's web API. That source is off by default:
+it answers without a key, but Deezer no longer hands out keys to developers, so
+whether nexbeat asks it is up to you (Settings › Sources).
 
 Once a day nexbeat asks GitHub for its newest release to tell administrators
 about updates. Nothing but the request itself goes out, and it can be switched

@@ -429,7 +429,7 @@
     "intro": "Woher nexbeat Empfehlungen, Bilder und Hörproben holt. Jede Quelle ist ein Weg nach außen und lässt sich abschalten.",
     "musicbrainz": "Suche, Diskografie und Cover. Immer an, ohne sie gibt es keine Identität.",
     "listenbrainz": "Ähnliche Künstler und Trends aus offenen Daten, ohne Schlüssel. Abgeschaltet gibt es keine Empfehlungen.",
-    "deezer": "Künstlerbilder und 30-Sekunden-Hörproben. Die Schnittstelle antwortet ohne Schlüssel, offiziell freigegeben ist sie nicht. Abgeschaltet fehlen nur Bilder und Hörproben.",
+    "deezer": "Künstlerbilder und 30-Sekunden-Hörproben. Ab Werk aus: Die Schnittstelle antwortet ohne Schlüssel, offiziell freigegeben ist sie nicht, also entscheidest du. Abgeschaltet fehlen nur Bilder und Hörproben.",
     "listenbrainzToken": "ListenBrainz-Schlüssel (freiwillig)",
     "listenbrainzTokenHint": "Manche Beliebtheitswerte gibt ListenBrainz nur noch mit Schlüssel heraus. Du findest ihn nach dem Anmelden auf listenbrainz.org in deinen Einstellungen.",
     "listenbrainzTokenCheck": "Schlüssel prüfen",

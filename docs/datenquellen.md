@@ -76,8 +76,8 @@ der Doku abgeschrieben. Wer eine Quelle neu anbindet, misst zuerst nach.
 
 ## Deezer
 
-Tokenlos erreichbar, rechtlich Grauzone: Das Entwicklerportal vergibt seit etwa
-Mitte 2025 keine Tokens mehr. Deshalb abschaltbar halten.
+Tokenlos erreichbar, das Entwicklerportal vergibt seit etwa Mitte 2025 keine
+neuen Tokens. Deshalb optional und ab Werk aus; einschalten ist Sache des Betreibers.
 
 - `GET https://api.deezer.com/search/artist?q=<name>`: `id`, `name`, `nb_fan`,
   `picture_xl` u. a. Kennt keine MusicBrainz-Kennungen.

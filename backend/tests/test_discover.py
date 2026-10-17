@@ -96,7 +96,22 @@ def test_artist_image_redirects_to_the_library_poster(client: TestClient) -> Non
     assert client.get("/api/images/artist/not-an-mbid", follow_redirects=False).status_code == 404
 
 
-def test_failed_image_lookup_is_not_kept_by_the_browser(client: TestClient) -> None:
+def test_deezer_stays_off_until_the_operator_switches_it_on(client: TestClient) -> None:
+    # 17.10.2026: Deezers Schnittstelle ist nicht offiziell freigegeben. Ab Werk fragt nexbeat sie nie.
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        asked.append(request.url.host)
+        return httpx.Response(200, json={"data": [{"id": 1, "name": "Busy Band", "nb_fan": 1, "picture_xl": "https://cdn.example.com/x.jpg"}]})
+
+    http.use_transport(httpx.MockTransport(handler))
+    assert client.get("/api/config").json()["previews_enabled"] is False
+    found = client.get(f"/api/images/artist/{NEW_ONE}?name=Busy%20Band", follow_redirects=False)
+    assert found.status_code == 404
+    assert "api.deezer.com" not in asked
+
+
+def test_failed_image_lookup_is_not_kept_by_the_browser(client: TestClient, deezer_on: None) -> None:
     # 11.09.2026: Deezer lehnte bei vielen Bildern auf einmal ab. Die 404 blieb eine
     # Stunde im Browser, auch als Deezer laengst wieder antwortete.
     quota = {"error": {"type": "Exception", "message": "Quota limit exceeded", "code": 4}}
@@ -248,7 +263,7 @@ def test_library_sync_keeps_the_artist_profile(admin_client: TestClient, fake_li
         assert db.get(LibraryArtist, NEW_ONE).metadata_profile_id == 2
 
 
-def test_artist_image_cannot_be_chosen_by_the_first_caller(client: TestClient) -> None:
+def test_artist_image_cannot_be_chosen_by_the_first_caller(client: TestClient, deezer_on: None) -> None:
     # 12.09.2026: Wer ohne Anmeldung zuerst mit einem falschen Namen fragte, bestimmte das Bild.
     def handler(request: httpx.Request) -> httpx.Response:
         name = request.url.params.get("q", "")

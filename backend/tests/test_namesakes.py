@@ -12,9 +12,12 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from app.services import http
+
+pytestmark = pytest.mark.usefixtures("deezer_on")
 
 FAMOUS = "77777777-7777-4777-8777-777777777777"
 NAMESAKE = "66666666-6666-4666-8666-666666666666"
