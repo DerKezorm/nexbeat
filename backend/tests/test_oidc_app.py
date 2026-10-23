@@ -245,7 +245,7 @@ def test_every_new_column_has_a_default_for_the_older_version(table: str, old_co
     with engine.connect() as connection:
         columns = connection.execute(text(f"PRAGMA table_info({table})")).mappings().all()
     newer = [column for column in columns if column["name"] not in old]
-    assert newer, "the table has the columns of the Bauplan"
+    assert newer, "the table has the columns of the sign-in module"
     missing = [column["name"] for column in newer if column["notnull"] and column["dflt_value"] is None]
     assert missing == []
 
@@ -482,7 +482,7 @@ async def test_only_a_trusted_proxy_is_believed(
 
 @pytest.mark.parametrize("peer", ["127.0.0.1", "::1", "172.17.0.1", "203.0.113.9", None])
 async def test_out_of_the_box_no_sender_is_trusted(monkeypatch: pytest.MonkeyPatch, peer: str | None) -> None:
-    """Bauplan OIDC, "Hinter einem Proxy": die Liste ist leer, bis der Betreiber sie setzt."""
+    """Hinter einem Proxy: die Liste ist leer, bis der Betreiber sie setzt."""
     monkeypatch.delenv("FORWARDED_ALLOW_IPS", raising=False)
     assert await _scheme_seen(trusted_proxies(), peer) == "http"
     monkeypatch.setenv("FORWARDED_ALLOW_IPS", "   ")

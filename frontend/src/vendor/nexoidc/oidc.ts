@@ -1,18 +1,18 @@
 /**
  * nexoidc in the browser: the fixed codes and names the server sends, the keys of their texts, and the slug the
- * provider form suggests. No framework, no app parts: the cards, buttons and dialogs are the app's own (Bauplan 04),
+ * provider form suggests. No framework, no app parts: the cards, buttons and dialogs are the app's own,
  * the words come from `oidc.de.json` and `oidc.en.json` next to this file.
  *
- * Copied unchanged into every app by `bauplaene/oidc/tools/sync.py`; changed only in `bauplaene/oidc`.
+ * Vendored unchanged and checked against `MANIFEST.json`; a change is made in the module's source, never in the copy.
  *
  * The wording files use i18next's `{{app}}` for the name of the app and `{{slug}}` for the slug the authentik button
  * gives the app's application (since 1.0.12). Set both once through `oidcVariables`, for example
- * `i18n.init({ interpolation: { defaultVariables: oidcVariables('nexlore') } })`, and merge the files into the app's
+ * `i18n.init({ interpolation: { defaultVariables: oidcVariables('Example') } })`, and merge the files into the app's
  * resources under the same keys (`oidc.…`) through `oidcWording` (since 1.0.9; it picks the sentences of apps with
  * one account and, since 1.0.12, of apps without invitations).
  */
 
-/** The error codes of Bauplan 02; each has a sentence under `oidc.error.<code>`. Same order as `errors.CODES`. */
+/** The fixed error codes; each has a sentence under `oidc.error.<code>`. Same order as `errors.CODES`. */
 export const OIDC_ERROR_CODES = [
   'oidc_not_configured',
   'oidc_provider_unreachable',
@@ -89,7 +89,7 @@ export function authentikReasonKey(reason: string | null | undefined): string | 
 }
 
 /**
- * The number of accounts the button asks about before it changes the issuer (`reason: issuer_change`, Bauplan 03), or
+ * The number of accounts the button asks about before it changes the issuer (`reason: issuer_change`), or
  * null when the run did not stop for that. The page then asks with `oidc.admin.issuerChangeConfirm` and, on yes, runs
  * the button again with `confirm_issuer_change: true`.
  */
@@ -198,10 +198,10 @@ function overlay(base: OidcWording, over: OidcWording): OidcWording {
 }
 
 /**
- * The words of a wording file as the app merges them into its resources. Apps with one account (nexcrate, nexsift;
- * `AppConfig.single_account`) pass `singleAccount: true`: then the sentences under `oidc.single` take the place of
+ * The words of a wording file as the app merges them into its resources. Apps with one account
+ * (`AppConfig.single_account`) pass `singleAccount: true`: then the sentences under `oidc.single` take the place of
  * the keys of the same name (`oidc.admin.passwordHint`, `oidc.admin.addressHint`, `oidc.error.oidc_no_account`), so
- * the page asks for the same keys in every app. Apps without invitations (nexdeck, nexsift, nexcrate) pass
+ * the page asks for the same keys in every app. Apps without invitations pass
  * `invitations: false` (since 1.0.12, required: a call without it throws): then the sentences under `oidc.noInvitations` take the place of
  * `oidc.admin.addressHint`, `oidc.admin.autoCreateHint` and `oidc.error.oidc_no_account`; the sentences of one account
  * go on top of them. Neither `oidc.single` nor `oidc.noInvitations` is handed on. Counts use i18next's plural forms
@@ -228,7 +228,7 @@ export function oidcWording(
 /**
  * What the app sets as i18next's `interpolation.defaultVariables` (since 1.0.12): `app`, the name of the app in the
  * texts, and `slug`, the slug the authentik button gives the app's application (in `oidc.admin.issuerHint`). The
- * button takes the server's `AppConfig.app_name`, which is the name in small letters (`Nexview` gives `nexview`);
+ * button takes the server's `AppConfig.app_name`, which is the name in small letters (`Example` gives `example`);
  * pass `slug` only when the app's `app_name` is something else.
  */
 export function oidcVariables(app: string, slug?: string): { app: string; slug: string } {

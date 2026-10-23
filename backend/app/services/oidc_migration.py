@@ -1,12 +1,12 @@
-"""Beim Start: die Anbieterliste von 1.3.0 auf den Bauplan nachziehen, und was 1.3.0 nach einem Rueckweg geaendert hat.
+"""Beim Start: die Anbieterliste von 1.3.0 aufs Modul nachziehen, und was 1.3.0 nach einem Rueckweg geaendert hat.
 
 nexbeat hatte schon eine Liste (``oidc_providers``, ``oidc_links``). Die neuen Spalten legt ``db._add_missing_columns``
 an, alle mit Vorgabe, die Namen der alten bleiben (``models.OidcProvider``). Hier passiert der Rest, bei jedem Start,
 in einer Transaktion:
 
 1. **Eintraege, die 1.3.0 angelegt hat** (``redirect_path`` NULL, beim ersten Start also alle): Ihr Anbieter kennt die
-   Rueckleitadresse ``/api/auth/oidc/<slug>/callback``; sie wird ihr ``redirect_path`` und bleibt gueltig (Bauplan 01,
-   letzter Absatz). Der Eintrag mit dem Kurznamen ``authentik``, dessen Aussteller auf ``/application/o/<slug>/``
+   Rueckleitadresse ``/api/auth/oidc/<slug>/callback``; sie wird ihr ``redirect_path`` und bleibt gueltig.
+   Der Eintrag mit dem Kurznamen ``authentik``, dessen Aussteller auf ``/application/o/<slug>/``
    endet, kam vom authentik-Knopf von 1.3.0 (der fand seinen Eintrag am Kurznamen): ``managed = "authentik"``.
 2. **Geheimnis:** Was in der Spalte von 1.3.0 steht, gilt; weicht die Spalte mit Kontext davon ab (1.3.0 hat es
    geaendert oder den Eintrag angelegt), wird sie neu geschrieben.
@@ -122,7 +122,7 @@ def _fill_link_issuers(db: Session) -> None:
 
 
 def _unique_links(db: Session) -> None:
-    """Hoechstens eine Identitaet je Anbieter und Konto (Bauplan 01). 1.3.0 hielt das schon im Code ein."""
+    """Hoechstens eine Identitaet je Anbieter und Konto. 1.3.0 hielt das schon im Code ein."""
     seen: set[tuple[int, int]] = set()
     dropped = 0
     for link in db.scalars(select(OidcLink).order_by(OidcLink.id)):

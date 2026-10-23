@@ -1,5 +1,5 @@
 /**
- * Die Anmeldung ueber Anbieter in der Oberflaeche (Bauplan "Anmeldung mit OIDC und authentik", 04): Anmeldeseite,
+ * Die Anmeldung ueber Anbieter in der Oberflaeche: Anmeldeseite,
  * Einladungsseite, die drei Karten unter Einstellungen, Mein Konto. Der Server ist hier durch Attrappen von `api`
  * ersetzt; den ganzen Weg gehen die Ende-zu-Ende-Tests in `e2e/nexoidc.spec.ts`.
  */

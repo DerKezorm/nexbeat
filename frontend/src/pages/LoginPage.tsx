@@ -11,7 +11,7 @@ import { Button, Card, ErrorBanner, Field } from '../components/ui'
 import { oidcErrorKey } from '../vendor/nexoidc/oidc'
 
 /**
- * Anmelden (Bauplan "Anmeldung mit OIDC und authentik", 04): Passwortformular, darunter "oder" und je aktivem Anbieter
+ * Anmelden: Passwortformular, darunter "oder" und je aktivem Anbieter
  * ein Knopf. Ist die Anmeldung mit Passwort aus, stehen nur die Knoepfe da und klein der Weg des Betreibers.
  */
 export function LoginPage() {

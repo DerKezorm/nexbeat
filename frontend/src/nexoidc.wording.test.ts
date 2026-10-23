@@ -1,10 +1,11 @@
 /**
- * Pflichttest 35 (Bauplan 05): every text of the oidc module is in the app, in German and English, through the app's
- * own i18n. Copied once by `bauplaene/oidc/tools/sync.py` to `frontend/src/nexoidc.wording.test.ts`; then the
+ * Every text of the oidc module is in the app, in German and English, through the app's own i18n. Copied once by
+ * the module's `tools/sync.py` to `frontend/src/nexoidc.wording.test.ts`; then the
  * app's file. Fill in the places marked APP.
  *
- * The module's own tests already check the wording files against Bauplan 04 word for word; this test checks that the
- * app really loads them (merged into its resources, `{{app}}` and `{{slug}}` filled in) and that nothing in the app overrides them.
+ * The module's own tests already check the wording files word for word; this test checks that the
+ * app really loads them (merged into its resources, `{{app}}` and `{{slug}}` filled in) and that nothing in the app
+ * overrides them.
  */
 import { beforeAll, describe, expect, it } from 'vitest'
 

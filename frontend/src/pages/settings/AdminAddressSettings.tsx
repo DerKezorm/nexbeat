@@ -14,7 +14,7 @@ export function AdminAddressSettings() {
   const { query, settings, save } = useSettings()
   const [draft, setDraft] = useState({ public_url: '', default_language: 'de' })
   const filled = useRef(false)
-  // Dieselbe Rueckfrage wie unter Anmeldung (Bauplan 04, Karte 1): Kennt ein Anbieter die bisherige Adresse, fragt
+  // Dieselbe Rueckfrage wie unter Anmeldung: Kennt ein Anbieter die bisherige Adresse, fragt
   // der Server, bevor er speichert.
   const [question, setQuestion] = useState<AddressQuestionValues | null>(null)
   const submit = (confirm: boolean) => {

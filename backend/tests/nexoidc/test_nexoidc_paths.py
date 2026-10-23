@@ -1,5 +1,5 @@
-"""Contract: the addresses (Bauplan 01 "Umstieg", 02 "Ablauf", 03 "Blueprint", 06 "Pfad der Schnittstelle" and
-"Verbund"): ``Secure`` behind HTTPS, the blueprint's callback entered by hand, old callbacks per entry, the coupling."""
+"""Contract, the addresses: ``Secure`` behind HTTPS, the blueprint's callback entered by hand, old callbacks per
+entry, the coupling."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def _cookies(response: Any) -> SimpleCookie:
     return cookies
 
 
-def test_01_behind_https_the_attempt_cookie_is_secure(
+def test_behind_https_the_attempt_cookie_is_secure(
     adapter: Any, oidc: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     name = oidc.current().cookie_name
@@ -30,7 +30,7 @@ def test_01_behind_https_the_attempt_cookie_is_secure(
     assert _cookies(response)[name]["secure"]
 
 
-def test_32_the_blueprints_callback_entered_by_hand_signs_in_and_the_button_takes_the_entry_later(
+def test_the_blueprints_callback_entered_by_hand_signs_in_and_the_button_takes_the_entry_later(
     adapter: Any, oidc: Any, net: fakes.Network
 ) -> None:
     ak = net.add(fakes.FakeAuthentik())
@@ -64,7 +64,7 @@ def test_32_the_blueprints_callback_entered_by_hand_signs_in_and_the_button_take
     assert adapter.who(round_trip(adapter, signer, "authentik")[0]) == "alex"
 
 
-def test_22_an_entry_with_an_old_callback_signs_in_there(adapter: Any, oidc: Any, sso: fakes.FakeProvider) -> None:
+def test_an_entry_with_an_old_callback_signs_in_there(adapter: Any, oidc: Any, sso: fakes.FakeProvider) -> None:
     standard = add_in_store(adapter, sso, "plain")
     with adapter.store() as store:
         assert store.get_provider(standard["id"]).redirect_path == ""
@@ -87,11 +87,11 @@ def test_22_an_entry_with_an_old_callback_signs_in_there(adapter: Any, oidc: Any
         assert location(response) == adapter.home and adapter.who(browser) == f"person{number}"
 
 
-def test_06_coupling_sets_the_own_entries_aside_and_uncoupling_puts_them_back(
+def test_coupling_sets_the_own_entries_aside_and_uncoupling_puts_them_back(
     adapter: Any, oidc: Any, sso: fakes.FakeProvider, with_sso: dict, net: fakes.Network
 ) -> None:
     if not adapter.supports_coupling:
-        # Apps with one account are never coupled (Bauplan 06 names only the apps of the Verbund): the list stays
+        # Apps with one account are never coupled: the list stays
         # the app's own, editable, and the authentik button is not held back.
         with adapter.store() as store:
             assert not oidc.providers.coupled(store)
@@ -118,7 +118,7 @@ def test_06_coupling_sets_the_own_entries_aside_and_uncoupling_puts_them_back(
         )
     public = adapter.browser().get(adapter.path("public")).json()
     assert [(item["slug"], item["label"]) for item in public] == [("oidc", "Suite")]
-    # Bauplan 06: the set-aside entries stay in the list, off, and the whole list is read-only.
+    # The set-aside entries stay in the list, off, and the whole list is read-only.
     listed = {item["slug"]: item for item in adapter.providers()}
     assert set(listed) == {"oidc", "oidc-own", "sso"}
     assert listed["oidc"]["managed"] == "nexsuite" and listed["oidc"]["enabled"]

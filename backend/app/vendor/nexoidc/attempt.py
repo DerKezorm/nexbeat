@@ -1,4 +1,4 @@
-"""The attempt cookie and the single use of a ``state`` (Bauplan 02, "Ablauf" 1 and 2).
+"""The attempt cookie and the single use of a ``state``.
 
 The three random values of an attempt travel with the browser in a signed cookie instead of a table: nothing to
 clean up, and an unredeemed attempt is worthless after ten minutes. Nobody can forge it without the key; the browser's

@@ -1,4 +1,4 @@
-// A stand-in OpenID Connect provider for the end-to-end run (Pflichttests 33 and 34). Never a real provider, never
+// A stand-in OpenID Connect provider for the end-to-end run of the sign-in. Never a real provider, never
 // the network: it makes its key at the start, answers discovery, keys, token and userinfo, and sends the browser
 // straight back with a code for the person POST /next named. Served at http://localhost:<port>, while nexbeat runs at
 // 127.0.0.1: another site, as with a real one (the session cookie, SameSite=Lax, still comes along on the way back).

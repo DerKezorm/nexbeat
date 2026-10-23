@@ -113,7 +113,7 @@ export function AdminUsersSettings() {
   const [editing, setEditing] = useState<number | null>(null)
   const [deleting, setDeleting] = useState<User | null>(null)
   const [linkFor, setLinkFor] = useState<{ id: number; delivery: Delivery } | null>(null)
-  // Eine Verknuepfung eines Kontos loesen, mit dem eigenen Passwort (Bauplan 01, "Verknuepfen und Loesen").
+  // Eine Verknuepfung eines Kontos loesen, mit dem eigenen Passwort.
   const [unlinking, setUnlinking] = useState<{ user: User; provider: { id: number; label: string } } | null>(null)
   const [password, setPassword] = useState('')
 

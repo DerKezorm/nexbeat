@@ -77,7 +77,7 @@ class LinkedProviderOut(BaseModel):
 
 class AdminUserOut(UserOut):
     quota: QuotaOut
-    # Die Anbieter, mit denen das Konto verknuepft ist (Marken in der Kontenliste, Bauplan 04).
+    # Die Anbieter, mit denen das Konto verknuepft ist (Marken in der Kontenliste).
     providers: list[LinkedProviderOut] = []
     has_password: bool = True
 

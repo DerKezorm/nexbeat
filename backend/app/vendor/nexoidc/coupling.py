@@ -1,4 +1,4 @@
-"""Coupling to nexsuite (Bauplan 06, "Apps im Verbund mit nexsuite"): nexcanvas, nextasks, nexbrand, nexlore.
+"""Coupling to nexsuite.
 
 While an app is coupled, nexsuite is its provider: one entry with ``managed = "nexsuite"`` and the slug ``oidc``,
 whose callback is ``<api>/oidc/callback`` (nexsuite compares it exactly and never changes it). The app's own entries
@@ -130,7 +130,7 @@ def _link_people(store: Store, provider_id: int, issuer: str, people: Iterable[t
     seen_accounts: set[int] = set()
     seen_subjects: set[str] = set()
     for account_id, subject in people:
-        # One identity per account and provider (Bauplan 01): a second pair for an account, or a subject twice,
+        # One identity per account and provider: a second pair for an account, or a subject twice,
         # is left out.
         if not subject or not subject.strip() or subject in seen_subjects or account_id in seen_accounts:
             continue

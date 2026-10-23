@@ -1,6 +1,6 @@
 """The contract between the shared tests and an app: ``StandardAdapter``.
 
-The tests in this folder (Pflichttests 1 to 32 of Bauplan 05) are the same in every app and are copied unchanged
+The tests in this folder are the same in every app and are copied unchanged
 by ``tools/sync.py``. What differs between apps (how an account is made, how one signs in with a password, where
 the routes are) the app answers in ``backend/tests/nexoidc_adapter.py``: a class ``Adapter(StandardAdapter)``.
 Everything marked "APP:" below must be written there; everything else has a default for the standard routes
@@ -24,26 +24,25 @@ class StandardAdapter:
     package = "app.vendor.nexoidc"
     #: The API prefix (``AppConfig.api_prefix``).
     api = "/api"
-    #: nexcrate, nexsift: one account (Bauplan 06). Then invitations and new accounts are refused instead.
+    #: The app has one account. Then invitations and new accounts are refused instead.
     single_account = False
-    #: The app has invitations (since 1.0.12). False for nexdeck, nexsift and nexcrate: the tests of an invitation are
+    #: The app has invitations (since 1.0.12). False: the tests of an invitation are
     #: skipped with the reason, and what they check besides it is checked through ``auto_create``. Apps with one
     #: account have none either; they keep their own answers (``single_account``).
     has_invitations = True
-    #: nexsuite: only authentik, no second entry through the form (Bauplan 06). Entries are then made in the store.
+    #: Only authentik, no second entry through the form. Entries are then made in the store.
     only_authentik = False
-    #: The app can be coupled to nexsuite (Bauplan 06). False for the apps with one account (nexcrate, nexsift): they
+    #: The app can be coupled to nexsuite. False for the apps with one account: they
     #: have no people to pair, and the coupling test checks instead that the list stays uncoupled.
     supports_coupling = True
     #: The app has a second factor of its own.
     has_second_factor = True
-    #: "single": the app kept one provider in its settings and migrates (Pflichttest 22); "list" or "none": not.
+    #: "single": the app kept one provider in its settings and migrates; "list" or "none": not.
     legacy_model = "single"
     #: legacy_model "single": how the version before the list behaved after the provider, as the app passes it to
-    #: ``migrate.plan`` and ``migrate.resync`` (Bauplan 06 "Wanderung"): True asked no code, False (nexdiary, nexpaper)
-    #: asked it.
+    #: ``migrate.plan`` and ``migrate.resync``: True asked no code, False asked it.
     trusted_before = True
-    #: Callback paths the app's providers knew before the module, with ``{slug}`` (nexbeat
+    #: Callback paths the app's providers knew before the module, with ``{slug}`` (such as
     #: ``/api/auth/oidc/{slug}/callback``); the app routes them to the same return. Empty: none.
     old_callback_paths: tuple[str, ...] = ()
     #: The account the operator signs in with (its password: ``self.password_for(operator_name)``).
@@ -113,7 +112,7 @@ class StandardAdapter:
         raise NotImplementedError
 
     def trip_throttle(self, client: Any) -> None:
-        """APP: make the app's brake hold this browser back (Bauplan 02, "Ablauf" 4), as many failed attempts from
+        """APP: make the app's brake hold this browser back, as many failed attempts from
         its sender would: the next start and the next return are refused with ``too_many_attempts``."""
         raise NotImplementedError
 
@@ -243,11 +242,11 @@ class StandardAdapter:
         return self.operator().post(self.path("address"), json=body)
 
     def save_public_url_route(self, url: str, *, confirm: bool = False) -> httpx.Response:
-        """APP if card 1 (or another settings page of the app) saves the public address in a route of its own (since
-        1.0.10): save ``url`` there as the operator does, ``confirm`` after ``oidc.admin.addressChangeConfirm``. That
-        route asks ``authentik.public_url_guard`` first and answers its question with 409, code
-        ``public_url_change`` (``error_code``) and the question's fields (``error_detail``: ``count``, ``address``,
-        ``hand``), saving nothing. Standard: the module's route (``adopt_only``)."""
+        """APP if the public-address card (or another settings page of the app) saves the public address in a route of
+        its own (since 1.0.10): save ``url`` there as the operator does, ``confirm`` after
+        ``oidc.admin.addressChangeConfirm``. That route asks ``authentik.public_url_guard`` first and answers its
+        question with 409, code ``public_url_change`` (``error_code``) and the question's fields (``error_detail``:
+        ``count``, ``address``, ``hand``), saving nothing. Standard: the module's route (``adopt_only``)."""
         return self.adopt_only(url, confirm=confirm)
 
     def error_detail(self, response: httpx.Response) -> dict[str, Any]:
@@ -273,7 +272,7 @@ class StandardAdapter:
         return browser
 
     def operator_unlink(self, client: Any, account_id: int, provider_id: int, password: str) -> httpx.Response:
-        """The operator removes an account's link, with the operator's own password (Bauplan 01)."""
+        """The operator removes an account's link, with the operator's own password."""
         path = self.path("operator_unlink", account=account_id, provider=provider_id)
         return client.request("DELETE", path, json={"password": password})
 

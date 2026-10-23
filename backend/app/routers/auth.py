@@ -87,7 +87,7 @@ def login(payload: LoginIn, request: Request, response: Response, db: DbSession)
 
 
 def password_login_open(db: Session) -> bool:
-    """Bauplan 01: Der Betreiber kann die Anmeldung mit Passwort abschalten, sobald ein Anbieter aktiv ist. Admins
+    """Der Betreiber kann die Anmeldung mit Passwort abschalten, sobald ein Anbieter aktiv ist. Admins
     melden sich immer mit Passwort an (der Rueckweg, falls der Anbieter ausfaellt). Ist kein Anbieter mehr aktiv,
     gilt das Passwort wieder fuer alle."""
     from .oidc import any_active_provider

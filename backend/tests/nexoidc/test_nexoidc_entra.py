@@ -1,4 +1,4 @@
-"""Contract, Bauplan 05 "Entra ID", Pflichttests 7 to 12, through the app's own routes."""
+"""Contract, Microsoft Entra ID, through the app's own routes."""
 
 from __future__ import annotations
 
@@ -51,9 +51,9 @@ def _values(adapter: Any, row: Any, **changes: Any) -> Any:
     return package.ProviderValues(**values)
 
 
-def test_07_common_and_organizations_can_be_entered(adapter: Any, entra: fakes.FakeEntra) -> None:
+def test_common_and_organizations_can_be_entered(adapter: Any, entra: fakes.FakeEntra) -> None:
     if adapter.only_authentik:
-        pytest.xfail("only authentik: Entra comes through authentik (Bauplan 06)")
+        pytest.xfail("only authentik: Entra comes through authentik")
     for slug, issuer in (("entra", COMMON), ("orgs", f"{fakes.ENTRA}/organizations/v2.0")):
         response = add_entra(adapter, entra, slug, issuer)
         assert response.status_code in (200, 201), response.text
@@ -71,9 +71,9 @@ def test_07_common_and_organizations_can_be_entered(adapter: Any, entra: fakes.F
     ],
     ids=["two-segments", "no-segment", "other-host", "other-version", "the-placeholder"],
 )
-def test_08_the_placeholder_stands_for_exactly_one_segment(adapter: Any, entra: fakes.FakeEntra, issuer: str) -> None:
+def test_the_placeholder_stands_for_exactly_one_segment(adapter: Any, entra: fakes.FakeEntra, issuer: str) -> None:
     if adapter.only_authentik:
-        pytest.xfail("only authentik: Entra comes through authentik (Bauplan 06)")
+        pytest.xfail("only authentik: Entra comes through authentik")
     response = add_entra(adapter, entra, "entra", issuer)
     assert response.status_code == 422, response.text
     assert adapter.providers() == []
@@ -88,17 +88,17 @@ def test_08_the_placeholder_stands_for_exactly_one_segment(adapter: Any, entra: 
     ],
     ids=["part-of-a-segment", "other-version", "other-host"],
 )
-def test_08_a_discovery_with_the_placeholder_elsewhere_is_refused(
+def test_a_discovery_with_the_placeholder_elsewhere_is_refused(
     adapter: Any, entra: fakes.FakeEntra, published: str
 ) -> None:
     if adapter.only_authentik:
-        pytest.xfail("only authentik: Entra comes through authentik (Bauplan 06)")
+        pytest.xfail("only authentik: Entra comes through authentik")
     entra.published = published
     response = add_entra(adapter, entra)
     assert response.status_code == 422 and adapter.error_code(response) == "oidc_issuer_mismatch"
 
 
-def test_09_a_token_of_its_tenant_signs_in_and_so_does_any_tenant_whose_iss_and_tid_agree(
+def test_a_token_of_its_tenant_signs_in_and_so_does_any_tenant_whose_iss_and_tid_agree(
     adapter: Any, entra: fakes.FakeEntra
 ) -> None:
     add_entra(adapter, entra)
@@ -142,9 +142,7 @@ def test_09_a_token_of_its_tenant_signs_in_and_so_does_any_tenant_whose_iss_and_
         "tid-object",
     ],
 )
-def test_10_a_token_whose_issuer_is_not_its_tenant_is_refused(
-    adapter: Any, entra: fakes.FakeEntra, claims: dict
-) -> None:
+def test_a_token_whose_issuer_is_not_its_tenant_is_refused(adapter: Any, entra: fakes.FakeEntra, claims: dict) -> None:
     add_entra(adapter, entra)
     adapter.make_account("max")
     link_person(adapter, "max", "entra", entra)
@@ -153,7 +151,7 @@ def test_10_a_token_whose_issuer_is_not_its_tenant_is_refused(
     assert error_in(response) == "oidc_token_invalid" and adapter.who(browser) is None
 
 
-def test_11_a_single_tenant_issuer_works_and_refuses_other_tenants(adapter: Any, entra: fakes.FakeEntra) -> None:
+def test_a_single_tenant_issuer_works_and_refuses_other_tenants(adapter: Any, entra: fakes.FakeEntra) -> None:
     add_entra(adapter, entra, "tenant", f"{fakes.ENTRA}/{fakes.TENANT}/v2.0")
     adapter.make_account("max")
     link_person(adapter, "max", "tenant", entra)
@@ -162,7 +160,7 @@ def test_11_a_single_tenant_issuer_works_and_refuses_other_tenants(adapter: Any,
     assert error_in(round_trip(adapter, entra, "tenant")[1]) == "oidc_token_invalid"
 
 
-def test_12_a_new_account_is_named_after_the_part_before_the_at(adapter: Any, entra: fakes.FakeEntra) -> None:
+def test_a_new_account_is_named_after_the_part_before_the_at(adapter: Any, entra: fakes.FakeEntra) -> None:
     add_entra(adapter, entra)
     if adapter.single_account:
         browser, response = round_trip(adapter, entra, "entra")

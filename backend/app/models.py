@@ -165,10 +165,10 @@ class ApiKey(Base):
 class OidcProvider(Base):
     """Ein Anmeldeanbieter per OpenID Connect: authentik, Entra ID, Keycloak, Pocket ID und andere.
 
-    Die Spalten folgen dem Bauplan (01 "Tabellen"), die Namen in der Datenbank aber denen von 1.3.0: Die alte
+    Die Spalten folgen dem Anmeldemodul, die Namen in der Datenbank aber denen von 1.3.0: Die alte
     Fassung liest dieselbe Tabelle. Umbenannt haette sie nach einem Rueckweg keinen Anbieter mehr gefunden.
     Deshalb heisst ``issuer`` in der Datenbank weiter ``issuer_url``, und das Geheimnis steht zweimal da:
-    ``client_secret_enc`` mit dem Kontext des Eintrags (Bauplan), ``client_secret_legacy`` so, wie 1.3.0 es liest.
+    ``client_secret_enc`` mit dem Kontext des Eintrags, ``client_secret_legacy`` so, wie 1.3.0 es liest.
 
     ⚠️ Jede neue Spalte hat einen ``server_default``: 1.3.0 legt auf einer Datenbank dieser Fassung weiter
     Eintraege an und kennt die Spalten nicht. ``redirect_path`` bleibt dabei NULL, daran erkennt der Start einen
@@ -191,9 +191,9 @@ class OidcProvider(Base):
     enabled: Mapped[bool] = mapped_column(default=True)
     # "Neue Personen bekommen ein Konto", ab Werk aus.
     auto_create: Mapped[bool] = mapped_column(default=False, server_default="0")
-    # Nur noch fuer 1.3.0, die damit Konten anlegte. Neue Konten sind Mitglieder (Bauplan 01).
+    # Nur noch fuer 1.3.0, die damit Konten anlegte. Neue Konten sind Mitglieder.
     default_role: Mapped[Role] = enum_column(Role, default=Role.user, server_default=Role.user.value)
-    # nexbeat hat keinen eigenen zweiten Faktor; die Spalte haelt den Bauplan ein und bleibt an.
+    # nexbeat hat keinen eigenen zweiten Faktor; die Spalte gehoert zum Modul und bleibt an.
     trusts_second_factor: Mapped[bool] = mapped_column(default=True, server_default="1")
     # "" von Hand, "authentik" vom authentik-Knopf.
     managed: Mapped[str] = mapped_column(String(20), default="", server_default="")

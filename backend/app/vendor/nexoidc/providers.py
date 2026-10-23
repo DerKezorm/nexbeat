@@ -1,4 +1,4 @@
-"""The list of providers (Bauplan 01 "Tabellen", "Anbieter ändern oder entfernen"; 04 "Karte 2").
+"""The list of providers: create, change, remove, order.
 
 Saving checks the issuer with a fresh discovery first and stores nothing when it fails (``oidc_issuer_mismatch`` and
 the other discovery codes at the issuer field). An issuer that really changes drops the links of that entry: a subject
@@ -157,7 +157,7 @@ def change_issuer(store: Store, provider: Provider, issuer: str) -> int:
 
 def coupled(store: Store) -> bool:
     """Whether the app is coupled to nexsuite: then nexsuite is its provider, and the list changes only through the
-    coupling (Bauplan 06)."""
+    coupling."""
     return any(entry.managed == MANAGED_NEXSUITE for entry in store.list_providers())
 
 
@@ -177,7 +177,7 @@ def check_redirect_path(path: str) -> str:
 
 
 async def create(store: Store, form: Form) -> Provider:
-    """A new entry from the form, after a fresh discovery. Defaults of Bauplan 01: on, no new accounts, the provider
+    """A new entry from the form, after a fresh discovery. Defaults: on, no new accounts, the provider
     checks the second factor."""
     _not_coupled(store)
     form = _checked(form)
@@ -322,7 +322,7 @@ def admin_view(provider: Provider, request_base: str, link_count: int, *, couple
         "registered_redirect_uri": provider.registered_redirect,
         "redirect_stale": bool(provider.registered_redirect) and provider.registered_redirect != redirect,
         "links": link_count,
-        # Bauplan 06: while coupled, the whole list is read-only (the set-aside entries show as "off"); the entry of
+        # While coupled, the whole list is read-only (the set-aside entries show as "off"); the entry of
         # the coupling never changes through the form.
         "editable": not coupled and provider.managed != MANAGED_NEXSUITE,
     }

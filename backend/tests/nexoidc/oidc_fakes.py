@@ -6,7 +6,7 @@ nothing in the repository looks like a credential. The token endpoint checks cod
 client authentication as a real one would: whatever passes against it and is refused by the tampered variants is the
 standard, not luck.
 
-Shipped with the module's contract tests and used by its own tests; changed only in ``bauplaene/oidc``.
+Shipped with the module's contract tests and used by its own tests; changed only in the module's source.
 """
 
 from __future__ import annotations

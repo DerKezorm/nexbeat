@@ -1,4 +1,4 @@
-"""Contract: what only the app's routes can keep (Bauplan 01, 02), so that no app can drop it unseen.
+"""Contract: what only the app's routes can keep, so that no app can drop it unseen.
 
 - every operator route refuses a browser without a session and a signed-in member;
 - the brake holds a sender back before start and return (``too_many_attempts``, the cookie goes);
@@ -60,7 +60,7 @@ def test_the_operator_removes_a_link_only_with_the_own_password(
     owner = adapter.make_account("owner")
     link_person(adapter, "owner", "sso", sso)
     if adapter.single_account:
-        # Bauplan 06: no account list, so no operator unlinking another account; the one account unlinks its own
+        # One account: no account list, so no operator unlinking another account; the one account unlinks its own
         # link on its account page (it has a password, so the link may go).
         browser = adapter.browser()
         adapter.sign_in_with_password(browser, "owner")

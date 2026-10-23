@@ -1,9 +1,9 @@
 """nexoidc: sign-in with OpenID Connect and the authentik button, the same in every nex app.
 
-This package is copied unchanged into ``backend/app/vendor/nexoidc/`` of each app by ``bauplaene/oidc/tools/sync.py``
-and changed only in ``bauplaene/oidc``. A test in every app compares the files with the checksums in ``MANIFEST.json``.
+This package is vendored unchanged into ``backend/app/vendor/nexoidc/``. A test in the app compares the files with the
+checksums in ``MANIFEST.json``, so a change is made in the module's source, never in the copy.
 
-What lives here (Bauplan "Anmeldung mit OIDC und authentik", parts 01 to 03 and 06):
+What lives here:
 
 - ``config``: what the app tells the module about itself (``configure(AppConfig(...))``);
 - ``model``: providers, links, identities, and the ``Store`` the app implements over its database;
@@ -42,7 +42,7 @@ from .model import (
 )
 from .tls import warm
 
-__version__ = "1.0.12"
+__version__ = "1.0.14"
 
 __all__ = [
     "CODES",

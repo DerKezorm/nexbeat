@@ -21,7 +21,7 @@ function BackToLogin() {
 
 /**
  * Einladung annehmen: Name und Passwort waehlen, danach geht es zur normalen Anmeldung. Oder ueber einen
- * Anmeldeanbieter weiter: Die Einladung reist mit und gilt fuer die Identitaet, die dort zurueckkommt (Bauplan 01).
+ * Anmeldeanbieter weiter: Die Einladung reist mit und gilt fuer die Identitaet, die dort zurueckkommt.
  */
 export function InvitationPage() {
   const { t } = useTranslation()

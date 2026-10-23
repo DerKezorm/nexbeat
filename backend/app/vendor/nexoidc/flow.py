@@ -1,4 +1,4 @@
-"""The way out to the provider and back (Bauplan 02, "Ablauf"), without a web framework.
+"""The way out to the provider and back, without a web framework.
 
 ``begin`` answers the start route with a redirect to the provider and the attempt cookie; ``finish`` checks the return
 and hands out the provider, the verified identity and what the attempt was for; ``refused`` turns any failure into
@@ -81,7 +81,7 @@ def callback_path(slug: str, redirect_path: str = "") -> str:
 
 
 def cookie_path_for(path: str) -> str:
-    """The path of the attempt cookie for a callback path: ``<api>/oidc`` for every callback below it (Bauplan 02),
+    """The path of the attempt cookie for a callback path: ``<api>/oidc`` for every callback below it,
     else the callback path itself, so that the browser sends the cookie to an old address too."""
     standard = config.current().cookie_path
     return standard if path == standard or path.startswith(standard + "/") else path

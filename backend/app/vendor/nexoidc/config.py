@@ -20,9 +20,9 @@ import httpx
 #: An app name as it appears in cookie names, key prefixes, authentik names and slugs.
 _APP_NAME = re.compile(r"[a-z][a-z0-9-]{1,30}")
 #: What an instance adds to its cookie names (letters, digits, "_"): two instances on one host with different ports
-#: share their cookies, the browser tells no ports apart (nexcanvas, nextasks, nexbrand: ``cookie_name_suffix()``).
+#: share their cookies, the browser tells no ports apart.
 _COOKIE_SUFFIX = re.compile(r"[A-Za-z0-9_]*")
-#: Where an API lives: ``/api`` for most apps, ``/api/v1`` for apps whose whole API sits there (Bauplan 06).
+#: Where an API lives: ``/api`` for most apps, ``/api/v1`` for apps whose whole API sits there.
 _API_PREFIX = re.compile(r"(/[a-z0-9]+)+")
 #: At most this long, so that the standard callback stays shorter than ``flow.CALLBACK_MAX`` (since 1.0.10).
 API_PREFIX_MAX = 100
@@ -56,8 +56,8 @@ class AppConfig:
     public_url: Callable[[], str] = _no_public_url
     #: Since 1.0.10: stores a confirmed public address (see above).
     save_public_url: Callable[[str], None] | None = None
-    #: nexcrate and nexsift: one account only. No invitations, no new accounts through a provider, and the authentik
-    #: button adds the step ``binding`` (Bauplan 06).
+    #: One account only: no invitations, no new accounts through a provider, and the authentik button adds the step
+    #: ``binding``.
     single_account: bool = False
     #: The logger the module writes to. Default ``<app>.oidc``.
     logger_name: str = ""

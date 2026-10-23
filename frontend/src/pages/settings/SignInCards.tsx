@@ -1,7 +1,7 @@
 /**
- * Einstellungen, System, Anmeldung: drei Karten untereinander, wie der Bauplan "Anmeldung mit OIDC und authentik"
- * (Teil 04) sie fuer jede nex-App vorgibt. Reihenfolge, Wortlaut und Verhalten kommen von dort, die Bauteile (Karte,
- * Schalter, Feld, Knopf, Rueckfrage) sind die von nexbeat.
+ * Einstellungen, System, Anmeldung: drei Karten untereinander, in jeder nex-App gleich. Reihenfolge, Wortlaut und
+ * Verhalten kommen vom gemeinsamen Anmeldemodul, die Bauteile (Karte, Schalter, Feld, Knopf, Rueckfrage) sind die
+ * von nexbeat.
  *
  * 1. Anmeldung: Anmeldung mit Passwort (an, solange kein Anbieter aktiv ist) und die oeffentliche Adresse.
  * 2. Anmeldeanbieter: die Liste mit ihren Marken und dem Ziehgriff, das Formular als Dialog.
@@ -319,7 +319,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
-/** Das Formular eines Anbieters als Dialog, Felder in der Reihenfolge des Bauplans. */
+/** Das Formular eines Anbieters als Dialog, Felder in der festen Reihenfolge des Moduls. */
 function ProviderDialog({ entry, onClose, onSaved }: { entry: OidcProvider | null; onClose: () => void; onSaved: () => void }) {
   const { t } = useTranslation()
   const { settings } = useSettings()

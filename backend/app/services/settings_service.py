@@ -55,7 +55,7 @@ DEFAULTS: dict[str, str] = {
     "quota_period": "week",
     # Einmal am Tag bei GitHub nach einer neueren Fassung fragen. Ab Werk an, abschaltbar auf "Ueber nexbeat".
     "update_check": "true",
-    # Anmeldung mit Passwort. Aus wirkt nur, solange ein Anbieter aktiv ist; Admins duerfen immer (Bauplan 01).
+    # Anmeldung mit Passwort. Aus wirkt nur, solange ein Anbieter aktiv ist; Admins duerfen immer.
     "password_login": "true",
 }
 

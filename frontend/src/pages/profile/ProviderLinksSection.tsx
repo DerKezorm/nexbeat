@@ -13,8 +13,8 @@ type Link = { slug: string; label: string; linked: boolean }
 const LINKS_KEY = ['oidc-me']
 
 /**
- * Mein Konto, Anmeldeanbieter (Bauplan 04): je aktivem Anbieter eine Zeile mit Zustand und "Verknuepfen" oder
- * "Loesen". Verknuepfen fragt das eigene Passwort noch einmal (Bauplan 01), dann geht es zum Anbieter.
+ * Mein Konto, Anmeldeanbieter: je aktivem Anbieter eine Zeile mit Zustand und "Verknuepfen" oder
+ * "Loesen". Verknuepfen fragt das eigene Passwort noch einmal, dann geht es zum Anbieter.
  *
  * ⚠️ Nur so kommt ein bestehendes Konto an einen Anbieter, nie ueber die Mailadresse. Die Rueckkehr landet wieder
  * hier, mit `linked` oder `error` in der Adresse.

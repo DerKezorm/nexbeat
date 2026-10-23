@@ -1,7 +1,7 @@
-"""The copied module is the module: every file as ``MANIFEST.json`` names it (Bauplan 05, "Gleichheit des gemeinsamen
-Moduls"), and the app pins the libraries the module is built for. Runs in the app's own test run and CI, which see
-only the app's repository. Red means: a file was changed in the app. Change it in ``bauplaene/oidc`` and copy it
-again with ``tools/sync.py copy <app>``; never here."""
+"""The copied module is the module: every file as ``MANIFEST.json`` names it, and the app
+pins the libraries the module is built for. Runs in the app's own test run and CI, which see
+only the app's repository. Red means: a file was changed in the app. Change it in the module's source and copy it
+again; never here."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def test_every_copied_file_equals_the_module(adapter: Any) -> None:
         for name, expected in manifest["files"].items()
         if not (root / name).is_file() or _digest(root / name) != expected
     ]
-    assert deviating == [], f"changed in the app instead of in bauplaene/oidc: {deviating}"
+    assert deviating == [], f"changed in the app instead of in the module's source: {deviating}"
 
 
 def test_the_copied_package_carries_the_version_of_the_manifest(adapter: Any) -> None:

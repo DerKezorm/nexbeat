@@ -1,6 +1,6 @@
 """The data the module works with, and the ``Store`` the app implements over its own database.
 
-The tables are the app's (Bauplan 01): ``oidc_providers`` and ``oidc_links`` with exactly the columns named there, in
+The tables are the app's: ``oidc_providers`` and ``oidc_links`` with the columns of ``Provider`` and ``Link`` below, in
 the app's own models and migrations. The module never sees a database; it calls the ``Store`` methods below, and
 the app answers them with SQLAlchemy, sqlite3 or whatever it uses. All methods are synchronous: every app runs its
 database synchronously.
@@ -18,7 +18,7 @@ from typing import Protocol
 
 DEFAULT_SCOPES = "openid profile email"
 #: The slug of the entry that came from the settings of a single-provider app, and of the nexsuite coupling: its
-#: callback is the old address ``<api>/oidc/callback`` (Bauplan 01 "Umstieg", 06 "Verbund").
+#: callback is the old address ``<api>/oidc/callback``.
 LEGACY_SLUG = "oidc"
 #: ``managed`` values. Only the authentik button touches an entry with ``MANAGED_AUTHENTIK``; an entry with
 #: ``MANAGED_NEXSUITE`` changes only through the coupling, never through the form.
@@ -50,8 +50,8 @@ class Provider:
     redirect_path: str = ""
     created_at: datetime | None = None
     #: The redirect address the authentik button last registered at authentik for this entry, "" when it never did
-    #: (an entry by hand, or one the button made before 1.0.10). Column ``registered_redirect`` (Bauplan 01, since
-    #: 1.0.10, ``server_default ''``). Compared with today's redirect address it tells whether authentik still sends
+    #: (an entry by hand, or one the button made before 1.0.10). Column ``registered_redirect`` (since 1.0.10,
+    #: ``server_default ''``). Compared with today's redirect address it tells whether authentik still sends
     #: people to an old one (``providers.admin_view``: ``redirect_stale``).
     registered_redirect: str = ""
 
@@ -95,7 +95,7 @@ class Link:
 @dataclass(frozen=True)
 class Identity:
     """What is certain after a successful run at the provider. ``issuer`` plus ``subject`` is the identity; the rest
-    may change at the provider any time. There is no ``email_verified``: the module never reads it (Bauplan 02)."""
+    may change at the provider any time. There is no ``email_verified``: the module never reads it."""
 
     issuer: str
     subject: str
@@ -138,7 +138,7 @@ class Impact:
 
 class Store(Protocol):
     """Implemented by the app over its own tables. Methods marked "single account: unused" may raise
-    ``NotImplementedError`` in nexcrate and nexsift."""
+    ``NotImplementedError`` in an app with one account."""
 
     # --- Providers -----------------------------------------------------------------------------------------------
     def list_providers(self) -> list[Provider]:
@@ -212,8 +212,8 @@ class Store(Protocol):
         ...
 
     def accept_invite(self, account_id: int, invite: Invite) -> None:
-        """Give an existing account the rights of the invitation in addition to its own (Bauplan 01, "Wer ist das?"
-        1: a known identity that came through an invitation). Adds, never takes away: an account with more rights
+        """Give an existing account the rights of the invitation in addition to its own (a known
+        identity that came through an invitation). Adds, never takes away: an account with more rights
         keeps them. Called after ``consume_invite`` succeeded, in the same transaction; the module commits."""
         ...
 
@@ -224,6 +224,6 @@ class Store(Protocol):
 
 
 def secret_context(provider_id: int) -> str:
-    """The encryption context of a provider's client secret (Bauplan 01): another provider's ciphertext does not
+    """The encryption context of a provider's client secret: another provider's ciphertext does not
     decrypt under this one."""
     return f"oidc-provider:{provider_id}"

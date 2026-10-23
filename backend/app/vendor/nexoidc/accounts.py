@@ -1,4 +1,4 @@
-"""Who the identity is (Bauplan 01, "Wer ist das?"), linking and unlinking, and the second factor.
+"""Who the identity is, linking and unlinking, and the second factor.
 
 The order on a return, and nothing else:
 
@@ -77,7 +77,7 @@ def name_for(identity: Identity, clean: Callable[[str], str], taken: Callable[[s
 
 
 def second_factor_due(trusts_second_factor: bool, state: AccountState) -> bool:
-    """Bauplan 01, "Zweiter Faktor": the code is asked after the provider only when the provider is not trusted to
+    """The code is asked after the provider only when the provider is not trusted to
     check one itself and the account has one in the app."""
     return not trusts_second_factor and state.has_second_factor
 
@@ -163,7 +163,7 @@ def sign_in(store: Store, arrival: Arrival) -> SignedIn:
 
 
 def _accept(store: Store, state: AccountState, key: str) -> str:
-    """The invitation of the attempt for an account that is known already (Bauplan 01, "Wer ist das?" 1): used up with
+    """The invitation of the attempt for an account that is known already (step 1 of the order above): used up with
     the one-row statement, then its rights added. Nothing committed here; a failure rolls the use back."""
     invite = store.find_invite(key)
     if invite is None or not store.consume_invite(invite):
@@ -178,7 +178,7 @@ def _accept(store: Store, state: AccountState, key: str) -> str:
 
 
 def link(store: Store, arrival: Arrival, signed_in_account_id: int | None) -> None:
-    """Store the identity on the account that started the linking (Bauplan 01, "Verknüpfen und Lösen"). The person
+    """Store the identity on the account that started the linking. The person
     must still be signed in as that account; an identity that belongs to another account is refused."""
     provider, identity, started = arrival.provider, arrival.identity, arrival.started
     if started.purpose != LINK or started.link_account_id is None:

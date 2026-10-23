@@ -1,7 +1,7 @@
 /**
- * Pflichttest 31 (Bauplan 05): every step the authentik button reports and every reason it gives has a sentence in
+ * Every step the authentik button reports and every reason it gives has a sentence in
  * both languages, and no language has a step or reason the server never sends. The server's lists are the module's
- * (`authentik.STEP_KEYS`, `authentik.REASONS`), mirrored in `oidc.ts` and checked against each other in bauplaene.
+ * (`authentik.STEP_KEYS`, `authentik.REASONS`), mirrored in `oidc.ts` and checked against each other in the module's own tests.
  */
 import { beforeAll, describe, expect, it } from 'vitest'
 

@@ -1,8 +1,9 @@
-"""Contract, Bauplan 05 "Konten", Pflichttests 13 to 22, through the app's own routes and store.
+"""Contract, accounts: links, new accounts, linking, the second factor, several providers, issuer changes and the
+migration, through the app's own routes and store.
 
-Apps with one account (Bauplan 06) answer 15 to 17 with "a foreign identity is refused" instead; the tests branch
-on ``adapter.single_account`` and never skip. Apps with several accounts and no invitations (nexdeck,
-``has_invitations`` False, since 1.0.12) skip the tests of an invitation, with the reason, and make the account
+Apps with one account answer the tests of new accounts with "a foreign identity is refused" instead; the tests branch
+on ``adapter.single_account`` and never skip. Apps with several accounts and no invitations
+(``has_invitations`` False, since 1.0.12) skip the tests of an invitation, with the reason, and make the account
 without a password through ``auto_create`` instead.
 """
 
@@ -42,8 +43,8 @@ def set_auto_create(adapter: Any, slug: str, value: bool) -> None:
     assert response.status_code == 200, response.text
 
 
-#: Why the tests of an invitation do not run in an app without invitations (Bauplan 04, "Apps ohne Einladungen").
-NO_INVITATIONS = "the app has no invitations (has_invitations False, Bauplan 04 'Apps ohne Einladungen')"
+#: Why the tests of an invitation do not run in an app without invitations.
+NO_INVITATIONS = "the app has no invitations (has_invitations False)"
 
 
 def needs_invitations(adapter: Any) -> None:
@@ -53,10 +54,10 @@ def needs_invitations(adapter: Any) -> None:
         pytest.skip(NO_INVITATIONS)
 
 
-# --- 13 -----------------------------------------------------------------------------------------------------------
+# --- A known link --------------------------------------------------------------------------------------------------
 
 
-def test_13_a_known_link_signs_in_whatever_name_and_address_say_today(
+def test_a_known_link_signs_in_whatever_name_and_address_say_today(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     adapter.make_account("alex")
@@ -67,10 +68,10 @@ def test_13_a_known_link_signs_in_whatever_name_and_address_say_today(
     assert "renamed" not in adapter.account_names()
 
 
-# --- 14 -----------------------------------------------------------------------------------------------------------
+# --- The same address ----------------------------------------------------------------------------------------------
 
 
-def test_14_an_account_with_the_same_address_is_never_taken_over(
+def test_an_account_with_the_same_address_is_never_taken_over(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     adapter.make_account("alex")
@@ -87,10 +88,10 @@ def test_14_an_account_with_the_same_address_is_never_taken_over(
     assert adapter.account_names() == before
 
 
-# --- 15 to 17 -----------------------------------------------------------------------------------------------------
+# --- New accounts: invitation, auto_create -------------------------------------------------------------------------
 
 
-def test_15_without_link_invitation_or_auto_create_nobody_comes_in(
+def test_without_link_invitation_or_auto_create_nobody_comes_in(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     before = adapter.account_names()
@@ -99,12 +100,12 @@ def test_15_without_link_invitation_or_auto_create_nobody_comes_in(
     assert adapter.account_names() == before
 
 
-def test_16_an_invitation_through_the_provider_makes_the_account_with_its_rights_once(
+def test_an_invitation_through_the_provider_makes_the_account_with_its_rights_once(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     needs_invitations(adapter)
     if adapter.single_account:
-        # Bauplan 06: no invitations; a foreign identity is refused.
+        # One account: no invitations; a foreign identity is refused.
         assert error_in(start(adapter, adapter.browser(), "sso", invite="any-key")) == "invite_invalid"
         browser, response = round_trip(adapter, sso, "sso")
         assert error_in(response) == "oidc_no_account" and adapter.who(browser) is None
@@ -117,7 +118,7 @@ def test_16_an_invitation_through_the_provider_makes_the_account_with_its_rights
     assert error_in(start(adapter, adapter.browser(), "sso", invite=key)) == "invite_invalid"
 
 
-def test_16_two_returning_at_once_with_one_invitation_make_one_account(
+def test_two_returning_at_once_with_one_invitation_make_one_account(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     needs_invitations(adapter)
@@ -146,12 +147,12 @@ def test_16_two_returning_at_once_with_one_invitation_make_one_account(
     assert len({"p1", "p2"} & set(adapter.account_names())) == 1
 
 
-def test_16_a_known_identity_with_an_invitation_signs_in_and_takes_its_rights_once(
+def test_a_known_identity_with_an_invitation_signs_in_and_takes_its_rights_once(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     needs_invitations(adapter)
     if adapter.single_account:
-        # Bauplan 06: no invitations, not even for the one account's own identity.
+        # One account: no invitations, not even for the one account's own identity.
         adapter.make_account("owner")
         link_person(adapter, "owner", "sso", sso)
         assert error_in(start(adapter, adapter.browser(), "sso", invite="any-key")) == "invite_invalid"
@@ -171,7 +172,7 @@ def test_16_a_known_identity_with_an_invitation_signs_in_and_takes_its_rights_on
     assert adapter.who(browser) == "alex" and adapter.rights_of("alex") == "editor"
 
 
-def test_16_a_known_and_a_new_identity_at_once_with_one_invitation_use_it_once(
+def test_a_known_and_a_new_identity_at_once_with_one_invitation_use_it_once(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     needs_invitations(adapter)
@@ -206,7 +207,7 @@ def test_16_a_known_and_a_new_identity_at_once_with_one_invitation_use_it_once(
     assert error_in(answers[1]) == ("invite_invalid" if took else None)
 
 
-def test_17_auto_create_makes_a_member(adapter: Any, sso: fakes.FakeProvider, with_sso: dict) -> None:
+def test_auto_create_makes_a_member(adapter: Any, sso: fakes.FakeProvider, with_sso: dict) -> None:
     if adapter.only_authentik:
         with adapter.store() as store:
             row = store.provider_by_slug("sso")
@@ -215,14 +216,14 @@ def test_17_auto_create_makes_a_member(adapter: Any, sso: fakes.FakeProvider, wi
         set_auto_create(adapter, "sso", True)
     browser, response = round_trip(adapter, sso, "sso")
     if adapter.single_account:
-        # Bauplan 06: auto_create is off inside; a foreign identity is refused.
+        # One account: auto_create is off inside; a foreign identity is refused.
         assert error_in(response) == "oidc_no_account" and adapter.who(browser) is None
         return
     assert location(response) == adapter.home and adapter.who(browser) == "alex"
     assert adapter.rights_of("alex") == "member"
 
 
-def test_17b_the_same_new_identity_returning_twice_at_once_makes_one_account_and_one_link(
+def test_the_same_new_identity_returning_twice_at_once_makes_one_account_and_one_link(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     """The race of 16 without an invitation, for every app: auto_create checks "no link yet" and then writes, and two
@@ -251,7 +252,7 @@ def test_17b_the_same_new_identity_returning_twice_at_once_makes_one_account_and
         thread.join(timeout=30)
     assert all(answer is not None for answer in answers)
     if adapter.single_account:
-        # Bauplan 06: auto_create is off inside; a foreign identity is refused, twice.
+        # One account: auto_create is off inside; a foreign identity is refused, twice.
         assert [error_in(answer) for answer in answers] == ["oidc_no_account"] * 2
         assert [adapter.who(browser) for browser, _ in ready] == [None, None]
         return
@@ -286,10 +287,10 @@ def _set_in_store(adapter: Any, row: Any, **changes: Any) -> None:
         store.commit()
 
 
-# --- 18 -----------------------------------------------------------------------------------------------------------
+# --- Linking -------------------------------------------------------------------------------------------------------
 
 
-def test_18_linking_asks_for_the_password_and_refuses_an_identity_of_another_account(
+def test_linking_asks_for_the_password_and_refuses_an_identity_of_another_account(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     adapter.make_account("alex")
@@ -300,8 +301,8 @@ def test_18_linking_asks_for_the_password_and_refuses_an_identity_of_another_acc
     assert adapter.link_start(adapter.browser(), "sso", adapter.password_for("alex")).status_code in (401, 403)
     link_person(adapter, "alex", "sso", sso)
     if adapter.single_account:
-        # Bauplan 06: there is no other account to take the identity. A foreign identity at the same provider does
-        # not come in; linking another identity replaces the one account's link (one per provider, Bauplan 01).
+        # One account: there is no other account to take the identity. A foreign identity at the same provider does
+        # not come in; linking another identity replaces the one account's link (one per provider).
         sso.person = {"sub": "person-2", "preferred_username": "stranger"}
         browser, response = round_trip(adapter, sso, "sso")
         assert error_in(response) == "oidc_no_account" and adapter.who(browser) is None
@@ -320,7 +321,7 @@ def test_18_linking_asks_for_the_password_and_refuses_an_identity_of_another_acc
     assert error_in(back) == "oidc_subject_taken" and location(back).startswith(adapter.account_page)
 
 
-def test_18_the_last_link_of_an_account_without_password_stays(
+def test_the_last_link_of_an_account_without_password_stays(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     if adapter.single_account:
@@ -351,10 +352,10 @@ def test_18_the_last_link_of_an_account_without_password_stays(
     assert error_in(round_trip(adapter, sso, "sso")[1]) == "oidc_no_account"
 
 
-# --- 19 -----------------------------------------------------------------------------------------------------------
+# --- The second factor ---------------------------------------------------------------------------------------------
 
 
-def test_19_the_second_factor_is_asked_only_when_the_provider_is_not_trusted(
+def test_the_second_factor_is_asked_only_when_the_provider_is_not_trusted(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     adapter.make_account("alex", second_factor=adapter.has_second_factor)
@@ -374,15 +375,15 @@ def test_19_the_second_factor_is_asked_only_when_the_provider_is_not_trusted(
         assert not adapter.second_factor_asked(browser, response) and adapter.who(browser) == "alex"
 
 
-# --- 20 -----------------------------------------------------------------------------------------------------------
+# --- Several providers ---------------------------------------------------------------------------------------------
 
 
-def test_20_the_same_subject_at_two_providers_is_two_identities_with_own_buttons_and_callbacks(
+def test_the_same_subject_at_two_providers_is_two_identities_with_own_buttons_and_callbacks(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict, net: fakes.Network
 ) -> None:
     other = net.add(fakes.FakeProvider("https://other.example.com"))
     if adapter.only_authentik:
-        # nexsuite: one provider only (Bauplan 06, without 20). The form takes no second one.
+        # Only authentik: one provider only. The form takes no second one.
         assert adapter.add_provider(other, slug="other", label="Other").status_code >= 400
         return
     response = adapter.add_provider(other, slug="other", label="Other")
@@ -401,14 +402,14 @@ def test_20_the_same_subject_at_two_providers_is_two_identities_with_own_buttons
     )
 
 
-# --- 21 -----------------------------------------------------------------------------------------------------------
+# --- Issuer change and removal -------------------------------------------------------------------------------------
 
 
-def test_21_changing_the_issuer_drops_the_links_of_that_entry_only_and_a_slash_drops_nothing(
+def test_changing_the_issuer_drops_the_links_of_that_entry_only_and_a_slash_drops_nothing(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict, net: fakes.Network
 ) -> None:
     if adapter.only_authentik:
-        pytest.xfail("only authentik: the issuer changes through the button only (test_30)")
+        pytest.xfail("only authentik: the issuer changes through the button only (see the authentik tests)")
     other = net.add(fakes.FakeProvider("https://other.example.com"))
     assert adapter.add_provider(other, slug="other", label="Other").status_code in (200, 201)
     adapter.make_account("alex")
@@ -428,7 +429,7 @@ def test_21_changing_the_issuer_drops_the_links_of_that_entry_only_and_a_slash_d
     assert error_in(round_trip(adapter, moved, "sso")[1]) == "oidc_no_account"
 
 
-def test_21_removing_an_entry_names_who_loses_access_and_takes_its_links(
+def test_removing_an_entry_names_who_loses_access_and_takes_its_links(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     if adapter.only_authentik:
@@ -443,14 +444,14 @@ def test_21_removing_an_entry_names_who_loses_access_and_takes_its_links(
     assert error_in(start(adapter, adapter.browser(), "sso")) == "oidc_not_configured"
 
 
-# --- 22 -----------------------------------------------------------------------------------------------------------
+# --- From one provider to the list ---------------------------------------------------------------------------------
 
 
-def test_22_the_old_single_provider_becomes_the_entry_oidc_and_the_old_callback_still_signs_in(
+def test_the_old_single_provider_becomes_the_entry_oidc_and_the_old_callback_still_signs_in(
     adapter: Any, sso: fakes.FakeProvider
 ) -> None:
     if adapter.legacy_model != "single":
-        # Apps that had a list already adapt their tables instead (Bauplan 01); nothing to migrate here.
+        # Apps that had a list already adapt their tables instead; nothing to migrate here.
         assert adapter.legacy_model in ("list", "none")
         return
     adapter.make_account("alex")
@@ -479,7 +480,7 @@ def test_22_the_old_single_provider_becomes_the_entry_oidc_and_the_old_callback_
     assert location(response) == adapter.home and adapter.who(browser) == "alex"
 
 
-def test_22_never_in_store_only_by_route_for_add_in_store(adapter: Any, net: fakes.Network) -> None:
+def test_never_in_store_only_by_route_for_add_in_store(adapter: Any, net: fakes.Network) -> None:
     """The helper for apps without a form writes a usable entry (keeps the other tests honest)."""
     fake = net.add(fakes.FakeProvider("https://store.example.com"))
     add_in_store(adapter, fake, "stored")

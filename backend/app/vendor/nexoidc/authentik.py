@@ -1,4 +1,4 @@
-"""The authentik button and the blueprint (Bauplan 03).
+"""The authentik button and the blueprint.
 
 The operator hands over the address of authentik and a one-time API token. The app then does through the authentik
 API v3 what one would otherwise click together in a dozen forms: a signing key, the provider with authentik's own
@@ -50,7 +50,7 @@ from .model import (
 )
 
 STEP_KEYS = ("reached", "signingKey", "mapping", "provider", "application", "filled")
-#: Only in apps with one account (Bauplan 06): authentik lets only the token's own user into the application.
+#: Only in apps with one account: authentik lets only the token's own user into the application.
 STEP_BINDING = "binding"
 REASONS = (
     "unreachable",
@@ -286,7 +286,7 @@ def _ascii(text: str) -> str:
 def instance_names(redirect_uri: str) -> tuple[str, str]:
     """Name and slug of this instance when another instance of the app holds the plain names already."""
     host = urlsplit(redirect_uri).netloc.lower()
-    # The host part takes at most 40 characters, and the whole slug stays within authentik's 50 (Bauplan 03).
+    # The host part takes at most 40 characters, and the whole slug stays within authentik's 50.
     room = min(HOST_MAX, SLUG_MAX - len(app_name()) - 1)
     suffix = re.sub(r"[^a-z0-9]+", "-", _ascii(host)).strip("-")[:room].strip("-") or "instance"
     return f"{app_name()} ({host})", f"{app_name()}-{suffix}"
@@ -476,7 +476,7 @@ def _issuer_change(entry: Provider, issuer: str, count: int, *, foreseen: bool) 
 
 
 async def _ask_first(store: Store, api: _Api, base_url: str, request_base: str) -> None:
-    """Bauplan 03, "Rückfrage vor dem Wechsel": raise ``issuer_change`` when the run would give an entry with links
+    """Ask before the issuer changes: raise ``issuer_change`` when the run would give an entry with links
     another issuer, found with reading calls only (the same ones the run makes later). Nothing to ask without an entry
     or without links. An issuer that cannot be told in advance (the application slug belongs to another provider and
     the own provider does not exist yet, so the replacement slug carries a number authentik has not handed out) counts
@@ -514,7 +514,7 @@ async def _fill(
     redirect: str,
 ) -> tuple[Provider, int, str]:
     """Confirm the new issuer with one discovery, then write the entry. Probed first: a failed discovery changes
-    nothing in the list, and links only go when an issuer that answers really replaces the old one (Bauplan 02). What
+    nothing in the list, and links only go when an issuer that answers really replaces the old one. What
     authentik handed out stays there; running the button again once authentik is reachable fills the entry. A new
     entry is on, makes no new accounts and trusts authentik with the second factor; an existing one keeps the
     operator's choices and only gets issuer, client id and secret. Either way the entry remembers the redirect
@@ -595,20 +595,20 @@ async def setup(
 ) -> SetupResult:
     """The whole run, step by step. Stops at the first failure; the result lists every step that ran.
 
-    The button never registers an address it guessed from the request (Bauplan 03, "Rückleitadresse", decided on
-    10.10.2026). Without a public address of the app it needs ``public_url``, the address the operator confirmed in the
-    card (the one the browser uses); it stores that through ``AppConfig.save_public_url`` and only then sets up.
-    Without either it stops at the first step, before any call, with ``reason: public_url_needed`` and ``address``
-    (``address_view``, ``headers`` are the request's). An address the app has already wins over a confirmed one.
+    The button never registers an address it guessed from the request. Without a public address of the app it needs
+    ``public_url``, the address the operator confirmed in the card (the one the browser uses); it stores that through
+    ``AppConfig.save_public_url`` and only then sets up. Without either it stops at the first step, before any call,
+    with ``reason: public_url_needed`` and ``address`` (``address_view``, ``headers`` are the request's). An address the
+    app has already wins over a confirmed one.
 
     Would the run give the entry another issuer while accounts are linked to it, it stops at the first step, after
-    reading calls only, with ``reason: issuer_change`` and ``count`` (Bauplan 03): nothing is written in authentik or
+    reading calls only, with ``reason: issuer_change`` and ``count``: nothing is written in authentik or
     in the app. The page asks the operator with ``oidc.admin.issuerChangeConfirm`` and runs the button again with
     ``confirm_issuer_change=True``, which changes the issuer and drops the links."""
     base_url = normalize_base(base_url)
     result = SetupResult()
     if providers.coupled(store):
-        # While coupled, sign-in comes through nexsuite (Bauplan 06): the button touches neither authentik nor the
+        # While coupled, sign-in comes through nexsuite: the button touches neither authentik nor the
         # list, and says so at the first step. The app locks the card meanwhile; this is the guard behind it.
         detail = "the app is coupled to nexsuite; the button changes nothing until it is uncoupled"
         result.steps.append(Step(STEP_KEYS[0], False, detail, "coupled", 0))
@@ -616,7 +616,7 @@ async def setup(
         return result
     try:
         if not token.isascii() or not token.isprintable() or any(char.isspace() for char in token):
-            # No HTTP header carries it, so no authentik token looks like this (Bauplan 03: reason "malformed").
+            # No HTTP header carries it, so no authentik token looks like this (reason "malformed").
             raise StepFailed("the token holds characters an HTTP header cannot carry", "malformed", 0)
         try:
             result.public_url = _public_url_first(store, public_url, request_base)
@@ -693,7 +693,7 @@ async def setup(
 
 
 # ---------------------------------------------------------------------------
-# The public address (Bauplan 03 "Rückleitadresse", 04 "Karte 3"; 1.0.10)
+# The public address (since 1.0.10)
 # ---------------------------------------------------------------------------
 
 
@@ -791,7 +791,7 @@ def address_view(store: Store, request_base: str, headers: Mapping[str, str] | N
 
 
 def public_url_change(store: Store, new_url: str, request_base: str = "") -> dict[str, Any]:
-    """What saving ``new_url`` as the public address leaves behind (the question of card 1, Bauplan 04):
+    """What saving ``new_url`` as the public address leaves behind (the question the page asks before it saves):
 
     - ``entries`` and ``count``: the entries the button set up whose redirect address at authentik the new address
       leaves behind (``address``: the first one's, for ``oidc.admin.addressChangeConfirm``). An entry the button made
@@ -848,13 +848,13 @@ def _remember_registered(store: Store, request_base: str) -> int:
 
 
 def public_url_guard(store: Store, new_url: str, request_base: str, *, confirm: bool) -> dict[str, Any] | None:
-    """For an app that saves the public address in a route of its own (card 1, or its own settings page): call it
-    before saving, with the address the operator typed. The question (``public_url_change``) while it asks: the
-    route answers 409 ``{"code": "public_url_change", **question}`` and saves nothing; the page asks with
-    ``oidc.admin.addressChangeConfirm`` when ``count`` and ``oidc.admin.addressChangeHand`` when ``hand`` (at least
-    one of the two) and sends again with ``confirm``. None: save now. With ``confirm`` the entries from before 1.0.10
-    get what authentik knows first (committed), so that the card reports ``stale`` afterwards. Raises ``ValueError``
-    for an address that is none."""
+    """For an app that saves the public address in a route of its own (the public-address card, or its own settings
+    page): call it before saving, with the address the operator typed. The question (``public_url_change``) while it
+    asks: the route answers 409 ``{"code": "public_url_change", **question}`` and saves nothing; the page asks with
+    ``oidc.admin.addressChangeConfirm`` when ``count`` and ``oidc.admin.addressChangeHand`` when ``hand`` (at least one
+    of the two) and sends again with ``confirm``. None: save now. With ``confirm`` the entries from before 1.0.10 get
+    what authentik knows first (committed), so that the card reports ``stale`` afterwards. Raises ``ValueError`` for an
+    address that is none."""
     change = public_url_change(store, new_url, request_base)
     if not change["count"] and not change["hand"]:
         return None
@@ -899,9 +899,9 @@ def _store_public_url(address: str) -> None:
 
 def save_public_url(store: Store, new_url: str, request_base: str, *, confirm: bool = False) -> dict[str, Any]:
     """``POST <api>/oidc/authentik/address`` (``{"public_url", "confirm"}``): "Use it only" in the authentik card,
-    and card 1 of an app that has no route of its own for the address. Cleans the address (``ValueError``: 422
-    ``public_url_invalid``), asks like ``public_url_guard`` (``PublicUrlChange``: 409), stores it through
-    ``AppConfig.save_public_url`` and reads it back (``PublicUrlNotKept``: 409 ``public_url_needed``). Answers
+    and the public-address card of an app that has no route of its own for the address. Cleans the address
+    (``ValueError``: 422 ``public_url_invalid``), asks like ``public_url_guard`` (``PublicUrlChange``: 409), stores it
+    through ``AppConfig.save_public_url`` and reads it back (``PublicUrlNotKept``: 409 ``public_url_needed``). Answers
     ``address_view`` with the new address."""
     address = flow.clean_public_url(new_url)
     question = public_url_guard(store, address, request_base, confirm=confirm)
@@ -990,8 +990,8 @@ entries:
 def blueprint_redirect(store: Store, request_base: str) -> str:
     """The callback the blueprint names: that of the button's entry, else of the entry the button would make, behind
     the app's public address. Without one it raises ``PublicUrlNeeded``: an address guessed from the request is
-    ``http`` behind a proxy that ends TLS, and a blueprint with it would fail at the first sign-in (Bauplan 03,
-    1.0.10). ``request_base`` is kept for the apps' calls; it is not used for the address."""
+    ``http`` behind a proxy that ends TLS, and a blueprint with it would fail at the first sign-in
+    (since 1.0.10). ``request_base`` is kept for the apps' calls; it is not used for the address."""
     if not flow.configured_public_url():
         raise PublicUrlNeeded("the app has no public address; the blueprint names no guessed one")
     managed = _managed(store)

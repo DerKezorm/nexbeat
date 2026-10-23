@@ -1,11 +1,11 @@
-"""The way from one provider in the settings to the list (Bauplan 01 "Umstieg", 06 "Wanderung").
+"""The way from one provider in the settings to the list.
 
-nexlore, nexcanvas, nextasks, nexsuite, nexbrand, nexdiary, nexpaper, nexsift, nextrmnl and nexcrate keep one provider
-in their settings (``oidc_issuer``, ``oidc_client_id`` …) and the subject at the account (``oidc_subject``; nexcrate
-in its settings). At the first start with the module, inside the app's own migration and after its backup, these become:
+An app from before the list keeps one provider in its settings (``oidc_issuer``, ``oidc_client_id`` …) and the subject
+at the account (``oidc_subject``; an app with one account may keep it in its settings). At the first start with the
+module, inside the app's own migration and after its backup, these become:
 
 1. an entry with the slug ``oidc``: name as before, ``auto_create`` as before, ``trusts_second_factor`` as the app
-   behaved before (on for the apps that asked no code after the provider, off for nexdiary and nexpaper),
+   behaved before (on for an app that asked no code after the provider, off for one that asked it),
    ``managed = "authentik"`` when the issuer ends in ``/application/o/<slug>/`` and the button had set it up;
 2. a link per stored subject (``issuer`` = the issuer so far);
 3. the old callback ``<api>/oidc/callback`` stays valid for ever and belongs to that entry (``flow.callback_path``).
@@ -65,7 +65,7 @@ def _log() -> logging.Logger:
 @dataclass(frozen=True)
 class Legacy:
     """The single provider as the app stored it. ``set_up_by_button``: the authentik button wrote these settings
-    (each app knows how it marked that, nexlore by the name "authentik")."""
+    (each app knows how it marked that, for example by the name "authentik")."""
 
     issuer: str
     client_id: str
@@ -137,9 +137,9 @@ def apply(store: Store, migration: Plan | None) -> Provider | None:
 
 def old_callback(template: str, slug: str) -> str:
     """The callback path a provider of an app with a list knew before the module, for that app's own migration of
-    its table (Bauplan 01, last paragraph; 06 "Pfad der Schnittstelle"): nexbeat ``/api/auth/oidc/{slug}/callback``,
-    nexdeck ``/api/v1/auth/oidc/{slug}/callback``, nexview, nexmail their own. The app stores it as the entry's
-    ``redirect_path``; the start then sends it, the cookie follows it, and the app routes it to the same return."""
+    its table, for example ``/api/auth/oidc/{slug}/callback`` or ``/api/v1/auth/oidc/{slug}/callback``. The app stores
+    it as the entry's ``redirect_path``; the start then sends it, the cookie follows it, and the app routes it to the
+    same return."""
     return providers.check_redirect_path(template.format(slug=slug))
 
 
@@ -155,8 +155,8 @@ def apply_coupled(
 ) -> coupling.Coupling | None:
     """``trusts_second_factor`` is how the app behaved so far, for both entries: its own and the coupled one.
 
-    The migration of an app that is coupled to nexsuite at the moment (Bauplan 06, Verbund): its own provider from
-    before the coupling (the settings it saved for the way back, and the subjects it kept apart, nexcanvas
+    The migration of an app that is coupled to nexsuite at the moment: its own provider from before the
+    coupling (the settings it saved for the way back, and the subjects it kept apart, such as a column
     ``oidc_subject_local``) becomes the entry ``oidc`` with its links, set aside at once; nexsuite becomes the coupled
     entry with the accounts' persons. Returns what the app keeps for uncoupling; None when there is a list already."""
     if store.list_providers():
@@ -190,7 +190,7 @@ _NO_PROVIDER = "-"
 #: Before a provider part: an issuer without a client id (``way_back`` rule 2), no provider to sign in through.
 _ISSUER_ONLY = "~"
 #: The anchor of a way back that is closed for good: the older version is shown no provider and no subject, whatever
-#: the entry ``oidc`` says, until ``resync`` takes over a provider the older version set up (Bauplan 01 "Umstieg").
+#: the entry ``oidc`` says, until ``resync`` takes over a provider the older version set up.
 CLOSED = "-"
 
 
@@ -297,7 +297,7 @@ class Changes:
 
 def changes(previous: str | None, current: str) -> Changes:
     """Compare a stored fingerprint with the one of now. For an app that keeps the old settings somewhere else as
-    well (nexcanvas ``oidc_way_back_held``): ``settings`` True means the older version wrote new settings, and they
+    well (a held copy of them): ``settings`` True means the older version wrote new settings, and they
     win over such a copy."""
     before, now = _read(previous), _read(current)
     if before is None or now is None or before.form != now.form:
@@ -323,7 +323,7 @@ def changes_since(previous: str | None, legacy: Legacy, subjects: Iterable[tuple
 @dataclass
 class Resync:
     """What ``resync`` did. ``coupled``: nothing, because the app is coupled to nexsuite (the list changes through the
-    coupling only, Bauplan 06)."""
+    coupling only)."""
 
     changes: Changes = field(default_factory=Changes)
     coupled: bool = False
@@ -549,7 +549,7 @@ class Mirror:
 
 
 def way_back(entry: Provider | None, links: Iterable[tuple[int, str]], anchor: str | None) -> Mirror:
-    """The way back (Bauplan 01 "Umstieg" 4), one rule for every app. Pure: the app calls it inside every commit,
+    """The way back, one rule for every app. Pure: the app calls it inside every commit,
     after the change, writes what comes back, then stores the fingerprint of what it reads back.
 
     ``entry`` is the entry ``oidc`` as the store gives it (secret decrypted), or None; ``links`` its links as
@@ -567,8 +567,8 @@ def way_back(entry: Provider | None, links: Iterable[tuple[int, str]], anchor: s
        older version finds no provider, so its bridge over a confirmed address and its ``auto_create`` never act.
     4. Only ``resync`` opens it again (see there).
 
-    While coupled (the entry ``oidc`` is nexsuite's): everything empty and the anchor as it was; a Verbund app keeps
-    its own rule for that time and does not call this then."""
+    While coupled (the entry ``oidc`` is nexsuite's): everything empty and the anchor as it was; an app that couples
+    keeps its own rule for that time and does not call this then."""
     if entry is not None and entry.managed == MANAGED_NEXSUITE:
         return Mirror(legacy=_EMPTY, subjects={}, anchor=_open(anchor) or CLOSED)
     known = _open(anchor)
@@ -576,7 +576,7 @@ def way_back(entry: Provider | None, links: Iterable[tuple[int, str]], anchor: s
         return Mirror(legacy=_EMPTY, subjects={}, anchor=CLOSED)
     button = entry.managed == MANAGED_AUTHENTIK
     # The issuer as the older version knows it, not the entry's form: most older versions compare their setting
-    # letter by letter when a provider is saved (nexcanvas, nextasks, nexbrand, nextrmnl, nexsift, nexcrate), and
+    # letter by letter when a provider is saved, and
     # their authentik button writes it with a slash; written without, the button dropped every subject there.
     if entry.enabled and entry.trusts_second_factor:
         legacy = Legacy(

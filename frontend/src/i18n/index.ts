@@ -19,7 +19,7 @@ type Texts = Record<string, unknown>
 
 /**
  * Die Texte einer Sprache: die eigenen von nexbeat und die des gemeinsamen Anmeldemoduls (Namensraum `oidc`,
- * Bauplan 04, wortgleich in allen Apps). `{{app}}` und `{{slug}}` darin setzt `defaultVariables` unten.
+ * wortgleich in allen Apps). `{{app}}` und `{{slug}}` darin setzt `defaultVariables` unten.
  */
 const TEXTS: Record<Language, () => Promise<Texts>> = {
   de: async () => merged((await import('./de.json')).default, (await import('../vendor/nexoidc/oidc.de.json')).default),

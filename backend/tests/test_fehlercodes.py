@@ -12,7 +12,7 @@ from pathlib import Path
 
 APP = Path(__file__).resolve().parent.parent / "app"
 I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n"
-#: Die Saetze des gemeinsamen Anmeldemoduls (Bauplan 04) stehen in seinen eigenen Sprachdateien, unter
+#: Die Saetze des gemeinsamen Anmeldemoduls stehen in seinen eigenen Sprachdateien, unter
 #: ``oidc.error`` und ``oidc.formError``. Das Modul selbst (``app/vendor``) wird an seiner Quelle geprueft.
 MODULE_I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "vendor" / "nexoidc"
 

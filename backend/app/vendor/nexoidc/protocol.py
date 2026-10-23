@@ -1,4 +1,4 @@
-"""OpenID Connect itself (Bauplan 02): discovery, the address at the provider, the code exchange, the token checks,
+"""OpenID Connect itself: discovery, the address at the provider, the code exchange, the token checks,
 userinfo. No accounts, no database, no cookies; ``flow.py`` puts these pieces together and ``accounts.py`` decides
 who the identity is.
 

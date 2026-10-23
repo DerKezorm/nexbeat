@@ -1,5 +1,5 @@
 /**
- * Ende-zu-Ende fuer die Anmeldung ueber Anbieter (Pflichttests 33 und 34 des Bauplans), kopflos. Die gebaute
+ * Ende-zu-Ende fuer die Anmeldung ueber Anbieter, kopflos. Die gebaute
  * Oberflaeche kommt vom echten Server wie im Container (`app.main:asgi`), mit eigenem Datenordner und eigenem Port,
  * daneben ein nachgebauter Anbieter (`e2e/fake-oidc.mjs`). Nie ein echter Anbieter, nie das Netz, nie `data/`.
  *

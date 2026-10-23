@@ -1,5 +1,5 @@
 /**
- * Pflichttests 33 und 34 der gemeinsamen Anmeldung (einmal aus bauplaene/oidc kopiert, dann nexbeats Datei).
+ * Ende-zu-Ende der gemeinsamen Anmeldung (einmal aus dem Modul kopiert, dann nexbeats Datei).
  *
  * Der Anbieter ist der nachgebaute aus `e2e/fake-oidc.mjs` (http://localhost:8037, eine andere Site als nexbeat auf
  * 127.0.0.1). Nie ein echter Anbieter, nie das Netz. Die Seite ist der Betreiber `operator` aus `global-setup.ts`.

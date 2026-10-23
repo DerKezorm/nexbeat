@@ -1,7 +1,7 @@
 """One TLS context for every call the module makes (provider, authentik), read once and never in the event loop.
 
 httpx builds a new context for each client unless it is given one (``verify=``), and reading the trusted certificates
-takes 0.5 to 0.8 s on a small machine (measured in nextasks), several times per sign-in, inside the event loop where
+takes 0.5 to 0.8 s on a small machine, several times per sign-in, inside the event loop where
 it stops everybody. So the module reads the context once, in a worker thread, with httpx's own defaults (certifi, and
 ``SSL_CERT_FILE``/``SSL_CERT_DIR`` from the environment), and hands it to every client it makes.
 

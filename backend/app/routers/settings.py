@@ -55,7 +55,7 @@ def read_settings(_admin: AdminUser, db: DbSession) -> dict[str, Any]:
 
 
 def _guard_public_url(payload: dict[str, Any], request: Request, db: DbSession) -> None:
-    """Aendert sich die oeffentliche Adresse, fragt erst das Anmeldemodul (Bauplan 04, Karte 1): Kennt authentik noch
+    """Aendert sich die oeffentliche Adresse, fragt erst das Anmeldemodul: Kennt authentik noch
     die alte Rueckleitadresse oder gibt es aktive Anbieter von Hand, antwortet die Route 409 und speichert nichts,
     bis die Seite mit ``confirm_address`` bestaetigt. Auch Leeren fragt."""
     confirm = bool(payload.pop("confirm_address", False))
@@ -76,7 +76,7 @@ def _guard_public_url(payload: dict[str, Any], request: Request, db: DbSession) 
 
 
 def _check_password_login(payload: dict[str, Any], db: DbSession) -> None:
-    """Passwort-Anmeldung aus nur, solange ein Anbieter aktiv ist (Bauplan 01)."""
+    """Passwort-Anmeldung aus nur, solange ein Anbieter aktiv ist."""
     if "password_login" not in payload:
         return
     try:

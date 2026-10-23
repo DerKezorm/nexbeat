@@ -39,7 +39,7 @@ from .services import http
 from .services.settings_service import ensure_webhook_secret, read_public_url, store_public_url
 from .vendor import nexoidc
 
-#: Das gemeinsame Anmeldemodul, vor der ersten Anfrage (Bauplan "Anmeldung mit OIDC und authentik").
+#: Das gemeinsame Anmeldemodul, vor der ersten Anfrage.
 nexoidc.configure(
     nexoidc.AppConfig(
         app_name="nexbeat",

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { AddressQuestionValues } from '../lib/addressQuestion'
 
-/** Die Rueckfrage vor einer neuen oeffentlichen Adresse, in den Worten des Bauplans (04, Karte 1). */
+/** Die Rueckfrage vor einer neuen oeffentlichen Adresse, in den Worten des Anmeldemoduls. */
 export function AddressQuestion({ question }: { question: AddressQuestionValues }) {
   const { t } = useTranslation()
   return (

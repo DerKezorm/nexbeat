@@ -1,4 +1,4 @@
-"""Contract, Bauplan 01 "Umstieg" 4 and 22 of Bauplan 05: up again after the way back.
+"""Contract: up again after the way back.
 
 The app mirrors the entry ``oidc`` into its old settings and the old column after every change, and stores a
 fingerprint of what it wrote. At the next start (``adapter.run_migration``) it takes over what the version before the
@@ -71,7 +71,7 @@ def change_entry(adapter: Any, oidc: Any, **values: Any) -> None:
         store.commit()
 
 
-def test_22_up_again_what_the_new_version_did_stays_when_the_older_one_changed_nothing(
+def test_up_again_what_the_new_version_did_stays_when_the_older_one_changed_nothing(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     if not _one_provider(adapter):
@@ -102,7 +102,7 @@ def test_22_up_again_what_the_new_version_did_stays_when_the_older_one_changed_n
     assert the_entry(adapter) is None
 
 
-def test_22_up_again_a_subject_the_older_version_emptied_or_set_is_taken_over(
+def test_up_again_a_subject_the_older_version_emptied_or_set_is_taken_over(
     adapter: Any, sso: fakes.FakeProvider
 ) -> None:
     if not _one_provider(adapter):
@@ -129,7 +129,7 @@ def test_22_up_again_a_subject_the_older_version_emptied_or_set_is_taken_over(
     assert adapter.legacy_read()["subjects"] == {"bob": "person-2"}
 
 
-def test_22_up_again_a_subject_that_moved_or_swapped_is_taken_over_in_any_order_of_the_accounts(
+def test_up_again_a_subject_that_moved_or_swapped_is_taken_over_in_any_order_of_the_accounts(
     adapter: Any, sso: fakes.FakeProvider
 ) -> None:
     """alex was made before bob. A subject that moves from bob to alex, from alex to bob, and two that swap: each
@@ -180,6 +180,17 @@ def in_full(adapter: Any, sso: fakes.FakeProvider, **changes: Any) -> dict[str, 
     }
 
 
+def as_made(adapter: Any, sso: fakes.FakeProvider, **changes: Any) -> dict[str, Any]:
+    """The entry ``oidc`` as the migration or ``resync`` made it from the older version's provider, untouched here,
+    as the version before the list finds it: its "the provider checks the second factor" is ``trusted_before``, so
+    rule 1 where the older version asked no code, rule 2 where it asked it (issuer and name stay,
+    client id and secret empty, "new people" off, the subjects stay; since 1.0.13)."""
+    full = in_full(adapter, sso, **changes)
+    if adapter.trusted_before:
+        return full
+    return {**full, "client_id": "", "client_secret": "", "auto_create": False}
+
+
 def set_issuer(adapter: Any, oidc: Any, issuer: str) -> None:
     """The new version changes the issuer of the entry ``oidc``, as the form does after its discovery."""
     with adapter.store() as store:
@@ -189,18 +200,18 @@ def set_issuer(adapter: Any, oidc: Any, issuer: str) -> None:
         store.commit()
 
 
-def test_22_rules_1_and_2_in_full_while_on_and_trusted_else_issuer_name_and_subjects_without_a_client(
+def test_rules_1_and_2_in_full_while_on_and_trusted_else_issuer_name_and_subjects_without_a_client(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     """Rule 1: the entry in full while it is on and the provider checks the second factor. Rule 2: off, or not
     trusted, the issuer and the name stay, client id and secret are empty, "new people" off, the subjects stay. The
     version before the list knows neither switch: without a client it lets nobody in; if it sets another issuer up,
-    its own comparison drops the old subjects; on again brings everything back (nexcanvas finding 2, 10.10.2026)."""
+    its own comparison drops the old subjects; on again brings everything back."""
     if not _one_provider(adapter):
         return
     migrated(adapter, sso)
     many = not adapter.single_account
-    # An app whose older version asked the code (nexdiary, nexpaper) migrated to an entry that does not trust the
+    # An app whose older version asked the code migrated to an entry that does not trust the
     # provider; trusted, its settings are written in full.
     change_entry(adapter, oidc, trusts_second_factor=True, auto_create=many)
     full = in_full(adapter, sso, auto_create=many)
@@ -219,12 +230,12 @@ def test_22_rules_1_and_2_in_full_while_on_and_trusted_else_issuer_name_and_subj
         assert found(adapter, like=full) == full, values
 
 
-def test_22_rule_3_an_issuer_changed_here_closes_the_way_back_for_good_until_the_older_version_sets_one_up(
+def test_rule_3_an_issuer_changed_here_closes_the_way_back_for_good_until_the_older_version_sets_one_up(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     """Another issuer at the entry than the one the version before the list knows: it finds nothing, not the new
     issuer, or its bridge over a confirmed address would sign anyone in as an account without a subject, and its
-    "new people" would let strangers in (nexcanvas finding 1, nextasks finding 1). For good: through starts, off and
+    "new people" would let strangers in. For good: through starts, off and
     on, a link made here, and the issuer set back. Rule 4: only a provider the older version sets up opens it."""
     if not _one_provider(adapter):
         return
@@ -252,12 +263,12 @@ def test_22_rule_3_an_issuer_changed_here_closes_the_way_back_for_good_until_the
     older(adapter, sso, subjects={"alex": "person-1"}, label="Again")
     adapter.run_migration()
     entry = the_entry(adapter)
-    assert (entry.label, entry.enabled) == ("Again", True)
+    assert (entry.label, entry.enabled, entry.trusts_second_factor) == ("Again", True, adapter.trusted_before)
     assert linked(adapter) == {"alex": "person-1"}
-    assert found(adapter, like=in_full(adapter, sso)) == in_full(adapter, sso, label="Again")
+    assert found(adapter, like=in_full(adapter, sso)) == as_made(adapter, sso, label="Again")
 
 
-def test_22_rule_3_an_entry_removed_here_stays_closed_also_for_a_new_entry_oidc(
+def test_rule_3_an_entry_removed_here_stays_closed_also_for_a_new_entry_oidc(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     if not _one_provider(adapter):
@@ -277,13 +288,13 @@ def test_22_rule_3_an_entry_removed_here_stays_closed_also_for_a_new_entry_oidc(
     assert the_entry(adapter) is not None
 
 
-def test_22_rule_2_on_again_is_no_change_and_a_provider_removed_in_the_older_version_while_off_takes_the_entry(
+def test_rule_2_on_again_is_no_change_and_a_provider_removed_in_the_older_version_while_off_takes_the_entry(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     """Off here, the issuer stays (rule 2): starts change nothing, and on again is the new version's own doing, no
     change of the older one. Off, and "remove the provider" there: since 1.0.10 the fingerprint keeps the issuer
     alone, so that is seen, and it does what removing does everywhere: the entry goes with its links, the way back
-    closes (nexbrand finding 2, nextrmnl and nexsift finding M-2)."""
+    closes."""
     if not _one_provider(adapter):
         return
     migrated(adapter, sso)
@@ -303,11 +314,11 @@ def test_22_rule_2_on_again_is_no_change_and_a_provider_removed_in_the_older_ver
     assert found(adapter) == CLOSED
 
 
-def test_22_the_issuer_stays_as_the_older_version_wrote_it_letter_by_letter(
+def test_the_issuer_stays_as_the_older_version_wrote_it_letter_by_letter(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
-    """Most versions before the list compare their issuer setting letter by letter when a provider is saved
-    (nexcanvas, nextasks, nexbrand, nextrmnl, nexsift, nexcrate), and their authentik button writes it with a slash.
+    """Most versions before the list compare their issuer setting letter by letter when a provider is saved,
+    and their authentik button writes it with a slash.
     Written back without one, the next press of that button there took it for another provider and dropped every
     subject. So the way back writes the issuer the older version knows, character by character: after the
     migration, through off and on, a save here and a start; the entry keeps its own form (since 1.0.11)."""
@@ -357,12 +368,12 @@ class _Lines(logging.Handler):
         self.lines.append(record.getMessage())
 
 
-def test_22_every_commit_writes_the_way_back_also_when_an_account_is_deleted(
+def test_every_commit_writes_the_way_back_also_when_an_account_is_deleted(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     """Every commit that changes accounts, links or the entry writes the way back and its fingerprint, also one that
     goes around the store (deleting an account): else the next start takes the stale fingerprint for a change of the
-    older version (a line in the log, a backup for nothing; nextrmnl and nexsuite, 10.10.2026)."""
+    older version (a line in the log, a backup for nothing)."""
     if not _one_provider(adapter) or adapter.single_account:
         return
     migrated(adapter, sso, bob="person-2")
@@ -380,12 +391,11 @@ def test_22_every_commit_writes_the_way_back_also_when_an_account_is_deleted(
     assert linked(adapter) == {"alex": "person-1"} and adapter.legacy_read()["subjects"] == {"alex": "person-1"}
 
 
-def test_22_a_start_without_any_provider_stores_the_fingerprint_so_one_set_up_later_in_the_older_version_comes_in(
+def test_a_start_without_any_provider_stores_the_fingerprint_so_one_set_up_later_in_the_older_version_comes_in(
     adapter: Any, sso: fakes.FakeProvider
 ) -> None:
     """The first start finds no provider, nothing to migrate: the fingerprint ("no provider") is stored all the same,
-    or the next start could not tell that the older version set one up since, and its mirror would throw it away
-    (nexbrand finding 1)."""
+    or the next start could not tell that the older version set one up since, and its mirror would throw it away."""
     if not _one_provider(adapter):
         return
     adapter.make_account("alex")
@@ -396,13 +406,14 @@ def test_22_a_start_without_any_provider_stores_the_fingerprint_so_one_set_up_la
     adapter.run_migration()
     entry = the_entry(adapter)
     assert entry is not None and entry.enabled and entry.label == "Company"
+    assert entry.trusts_second_factor is adapter.trusted_before
     assert linked(adapter) == {"alex": "person-1"}
-    assert found(adapter, like=in_full(adapter, sso)) == in_full(adapter, sso)
+    assert found(adapter, like=in_full(adapter, sso)) == as_made(adapter, sso)
     browser, response = oidc_contract.round_trip(adapter, sso, "oidc", legacy=True)
     assert location(response) == adapter.home and adapter.who(browser) == "alex"
 
 
-def test_22_up_again_a_provider_the_older_version_removed_is_gone(adapter: Any, sso: fakes.FakeProvider) -> None:
+def test_up_again_a_provider_the_older_version_removed_is_gone(adapter: Any, sso: fakes.FakeProvider) -> None:
     if not _one_provider(adapter):
         return
     migrated(adapter, sso)
@@ -412,7 +423,7 @@ def test_22_up_again_a_provider_the_older_version_removed_is_gone(adapter: Any, 
     assert oidc_contract.error_in(start(adapter, adapter.browser(), "oidc")) == "oidc_not_configured"
 
 
-def test_22_up_again_a_provider_the_older_version_set_up_comes_back_as_the_entry_oidc(
+def test_up_again_a_provider_the_older_version_set_up_comes_back_as_the_entry_oidc(
     adapter: Any, sso: fakes.FakeProvider
 ) -> None:
     if not _one_provider(adapter):
@@ -435,7 +446,7 @@ def test_22_up_again_a_provider_the_older_version_set_up_comes_back_as_the_entry
     assert location(response) == adapter.home and adapter.who(browser) == "alex"
 
 
-def test_22_up_again_new_values_for_the_same_issuer_are_taken_over_and_the_links_stay(
+def test_up_again_new_values_for_the_same_issuer_are_taken_over_and_the_links_stay(
     adapter: Any, sso: fakes.FakeProvider
 ) -> None:
     if not _one_provider(adapter):
@@ -461,7 +472,7 @@ def test_22_up_again_new_values_for_the_same_issuer_are_taken_over_and_the_links
     assert linked(adapter) == {"alex": "person-1"}
 
 
-def test_22_up_again_another_issuer_drops_the_links_and_takes_the_values(adapter: Any, sso: fakes.FakeProvider) -> None:
+def test_up_again_another_issuer_drops_the_links_and_takes_the_values(adapter: Any, sso: fakes.FakeProvider) -> None:
     if not _one_provider(adapter):
         return
     migrated(adapter, sso)
@@ -477,7 +488,7 @@ def test_22_up_again_another_issuer_drops_the_links_and_takes_the_values(adapter
     assert linked(adapter) == {"alex": "other-7"}
 
 
-def test_22_up_again_a_provider_set_up_while_the_entry_was_off_turns_it_on(
+def test_up_again_a_provider_set_up_while_the_entry_was_off_turns_it_on(
     adapter: Any, sso: fakes.FakeProvider, oidc: Any
 ) -> None:
     if not _one_provider(adapter):
@@ -492,7 +503,7 @@ def test_22_up_again_a_provider_set_up_while_the_entry_was_off_turns_it_on(
     assert linked(adapter) == {"alex": "person-1"}
 
 
-def test_22_up_again_nothing_is_taken_over_while_coupled(adapter: Any, sso: fakes.FakeProvider, oidc: Any) -> None:
+def test_up_again_nothing_is_taken_over_while_coupled(adapter: Any, sso: fakes.FakeProvider, oidc: Any) -> None:
     if not _one_provider(adapter) or not adapter.supports_coupling:
         return
     ids = migrated(adapter, sso)
@@ -511,15 +522,15 @@ def test_22_up_again_nothing_is_taken_over_while_coupled(adapter: Any, sso: fake
     older(adapter, sso, subjects={"alex": "elsewhere"}, issuer="https://other.example.com", client_id="other")
     adapter.run_migration()
     assert sorted((item["slug"], item["issuer"], item["enabled"]) for item in adapter.providers()) == before
-    # The anchor outlives the coupling: uncoupled, the way back shows the own entry in full again.
+    # The anchor outlives the coupling: uncoupled, the way back shows the own entry again, as the migration made it.
     with adapter.store() as store:
         oidc.coupling.uncouple(store, coupled)
     adapter.run_migration()
     assert linked(adapter) == {"alex": "person-1"}
-    assert found(adapter, like=in_full(adapter, sso)) == in_full(adapter, sso)
+    assert found(adapter, like=in_full(adapter, sso)) == as_made(adapter, sso)
 
 
-def test_22_the_helper_for_entries_in_the_store_is_untouched_by_the_way_back(adapter: Any, net: fakes.Network) -> None:
+def test_the_helper_for_entries_in_the_store_is_untouched_by_the_way_back(adapter: Any, net: fakes.Network) -> None:
     """Another entry than ``oidc`` is no business of the way back: a start leaves it alone."""
     if not _one_provider(adapter):
         return

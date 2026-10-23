@@ -1,4 +1,5 @@
-"""Contract, Bauplan 03 "Rückleitadresse" and 05 Pflichttests 36 to 38 (since 1.0.10), through the app's own routes.
+"""Contract, the public address and the redirect address the button registers (since 1.0.10), through the app's
+own routes.
 
 Behind a proxy that ends TLS the app sees ``http`` while people use ``https``. The authentik button never registers
 an address guessed from the request: without a public address it needs the one the operator confirmed in the card
@@ -34,7 +35,7 @@ def registered(ak: fakes.FakeAuthentik) -> list[str]:
     return [item["url"] for provider in ak.providers for item in provider.get("redirect_uris") or []]
 
 
-def test_36_without_a_public_address_behind_a_tls_proxy_the_button_registers_nothing(
+def test_without_a_public_address_behind_a_tls_proxy_the_button_registers_nothing(
     adapter: Any, oidc: Any, ak: fakes.FakeAuthentik
 ) -> None:
     assert adapter.read_public_url() == ""
@@ -61,7 +62,7 @@ def test_36_without_a_public_address_behind_a_tls_proxy_the_button_registers_not
     assert ak.calls == [] and adapter.providers() == []
 
 
-def test_37_a_confirmed_https_address_is_stored_and_exactly_it_is_registered(
+def test_a_confirmed_https_address_is_stored_and_exactly_it_is_registered(
     adapter: Any, ak: fakes.FakeAuthentik
 ) -> None:
     result = setup(adapter, ak, PUBLIC + "/")
@@ -80,7 +81,7 @@ def test_37_a_confirmed_https_address_is_stored_and_exactly_it_is_registered(
     assert registered(ak) == [redirect]
 
 
-def test_38_a_new_public_address_is_reported_and_the_next_run_moves_the_redirect(
+def test_a_new_public_address_is_reported_and_the_next_run_moves_the_redirect(
     adapter: Any, oidc: Any, ak: fakes.FakeAuthentik
 ) -> None:
     callback = adapter.path("callback", slug="authentik")
@@ -127,11 +128,11 @@ def active_by_hand(adapter: Any, oidc: Any) -> int:
 
 
 @pytest.mark.parametrize("way", WAYS)
-def test_39_saving_the_public_address_asks_first_and_the_card_reports_it_after(
+def test_saving_the_public_address_asks_first_and_the_card_reports_it_after(
     adapter: Any, oidc: Any, ak: fakes.FakeAuthentik, with_sso: dict, way: str
 ) -> None:
-    """Pflichttest 39 (since 1.0.10): the module's route ("Use it only") and the app's own way of saving the public
-    address (card 1, ``save_public_url_route`` in the adapter) both ask while an entry of the button would be left
+    """Since 1.0.10: the module's route ("Use it only") and the app's own way of saving the public
+    address (its card, ``save_public_url_route`` in the adapter) both ask while an entry of the button would be left
     with an old redirect address, save nothing unasked, save once confirmed, and then the card says ``stale``. Also
     for an entry the button made before 1.0.10, which has no registered address of its own."""
     save = getattr(adapter, way)
@@ -157,7 +158,7 @@ def test_39_saving_the_public_address_asks_first_and_the_card_reports_it_after(
     question = adapter.error_detail(asked)
     assert question["count"] == 1 and question["address"] == first + callback
     # The entry made by hand (sso) needs its redirect address changed at its provider: the question says so. In an
-    # app with authentik alone (nexsuite) the button may have switched entries by hand off (since 1.0.8, the app's
+    # app with authentik alone the button may have switched entries by hand off (since 1.0.8, the app's
     # rule): then the question counts the ones still on, and no adapter has to switch them on again (1.0.11).
     if adapter.only_authentik:
         assert question["hand"] == active_by_hand(adapter, oidc)
@@ -192,11 +193,11 @@ def test_39_saving_the_public_address_asks_first_and_the_card_reports_it_after(
 
 
 @pytest.mark.parametrize("way", WAYS)
-def test_39_a_switched_off_entry_by_hand_and_no_entry_at_all_ask_nothing(
+def test_a_switched_off_entry_by_hand_and_no_entry_at_all_ask_nothing(
     adapter: Any, oidc: Any, with_sso: dict, way: str
 ) -> None:
-    """Pflichttest 39, the other side: the question needs an entry of the button or an active one by hand. With
-    only a switched-off entry by hand nothing changes at any provider, so the address is saved at once."""
+    """The other side of the question before saving: the question needs an entry of the button or an active one by hand.
+    With only a switched-off entry by hand nothing changes at any provider, so the address is saved at once."""
     save = getattr(adapter, way)
     with adapter.store() as store:
         own = store.provider_by_slug("sso")
@@ -207,7 +208,7 @@ def test_39_a_switched_off_entry_by_hand_and_no_entry_at_all_ask_nothing(
     assert adapter.read_public_url().rstrip("/") == "https://first.example.org"
 
 
-def test_39_use_it_only_takes_no_address_that_is_none(adapter: Any) -> None:
+def test_use_it_only_takes_no_address_that_is_none(adapter: Any) -> None:
     for wrong in ("https://exa mple.org", "https://app.example.org/../x", "https://bücher.example.org"):
         refused = adapter.adopt_only(wrong)
         assert refused.status_code == 422 and adapter.error_code(refused) == "public_url_invalid", wrong

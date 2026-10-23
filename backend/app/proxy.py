@@ -9,8 +9,8 @@ Absender (``X-Forwarded-For``) setzt weiter uvicorns ``ProxyHeadersMiddleware``;
 fuer eine gewoehnliche Anfrage) wird danach wieder durch dieses ersetzt.
 
 Vertraut wird den Adressen in ``FORWARDED_ALLOW_IPS`` (uvicorns eigene Einstellung: Adressen, Netze wie
-``172.16.0.0/12``, ``*`` fuer alle), fuer Schema und Absender gleich. Ab Werk keinem (Bauplan OIDC, "Hinter einem
-Proxy"): bis 1.4.0 galt uvicorns Vorgabe ``127.0.0.1``. Im Container mit eigenem Netz kommt von dort nur der Container
+``172.16.0.0/12``, ``*`` fuer alle), fuer Schema und Absender gleich. Ab Werk keinem: bis
+1.4.0 galt uvicorns Vorgabe ``127.0.0.1``. Im Container mit eigenem Netz kommt von dort nur der Container
 selbst, mit ``network_mode: host`` oder ohne Container aber jedes Programm auf dem Rechner, und das gab sich so ein
 anderes Schema und fuer die Bremse eine andere Adresse. Das Abbild startet uvicorn mit ``--no-proxy-headers`` und
 ``app.main:asgi``; sonst laege uvicorns eigene Middleware aussen und glaubte ``127.0.0.1`` doch.

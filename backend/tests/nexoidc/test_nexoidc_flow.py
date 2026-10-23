@@ -1,4 +1,4 @@
-"""Contract, Bauplan 05 "Anmeldeablauf", Pflichttests 1 to 6, through the app's own routes."""
+"""Contract, the way to the provider and back, through the app's own routes."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from oidc_contract import (
 )
 
 
-def test_01_the_start_sets_the_attempt_cookie_and_sends_the_browser_off_with_pkce_state_and_nonce(
+def test_the_start_sets_the_attempt_cookie_and_sends_the_browser_off_with_pkce_state_and_nonce(
     adapter: Any, oidc: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     response = start(adapter, adapter.browser(), "sso")
@@ -41,14 +41,14 @@ def test_01_the_start_sets_the_attempt_cookie_and_sends_the_browser_off_with_pkc
     assert query["state"] not in morsel.value
 
 
-def test_01_a_whole_run_signs_in(adapter: Any, sso: fakes.FakeProvider, with_sso: dict) -> None:
+def test_a_whole_run_signs_in(adapter: Any, sso: fakes.FakeProvider, with_sso: dict) -> None:
     adapter.make_account("alex")
     link_person(adapter, "alex", "sso", sso)
     browser, response = round_trip(adapter, sso, "sso")
     assert location(response) == adapter.home and adapter.who(browser) == "alex"
 
 
-def test_02_a_wrong_state_a_missing_cookie_and_a_second_return_are_refused(
+def test_a_wrong_state_a_missing_cookie_and_a_second_return_are_refused(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict
 ) -> None:
     adapter.make_account("alex")
@@ -97,7 +97,7 @@ def test_02_a_wrong_state_a_missing_cookie_and_a_second_return_are_refused(
     ],
     ids=["foreign-signature", "hs256", "aud", "azp", "expired", "nonce", "empty-sub"],
 )
-def test_03_a_bent_token_is_refused(adapter: Any, sso: fakes.FakeProvider, with_sso: dict, bend: dict) -> None:
+def test_a_bent_token_is_refused(adapter: Any, sso: fakes.FakeProvider, with_sso: dict, bend: dict) -> None:
     adapter.make_account("alex")
     link_person(adapter, "alex", "sso", sso)
     for name, value in bend.items():
@@ -109,19 +109,19 @@ def test_03_a_bent_token_is_refused(adapter: Any, sso: fakes.FakeProvider, with_
     assert error_in(response) == expected and adapter.who(browser) is None
 
 
-def test_04_a_discovery_naming_another_issuer_is_not_saved(adapter: Any, net: fakes.Network) -> None:
+def test_a_discovery_naming_another_issuer_is_not_saved(adapter: Any, net: fakes.Network) -> None:
     liar = net.add(fakes.FakeProvider("https://liar.example.com"))
     liar.published = "https://someone-else.example.com"
     response = adapter.add_provider(liar, slug="liar")
     if adapter.only_authentik:
-        # nexsuite: the form takes no entry at all (Bauplan 06); the button's discovery is test_23.
+        # Only authentik: the form takes no entry at all; the button's discovery is checked with the button.
         assert response.status_code >= 400
     else:
         assert response.status_code == 422 and adapter.error_code(response) == "oidc_issuer_mismatch"
     assert [item["slug"] for item in adapter.providers()] == []
 
 
-def test_05_an_issuer_with_a_slash_at_the_end_takes_exactly_that_issuer(adapter: Any, net: fakes.Network) -> None:
+def test_an_issuer_with_a_slash_at_the_end_takes_exactly_that_issuer(adapter: Any, net: fakes.Network) -> None:
     from conftest import add_in_store
 
     slashed = net.add(fakes.FakeProvider("https://auth.example.com/application/o/app/"))
@@ -138,7 +138,7 @@ def test_05_an_issuer_with_a_slash_at_the_end_takes_exactly_that_issuer(adapter:
 
 
 @pytest.mark.parametrize("mode", ["json", "signed", "signed-foreign", "other-subject", "error"])
-def test_06_userinfo_is_checked_and_its_failures_break_nothing(
+def test_userinfo_is_checked_and_its_failures_break_nothing(
     adapter: Any, sso: fakes.FakeProvider, with_sso: dict, mode: str
 ) -> None:
     adapter.make_account("alex")

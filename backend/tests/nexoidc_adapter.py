@@ -1,11 +1,11 @@
-"""nexoidc contract tests: nexbeat's adapter (from ``bauplaene/oidc/tests-fuer-apps/adapter_template.py``).
+"""nexoidc contract tests: nexbeat's adapter (from the module's adapter template).
 
 The contract tests in ``tests/nexoidc/`` are the same in every app and never edited here. Everything nexbeat does its
 own way is answered below: accounts in ``users``, invitations in ``auth_tokens``, a sign-in that answers with an access
 token in the body and keeps the session in the cookie ``nexbeat_refresh``.
 
 nexbeat had a provider list before the module (1.3.0, ``legacy_model = "list"``); its providers know the redirect
-address ``/api/auth/oidc/<slug>/callback``. nexbeat has no second factor of its own and is never coupled to nexsuite.
+address ``/api/auth/oidc/<slug>/callback``. nexbeat has no second factor of its own and is never coupled to another app.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ class Adapter(StandardAdapter):
     single_account = False
     has_invitations = True  # nexbeat has invitations (auth_tokens)
     only_authentik = False
-    # Bauplan 06 names nexcanvas, nextasks, nexbrand and nexlore for the Verbund; nexbeat is never coupled.
+    # nexbeat is never coupled to another app.
     supports_coupling = False
     has_second_factor = False
     legacy_model = "list"

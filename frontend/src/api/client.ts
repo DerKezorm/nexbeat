@@ -68,7 +68,7 @@ export function translateError(detail: Record<string, unknown>, status: number):
   if (special) return special(detail)
   const key = `errors.byCode.${code}`
   if (i18n.exists(key)) return i18n.t(key, { ...detail })
-  // Die Kennungen des Anmeldemoduls haben ihre Saetze dort (Bauplan 04), in jeder App dieselben.
+  // Die Kennungen des Anmeldemoduls haben ihre Saetze dort, in jeder App dieselben.
   const shared = oidcErrorKey(code) ?? oidcFormErrorKey(code)
   return shared ? i18n.t(shared) : fallback
 }

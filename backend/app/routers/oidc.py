@@ -1,6 +1,6 @@
 """Anmelden ueber OpenID Connect, das eigene Konto verknuepfen, die Anbieter verwalten, der authentik-Knopf.
 
-Der Ablauf selbst steht im gemeinsamen Modul ``app.vendor.nexoidc`` (Bauplan "Anmeldung mit OIDC und authentik"),
+Der Ablauf selbst steht im gemeinsamen Modul ``app.vendor.nexoidc``,
 hier nur, was nexbeat dazugibt: Sitzung, Bremse, Passwort, Rechte und die Antworten. Pfade:
 
 | Methode | Pfad | Wer |

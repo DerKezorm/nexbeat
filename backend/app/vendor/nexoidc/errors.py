@@ -1,4 +1,4 @@
-"""The fixed error codes (Bauplan 02, "Fehlercodes"). Every app uses exactly these; each has a sentence in German and
+"""The fixed error codes. Every app uses exactly these; each has a sentence in German and
 English in the module's wording files under ``oidc.error.<code>``.
 
 A refused sign-in ends on the sign-in page with ``?error=<code>`` (a refused linking on the account page). The
@@ -7,7 +7,7 @@ message of an ``OidcError`` is English and meant for the log, never for the page
 
 from __future__ import annotations
 
-#: In the order of Bauplan 02.
+#: In a fixed order; the frontend lists them the same way (``OIDC_ERROR_CODES``).
 CODES = (
     "oidc_not_configured",
     "oidc_provider_unreachable",
