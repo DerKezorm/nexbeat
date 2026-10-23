@@ -142,6 +142,26 @@
       ],
       "smallTitle": "Außerdem",
       "small": []
+    },
+    "1.4.2": {
+      "lead": "nexbeat passt jetzt aufs Handy, und Deezer ist ab Werk aus.",
+      "sections": [
+        {
+          "title": "Auf dem Handy",
+          "body": "Lange Titel und Adressen schieben die Seite nicht mehr über den Rand, Knöpfe und Links sind groß genug für den Finger, und Eingabefelder zoomen auf dem iPhone nicht mehr hinein. Danke an francescoferruccio für den Beitrag.",
+          "where": "Überall, auf schmalen Bildschirmen"
+        },
+        {
+          "title": "Deezer ab Werk aus",
+          "body": "Künstlerbilder und Hörproben von Deezer sind jetzt ab Werk aus. Hast du die Quelle nie selbst gespeichert, ist sie nach diesem Update ebenfalls aus. Willst du Bilder und Hörproben zurück, schaltest du Deezer unter Quellen wieder ein.",
+          "where": "Einstellungen › Quellen",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Auf dem Handy wechselt im Kopf ein einzelner Knopf zwischen hell und dunkel."
+      ]
     }
   }
 }

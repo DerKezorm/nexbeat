@@ -142,6 +142,26 @@
       ],
       "smallTitle": "Also",
       "small": []
+    },
+    "1.4.2": {
+      "lead": "nexbeat now fits on a phone, and Deezer is off by default.",
+      "sections": [
+        {
+          "title": "On a phone",
+          "body": "Long titles and addresses no longer push the page past the edge, buttons and links are big enough for a finger, and input fields no longer zoom in on the iPhone. Thanks to francescoferruccio for the contribution.",
+          "where": "Everywhere, on narrow screens"
+        },
+        {
+          "title": "Deezer off by default",
+          "body": "Artist images and previews from Deezer are now off by default. If you never saved that source yourself, it is off after this update too. To get images and previews back, switch Deezer on again under Sources.",
+          "where": "Settings › Sources",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "On a phone, a single button in the header switches between light and dark."
+      ]
     }
   }
 }
