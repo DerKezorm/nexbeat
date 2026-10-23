@@ -85,13 +85,13 @@ export function MyRequestsPage() {
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <Link to={target} className="line-clamp-1 font-semibold hover:text-accent-400">
+                    <Link to={target} className="nv-text-link line-clamp-1 font-semibold hover:text-accent-400">
                       {request.title}
                     </Link>
                     {wholeArtist ? (
                       <p className="line-clamp-1 text-sm text-mist-400">{t('artistRequest.kind')}</p>
                     ) : (
-                      <Link to={`/kuenstler/${request.artist_mbid}`} className="line-clamp-1 text-sm text-mist-400 hover:text-mist-200">
+                      <Link to={`/kuenstler/${request.artist_mbid}`} className="nv-text-link line-clamp-1 text-sm text-mist-400 hover:text-mist-200">
                         {request.artist_name}
                       </Link>
                     )}

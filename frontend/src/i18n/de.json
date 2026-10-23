@@ -43,7 +43,9 @@
   "theme": {
     "label": "Darstellung",
     "dark": "Dunkel",
-    "light": "Hell"
+    "light": "Hell",
+    "toDark": "Zu Dunkel wechseln",
+    "toLight": "Zu Hell wechseln"
   },
   "login": {
     "title": "Anmelden",

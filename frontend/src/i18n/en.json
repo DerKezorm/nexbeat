@@ -43,7 +43,9 @@
   "theme": {
     "label": "Appearance",
     "dark": "Dark",
-    "light": "Light"
+    "light": "Light",
+    "toDark": "Switch to dark",
+    "toLight": "Switch to light"
   },
   "login": {
     "title": "Sign in",

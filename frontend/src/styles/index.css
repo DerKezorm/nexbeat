@@ -75,18 +75,20 @@
   }
 
   /* Keep compact desktop controls, with a 44px touch area on phones.
-     Footer and inline text links retain their natural text layout. */
+     Footer and inline text links retain their natural text layout, and so do
+     links marked nv-text-link (titles next to a larger link to the same page). */
   @media (width < 48rem) {
     button,
-    a[href]:not(:where(footer *, p *, dd *, span *)),
+    a[href]:not(:where(footer *, p *, dd *, span *, .nv-text-link)),
     input:not([type='checkbox']),
     select {
       min-height: 2.75rem;
       min-width: 2.75rem;
     }
 
-    a[href]:not(:where(footer *, p *, dd *, span *)) {
+    a[href]:not(:where(footer *, p *, dd *, span *, .nv-text-link)) {
       display: inline-flex;
+      align-items: center;
     }
   }
 

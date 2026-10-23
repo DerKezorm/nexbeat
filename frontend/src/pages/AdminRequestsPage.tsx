@@ -105,7 +105,7 @@ export function AdminRequestsPage() {
               </Link>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link to={target} className="font-semibold hover:text-accent-400">
+                  <Link to={target} className="nv-text-link font-semibold hover:text-accent-400">
                     {request.title}
                   </Link>
                   <RequestStatusChip request={request} />

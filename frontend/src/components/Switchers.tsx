@@ -73,9 +73,9 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
     setTheme(next)
   }
 
-  const modes: { value: Theme; label: string; icon: () => React.ReactElement }[] = [
-    { value: 'dark', label: t('theme.dark'), icon: MoonIcon },
-    { value: 'light', label: t('theme.light'), icon: SunIcon },
+  const modes: { value: Theme; label: string; switchTo: string; icon: () => React.ReactElement }[] = [
+    { value: 'dark', label: t('theme.dark'), switchTo: t('theme.toDark'), icon: MoonIcon },
+    { value: 'light', label: t('theme.light'), switchTo: t('theme.toLight'), icon: SunIcon },
   ]
   const nextMode = modes.find((mode) => mode.value !== theme)!
   const NextIcon = nextMode.icon
@@ -86,8 +86,8 @@ export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => select(nextMode.value)}
-          title={nextMode.label}
-          aria-label={nextMode.label}
+          title={nextMode.switchTo}
+          aria-label={nextMode.switchTo}
           className="inline-flex shrink-0 items-center justify-center rounded-full border border-ink-700 bg-ink-850 p-1.5 text-mist-500 transition-colors hover:text-mist-100 md:hidden"
         >
           <NextIcon />
