@@ -14,12 +14,12 @@ function CopyValue({ label, value, secret = false }: { label: string; value: str
   const [shown, setShown] = useState(!secret)
   const [copied, setCopied] = useState(false)
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <span className="text-sm font-medium text-mist-300">{label}</span>
-      <div className="flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2">
+      <div className="flex min-w-0 items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2">
         <code className="min-w-0 flex-1 truncate text-sm text-mist-200">{shown ? value : '••••••••••••'}</code>
         {secret && (
-          <button type="button" onClick={() => setShown(!shown)} className="text-xs font-semibold text-mist-500 hover:text-mist-200">
+          <button type="button" onClick={() => setShown(!shown)} className="shrink-0 text-xs font-semibold text-mist-500 hover:text-mist-200">
             {shown ? t('common.hide') : t('common.show')}
           </button>
         )}
@@ -28,7 +28,7 @@ function CopyValue({ label, value, secret = false }: { label: string; value: str
           onClick={() => {
             void navigator.clipboard?.writeText(value).then(() => setCopied(true))
           }}
-          className="text-xs font-semibold text-accent-500 hover:text-accent-400"
+          className="shrink-0 text-xs font-semibold text-accent-500 hover:text-accent-400"
         >
           {copied ? t('common.copied') : t('common.copy')}
         </button>
@@ -161,7 +161,7 @@ export function AdminLidarrSettings() {
             }}
           >
             <div className="grid gap-4 sm:grid-cols-3">
-              <label className="flex flex-col gap-1.5">
+              <label className="flex min-w-0 flex-col gap-1.5">
                 <span className="text-sm font-medium text-mist-300">{t('lidarr.rootFolder')}</span>
                 <select value={target.root} onChange={(event) => setTarget({ ...target, root: event.target.value })} className={SELECT_CLASS}>
                   <option value="">{t('common.choose')}</option>
@@ -172,7 +172,7 @@ export function AdminLidarrSettings() {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1.5">
+              <label className="flex min-w-0 flex-col gap-1.5">
                 <span className="text-sm font-medium text-mist-300">{t('lidarr.qualityProfile')}</span>
                 <select value={target.quality} onChange={(event) => setTarget({ ...target, quality: event.target.value })} className={SELECT_CLASS}>
                   <option value="">{t('common.choose')}</option>
@@ -183,7 +183,7 @@ export function AdminLidarrSettings() {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1.5">
+              <label className="flex min-w-0 flex-col gap-1.5">
                 <span className="text-sm font-medium text-mist-300">{t('lidarr.metadataProfile')}</span>
                 <select value={target.metadata} onChange={(event) => setTarget({ ...target, metadata: event.target.value })} className={SELECT_CLASS}>
                   <option value="">{t('common.choose')}</option>
@@ -251,7 +251,7 @@ export function AdminLidarrSettings() {
           <p className="mt-1 text-sm text-mist-500">{t('lidarr.webhookIntro')}</p>
         </div>
         {webhook.data && (
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <CopyValue label={t('lidarr.webhookUrl')} value={`${webhookBase}${webhook.data.path}`} />
             <CopyValue label={t('lidarr.webhookUser')} value={webhook.data.username} />
             <CopyValue label={t('lidarr.webhookPassword')} value={webhook.data.password} secret />

@@ -247,9 +247,9 @@ export function ArtistPage() {
       </section>
 
       {(showPopular || showTracks) && (
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           {showPopular && (
-            <section className="flex flex-col gap-3">
+            <section className="flex min-w-0 flex-col gap-3">
               <h2 className="text-xl font-bold tracking-tight">{t('artist.popular')}</h2>
               {popularQuery.isPending ? (
                 <CoverSkeletons count={4} className="grid grid-cols-2 gap-4 sm:grid-cols-4" />
@@ -351,7 +351,7 @@ export function ArtistPage() {
       ) : similarQuery.isPending ? (
         <ShelfSkeleton round />
       ) : similarQuery.isError ? (
-        <section className="flex flex-col gap-3">
+        <section className="flex min-w-0 flex-col gap-3">
           <h2 className="text-xl font-bold tracking-tight">{t('artist.similar')}</h2>
           <SectionProblem error={similarQuery.error} retrying={similarQuery.isFetching} onRetry={() => void similarQuery.refetch()} />
         </section>

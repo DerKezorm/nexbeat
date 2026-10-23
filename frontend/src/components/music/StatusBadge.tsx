@@ -35,7 +35,7 @@ export function StatusBadge({
   return (
     <span
       className={
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ' +
+        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ' +
         (overImage ? 'bg-scrim text-mist-100 ring-ink-700' : TONES[status.tone])
       }
     >

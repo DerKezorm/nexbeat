@@ -57,7 +57,7 @@ export function WhatsNewDialog({
             <section key={section.title} className="mb-4">
               <h3 className="font-semibold">{section.title}</h3>
               <p className="mt-0.5 leading-relaxed text-mist-400">{section.body}</p>
-              <p className="mt-0.5 text-[11px] text-mist-600">{section.where}</p>
+              <p className="mt-0.5 text-xs text-mist-600">{section.where}</p>
             </section>
           ))}
           {entry.small.length > 0 && (

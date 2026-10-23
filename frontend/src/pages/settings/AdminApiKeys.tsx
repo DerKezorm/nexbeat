@@ -43,7 +43,7 @@ export function AdminApiKeys() {
                   <td className="py-2.5 pr-4">
                     <span className="text-mist-200">{key.name}</span>
                     {key.read_only && (
-                      <span className="ml-2 rounded-full bg-ink-800 px-2 py-0.5 text-[11px] text-mist-500">{t('apiKeys.readOnly')}</span>
+                      <span className="ml-2 rounded-full bg-ink-800 px-2 py-0.5 text-xs text-mist-500">{t('apiKeys.readOnly')}</span>
                     )}
                     <span className="block font-mono text-xs text-mist-600">{key.preview}…</span>
                   </td>

@@ -26,7 +26,7 @@ function AlbumLoading({ preview }: { preview: AlbumPreview }) {
           <Cover src={preview.cover} alt="" className="h-full w-full scale-125 opacity-40 blur-3xl" />
           <div className="absolute inset-0 bg-linear-to-b from-ink-950/30 via-ink-950/75 to-ink-950" />
         </div>
-        <div className="relative grid gap-8 lg:grid-cols-[auto_1fr_20rem] lg:items-end">
+        <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[auto_minmax(0,1fr)_20rem] lg:items-end">
           <Cover
             src={preview.cover}
             alt={preview.title}
@@ -91,7 +91,7 @@ export function AlbumPage() {
           <Cover src={album.cover} alt="" className="h-full w-full scale-125 opacity-40 blur-3xl" />
           <div className="absolute inset-0 bg-linear-to-b from-ink-950/30 via-ink-950/75 to-ink-950" />
         </div>
-        <div className="relative grid gap-8 lg:grid-cols-[auto_1fr_20rem] lg:items-end">
+        <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[auto_minmax(0,1fr)_20rem] lg:items-end">
           <Cover
             src={album.cover}
             alt={album.title}

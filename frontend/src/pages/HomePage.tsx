@@ -45,8 +45,8 @@ function Hero({ spotlight }: { spotlight: ArtistItem | null }) {
           <div className="absolute inset-0 bg-linear-to-r from-ink-950 via-ink-950/85 to-ink-950/40" />
         </div>
       )}
-      <div className="relative grid gap-8 p-6 sm:p-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
-        <div className="flex flex-col gap-5">
+      <div className="relative grid grid-cols-1 gap-8 p-6 sm:p-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-center">
+        <div className="flex min-w-0 flex-col gap-5">
           <p className="text-sm font-medium text-accent-400">{t('discover.greeting', { name: user?.display_name || user?.username })}</p>
           <h1 className="text-4xl leading-tight font-bold tracking-tight sm:text-5xl">
             {t('discover.heroTitle')}
@@ -60,7 +60,7 @@ function Hero({ spotlight }: { spotlight: ArtistItem | null }) {
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('search.placeholder')}
               aria-label={t('search.placeholder')}
-              className="min-w-0 flex-1 bg-transparent py-2 text-sm text-mist-100 placeholder:text-mist-600 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent py-2 text-base text-mist-100 sm:text-sm placeholder:text-mist-600 focus:outline-none"
             />
             <button type="submit" className="rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-400">
               {t('search.submit')}
@@ -71,7 +71,7 @@ function Hero({ spotlight }: { spotlight: ArtistItem | null }) {
         {spotlight && (
           <Link
             to={`/kuenstler/${spotlight.mbid}`}
-            className="group relative flex items-center gap-5 rounded-2xl border border-ink-700/80 bg-ink-850/70 p-5 backdrop-blur transition-colors hover:border-accent-500/60"
+            className="group relative flex min-w-0 items-center gap-5 rounded-2xl border border-ink-700/80 bg-ink-850/70 p-5 backdrop-blur transition-colors hover:border-accent-500/60"
           >
             <ArtistImage
               src={spotlight.image}

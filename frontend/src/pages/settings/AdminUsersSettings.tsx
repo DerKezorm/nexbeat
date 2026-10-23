@@ -232,8 +232,8 @@ export function AdminUsersSettings() {
                     <div className="min-w-0 flex-1">
                       <p className="flex flex-wrap items-center gap-2 font-semibold">
                         {name}
-                        {!user.is_active && <span className="rounded-full bg-bad-500/15 px-2 py-0.5 text-[11px] text-bad-500">{t('users.inactive')}</span>}
-                        {user.requires_approval && <span className="rounded-full bg-warn-500/15 px-2 py-0.5 text-[11px] text-warn-500">{t('users.approvalBadge')}</span>}
+                        {!user.is_active && <span className="rounded-full bg-bad-500/15 px-2 py-0.5 text-xs text-bad-500">{t('users.inactive')}</span>}
+                        {user.requires_approval && <span className="rounded-full bg-warn-500/15 px-2 py-0.5 text-xs text-warn-500">{t('users.approvalBadge')}</span>}
                       </p>
                       <p className="truncate text-xs text-mist-500">
                         @{user.username}
@@ -242,7 +242,7 @@ export function AdminUsersSettings() {
                       {(user.providers ?? []).length > 0 && (
                         <p className="mt-1 flex flex-wrap gap-1.5" data-testid="user-providers">
                           {(user.providers ?? []).map((provider) => (
-                            <span key={provider.id} className="rounded-full border border-ink-700 px-2 py-0.5 text-[11px] text-mist-400">
+                            <span key={provider.id} className="rounded-full border border-ink-700 px-2 py-0.5 text-xs text-mist-400">
                               {provider.label}
                             </span>
                           ))}
@@ -251,7 +251,7 @@ export function AdminUsersSettings() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold tabular-nums">{quota.limit === null ? '∞' : `${quota.used}/${quota.limit}`}</p>
-                      <p className="text-[11px] text-mist-600">{t(`quota.period_${quota.period}`)}</p>
+                      <p className="text-xs text-mist-600">{t(`quota.period_${quota.period}`)}</p>
                     </div>
                     <Button variant="ghost" className="px-4 py-1.5 text-xs" onClick={() => setEditing(editing === user.id ? null : user.id)}>
                       {editing === user.id ? t('common.close') : t('users.edit')}

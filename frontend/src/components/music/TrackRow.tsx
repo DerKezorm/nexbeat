@@ -34,7 +34,7 @@ export function TrackRow({
         (active ? 'bg-accent-500/10' : 'hover:bg-ink-800/70')
       }
     >
-      <div className="flex w-8 shrink-0 justify-center">
+      <div className="flex w-11 shrink-0 justify-center md:w-8">
         {track ? (
           <button
             type="button"
@@ -56,7 +56,7 @@ export function TrackRow({
         {sub && <p className="truncate text-xs text-mist-600">{sub}</p>}
       </div>
       {explicit && (
-        <span className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-bold text-mist-300" title={t('album.explicit')}>
+        <span className="rounded bg-ink-700 px-1.5 py-0.5 text-xs font-bold text-mist-300" title={t('album.explicit')}>
           E
         </span>
       )}
