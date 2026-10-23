@@ -71,7 +71,7 @@ export function ApiKeysSection() {
                 <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-mist-100">
                   {key.name}
                   {key.read_only && (
-                    <span className="rounded-full bg-ink-800 px-2 py-0.5 text-[11px] text-mist-500">{t('apiKeys.readOnly')}</span>
+                    <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs text-mist-500">{t('apiKeys.readOnly')}</span>
                   )}
                 </span>
                 <span className="mt-0.5 block font-mono text-xs text-mist-600">{key.preview}…</span>

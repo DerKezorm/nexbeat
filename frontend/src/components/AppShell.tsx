@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 function navClass(isActive: boolean, compact = false): string {
   return (
     (compact ? 'shrink-0 px-3 ' : 'px-3.5 ') +
-    'rounded-full py-1.5 text-sm font-medium transition-colors ' +
+    'inline-flex items-center rounded-full py-1.5 text-sm font-medium transition-colors ' +
     (isActive ? 'bg-accent-500/15 text-accent-400' : 'text-mist-500 hover:bg-ink-850 hover:text-mist-100')
   )
 }
@@ -36,7 +36,7 @@ export function AppShell() {
     <div className="nv-glow flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-ink-700/80 bg-ink-950/80 backdrop-blur-xl">
         <LoadingBar />
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-6">
           <NavLink to="/" className="shrink-0" aria-label={t('nav.home')}>
             <Logo withWordmark />
           </NavLink>
@@ -48,7 +48,7 @@ export function AppShell() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <ThemeSwitcher />
+            <ThemeSwitcher compact />
             <LanguageSwitcher />
             <UserMenu />
           </div>

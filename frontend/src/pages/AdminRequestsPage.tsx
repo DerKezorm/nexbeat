@@ -168,7 +168,7 @@ export function AdminRequestsPage() {
           maxLength={500}
           rows={3}
           placeholder={t('adminRequests.reasonPlaceholder')}
-          className="mt-4 w-full rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-sm text-mist-100 placeholder:text-mist-600 focus:border-accent-500 focus:outline-none"
+          className="mt-4 w-full rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-base text-mist-100 sm:text-sm placeholder:text-mist-600 focus:border-accent-500 focus:outline-none"
         />
       </ConfirmDialog>
     </div>

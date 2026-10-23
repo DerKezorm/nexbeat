@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 /** Der Stil eines Auswahlfelds, einmal fuer alle. */
 export const SELECT_CLASS =
-  'rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-sm text-mist-100 focus:border-accent-500 focus:outline-none disabled:opacity-50'
+  'min-w-0 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-base sm:text-sm text-mist-100 focus:border-accent-500 focus:outline-none disabled:opacity-50'
 
 type ButtonProps = ComponentPropsWithRef<'button'> & {
   variant?: 'primary' | 'ghost'
@@ -57,7 +57,7 @@ export function Field({ label, hint, className = '', ...rest }: FieldProps) {
   const id = useId()
   const hintId = hint ? `${id}-hint` : undefined
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-mist-300">
         {label}
       </label>
@@ -65,7 +65,7 @@ export function Field({ label, hint, className = '', ...rest }: FieldProps) {
         id={id}
         aria-describedby={hintId}
         className={
-          'rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-mist-100 ' +
+          'min-w-0 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2.5 text-base text-mist-100 ' +
           'placeholder:text-mist-600 transition-colors focus:border-accent-500 focus:outline-none ' +
           className
         }
@@ -98,7 +98,7 @@ export function OkBanner({ message }: { message: string }) {
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={'rounded-2xl border border-ink-700 bg-ink-850/80 p-6 shadow-2xl shadow-black/40 backdrop-blur ' + className}>
+    <div className={'min-w-0 rounded-2xl border border-ink-700 bg-ink-850/80 p-6 shadow-2xl shadow-black/40 backdrop-blur ' + className}>
       {children}
     </div>
   )
@@ -124,7 +124,7 @@ export function Section({
         <h2 className="text-lg font-semibold">{title}</h2>
         {intro && <p className="mt-1 text-sm text-mist-500">{intro}</p>}
       </div>
-      <div className={'flex flex-col gap-4' + (wide ? '' : ' max-w-3xl')}>{children}</div>
+      <div className={'flex min-w-0 flex-col gap-4' + (wide ? '' : ' max-w-3xl')}>{children}</div>
     </Card>
   )
 }
@@ -169,19 +169,19 @@ export function Toggle({
 }) {
   const id = useId()
   return (
-    <div className="flex items-start gap-3">
+    <label htmlFor={id} className="flex min-w-0 cursor-pointer items-start gap-3 max-md:min-h-11 max-md:min-w-11 max-md:py-2.5">
       <input
         id={id}
         type="checkbox"
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4 accent-accent-500"
+        className="mt-1 h-4 w-4 shrink-0 accent-accent-500"
       />
-      <label htmlFor={id} className="flex flex-col gap-0.5">
+      <span className="flex min-w-0 flex-col gap-0.5">
         <span className="text-sm font-medium text-mist-200">{label}</span>
         {hint && <span className="text-xs text-mist-500">{hint}</span>}
-      </label>
-    </div>
+      </span>
+    </label>
   )
 }

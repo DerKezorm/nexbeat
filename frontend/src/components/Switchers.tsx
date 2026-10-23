@@ -64,7 +64,7 @@ function SunIcon() {
 }
 
 /** Hell/Dunkel. Die Wahl bleibt im Browser. */
-export function ThemeSwitcher() {
+export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation()
   const [theme, setTheme] = useState<Theme>(storedTheme())
 
@@ -77,25 +77,40 @@ export function ThemeSwitcher() {
     { value: 'dark', label: t('theme.dark'), icon: MoonIcon },
     { value: 'light', label: t('theme.light'), icon: SunIcon },
   ]
+  const nextMode = modes.find((mode) => mode.value !== theme)!
+  const NextIcon = nextMode.icon
 
   return (
-    <div className="flex items-center rounded-full border border-ink-700 bg-ink-850 p-0.5" role="group" aria-label={t('theme.label')}>
-      {modes.map(({ value, label, icon: Icon }) => (
+    <>
+      {compact && (
         <button
-          key={value}
           type="button"
-          onClick={() => select(value)}
-          aria-pressed={theme === value}
-          title={label}
-          aria-label={label}
-          className={
-            'rounded-full p-1.5 transition-colors ' +
-            (theme === value ? 'bg-accent-500 text-white' : 'text-mist-500 hover:text-mist-100')
-          }
+          onClick={() => select(nextMode.value)}
+          title={nextMode.label}
+          aria-label={nextMode.label}
+          className="inline-flex shrink-0 items-center justify-center rounded-full border border-ink-700 bg-ink-850 p-1.5 text-mist-500 transition-colors hover:text-mist-100 md:hidden"
         >
-          <Icon />
+          <NextIcon />
         </button>
-      ))}
-    </div>
+      )}
+      <div className={(compact ? 'hidden md:flex' : 'flex') + ' items-center rounded-full border border-ink-700 bg-ink-850 p-0.5'} role="group" aria-label={t('theme.label')}>
+        {modes.map(({ value, label, icon: Icon }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => select(value)}
+            aria-pressed={theme === value}
+            title={label}
+            aria-label={label}
+            className={
+              'inline-flex items-center justify-center rounded-full p-1.5 transition-colors ' +
+              (theme === value ? 'bg-accent-500 text-white' : 'text-mist-500 hover:text-mist-100')
+            }
+          >
+            <Icon />
+          </button>
+        ))}
+      </div>
+    </>
   )
 }

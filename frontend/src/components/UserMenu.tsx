@@ -92,7 +92,7 @@ export function UserMenu() {
               </div>
             </div>
             <dl className="mt-3 border-t border-ink-700/60 pt-3">
-              <dt className="text-[10px] font-medium tracking-wide text-mist-600 uppercase">{t(`quota.period_${quota.period}`)}</dt>
+              <dt className="text-xs font-medium tracking-wide text-mist-600 uppercase">{t(`quota.period_${quota.period}`)}</dt>
               <dd className={'text-sm tabular-nums ' + (quota.limit !== null && quota.used >= quota.limit ? 'text-bad-500' : 'text-mist-300')}>
                 {quota.limit === null ? t('quota.unlimited') : t('quota.usedOf', { used: quota.used, limit: quota.limit })}
               </dd>
@@ -111,7 +111,7 @@ export function UserMenu() {
             >
               {t(entry.labelKey)}
               {entry.badge ? (
-                <span className="ml-auto rounded-full bg-accent-500 px-1.5 text-[10px] font-bold text-white">{entry.badge}</span>
+                <span className="ml-auto rounded-full bg-accent-500 px-1.5 text-xs font-bold text-white">{entry.badge}</span>
               ) : null}
             </NavLink>
           ))}

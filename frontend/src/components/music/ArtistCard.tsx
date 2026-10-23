@@ -29,7 +29,7 @@ export function ArtistCard({ artist, size = 'md' }: { artist: ArtistItem; size?:
           className="relative aspect-square w-full rounded-full border border-ink-700 transition-transform duration-300 group-hover:scale-[1.04] group-hover:border-accent-500/60"
         />
         {artist.in_library && (
-          <span className="absolute right-1 bottom-1 rounded-full bg-scrim px-2 py-0.5 text-[10px] font-semibold text-ok-500 ring-1 ring-ok-500/40">
+          <span className="absolute right-1 bottom-1 rounded-full bg-scrim px-2 py-0.5 text-xs font-semibold text-ok-500 ring-1 ring-ok-500/40">
             {t('status.inLibrary')}
           </span>
         )}
