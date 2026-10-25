@@ -21,6 +21,7 @@ function rowTitle(row: DiscoverRow, t: (key: string, options?: Record<string, un
   if (row.id.startsWith('because:')) {
     return { title: t('discover.becauseYouListen', { name: row.params?.name ?? '' }), hint: t('discover.becauseHint') }
   }
+  if (row.id === 'fresh_releases') return { title: t('discover.freshReleases'), hint: t('discover.freshHint') }
   if (row.id === 'trending_albums') return { title: t('discover.trendingAlbums'), hint: t('discover.trendingHint') }
   return { title: t('discover.trendingArtists'), hint: t('discover.trendingHint') }
 }
@@ -147,8 +148,15 @@ export function HomePage() {
                     title={album.title}
                     subtitle={album.artist_name}
                     cover={album.cover}
+                    library={album.library}
                     request={album.request}
                     inRow
+                    {...(row.id === 'fresh_releases' && {
+                      date: album.date,
+                      type: album.primary_type,
+                      secondaryTypes: album.secondary_types,
+                      showDay: true,
+                    })}
                   />
                 ))}
           </Shelf>

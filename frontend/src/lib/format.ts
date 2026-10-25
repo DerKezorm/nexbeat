@@ -30,6 +30,14 @@ export function formatYear(value: string | null | undefined): string {
   return value ? value.slice(0, 4) : ''
 }
 
+/** "2026-10-20" wird "20. Okt." oder "Oct 20", ohne Verschiebung durch die eigene Zeitzone. */
+export function formatDay(value: string | null | undefined, language: string): string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatYear(value)
+  const date = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return formatYear(value)
+  return new Intl.DateTimeFormat(language, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(date)
+}
+
 /** Sekunden als m:ss. */
 export function formatDuration(seconds: number | null | undefined): string {
   if (!seconds || seconds < 0) return ''

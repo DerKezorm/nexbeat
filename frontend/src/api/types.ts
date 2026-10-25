@@ -100,6 +100,7 @@ export type AlbumItem = {
   artist_name?: string
   cover: string
   primary_type?: string
+  secondary_types?: string[]
   date?: string
   first_release_date?: string
   request?: RequestState | null

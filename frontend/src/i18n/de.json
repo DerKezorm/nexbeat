@@ -97,6 +97,8 @@
     "becauseYouListen": "Weil du {{name}} hörst",
     "becauseHint": "Ähnliche Künstler, die noch nicht im Bestand sind.",
     "openSeed": "Zu {{name}}",
+    "freshReleases": "Neu von deinen Künstlern",
+    "freshHint": "Alben und EPs der letzten 30 Tage von Künstlern im Bestand, laut ListenBrainz.",
     "trendingAlbums": "Gerade viel gehört",
     "trendingArtists": "Künstler der Woche",
     "trendingHint": "Was die ListenBrainz-Community diese Woche am meisten hört.",

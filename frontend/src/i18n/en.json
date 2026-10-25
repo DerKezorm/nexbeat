@@ -97,6 +97,8 @@
     "becauseYouListen": "Because you listen to {{name}}",
     "becauseHint": "Similar artists that are not in the library yet.",
     "openSeed": "Go to {{name}}",
+    "freshReleases": "New from your artists",
+    "freshHint": "Albums and EPs from the past 30 days by artists in the library, according to ListenBrainz.",
     "trendingAlbums": "Played a lot right now",
     "trendingArtists": "Artists of the week",
     "trendingHint": "What the ListenBrainz community listens to most this week.",

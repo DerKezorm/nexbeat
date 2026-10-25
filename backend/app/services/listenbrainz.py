@@ -1,4 +1,4 @@
-"""ListenBrainz: aehnliche Kuenstler, Trends, beliebteste Alben eines Kuenstlers.
+"""ListenBrainz: aehnliche Kuenstler, Trends, Neuerscheinungen, beliebteste Alben eines Kuenstlers.
 
 Groesstenteils ohne Schluessel nutzbar. Die aehnlichen Kuenstler kommen von
 ``labs``, einem Versuchsgelaende ohne Stabilitaetszusage. Deshalb liegt jedes
@@ -185,6 +185,37 @@ async def top_release_groups(artist_mbid: str, token: str = "") -> list[dict[str
                     for credit in (item.get("artist") or {}).get("artists") or []
                     if credit.get("artist_mbid")
                 ],
+            }
+        )
+    return _first_of_each(result)
+
+
+async def fresh_releases(days: int, types: frozenset[str], token: str = "") -> list[dict[str, Any]]:
+    """Alles, was in den letzten ``days`` Tagen erschienen ist, nur Release-Groups dieser Arten.
+
+    Eine Liste fuer die ganze Welt, nicht je Kuenstler. Gemessen am 25.10.2026: 30 Tage
+    ergaben 9634 Eintraege in 4,2 MB, davon 3733 Alben und 1252 EPs, jede Release-Group
+    einmal. ``release_group_primary_type`` fehlt bei rund 150 Eintraegen.
+    """
+    params = {"days": days, "past": "true", "future": "false"}
+    data = await _get(f"{API_URL}/explore/fresh-releases/", params, token) or {}
+    result = []
+    for item in (data.get("payload") or {}).get("releases") or []:
+        mbid = item.get("release_group_mbid")
+        artists = [artist for artist in item.get("artist_mbids") or [] if artist]
+        if not mbid or not artists or item.get("release_group_primary_type") not in types:
+            continue
+        secondary = item.get("release_group_secondary_type")
+        result.append(
+            {
+                "mbid": mbid,
+                "title": item.get("release_name") or "",
+                "artist_mbids": artists,
+                "artist_name": item.get("artist_credit_name") or "",
+                "date": (item.get("release_date") or "")[:10],
+                "primary_type": item["release_group_primary_type"],
+                "secondary_types": [secondary] if secondary else [],
+                "cover": coverart.release_image(item.get("caa_release_mbid"), item.get("caa_id")),
             }
         )
     return _first_of_each(result)

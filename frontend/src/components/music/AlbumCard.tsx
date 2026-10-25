@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import type { LibraryState, RequestState } from '../../api/types'
-import { formatYear } from '../../lib/format'
+import { formatDay, formatYear } from '../../lib/format'
 import { Cover } from './Cover'
 import { StatusBadge } from './StatusBadge'
 
@@ -19,13 +19,28 @@ type AlbumCardProps = {
   request?: RequestState | null
   /** In Reihen feste Breite, im Raster volle Breite. */
   inRow?: boolean
+  /** Tag und Monat statt nur des Jahres, fuer Neuerscheinungen. */
+  showDay?: boolean
 }
 
 /** Das Album als quadratisches Cover, mit Zustand oben links. Hover wie die Kacheln in Nexview. */
-export function AlbumCard({ mbid, title, cover, subtitle, date, type, secondaryTypes = [], library, request, inRow = false }: AlbumCardProps) {
-  const { t } = useTranslation()
+export function AlbumCard({
+  mbid,
+  title,
+  cover,
+  subtitle,
+  date,
+  type,
+  secondaryTypes = [],
+  library,
+  request,
+  inRow = false,
+  showDay = false,
+}: AlbumCardProps) {
+  const { t, i18n } = useTranslation()
   const typeLabel = type ? t(`releaseType.${type.toLowerCase()}`, { defaultValue: type }) : ''
-  const meta = [formatYear(date), typeLabel, ...secondaryTypes].filter(Boolean).join(' · ')
+  const when = showDay ? formatDay(date, i18n.language) : formatYear(date)
+  const meta = [when, typeLabel, ...secondaryTypes].filter(Boolean).join(' · ')
   return (
     <Link
       to={`/album/${mbid}`}

@@ -18,4 +18,14 @@ describe('album card', () => {
     )
     expect(screen.getByText('2024 · Album · Live')).toBeInTheDocument()
   })
+
+  it('names the day for new releases', () => {
+    // Issue #4: In "Neu von deinen Künstlern" stünde sonst bei jedem Album nur das laufende Jahr.
+    render(
+      <MemoryRouter>
+        <AlbumCard mbid="a" title="Fresh" cover="" date="2026-10-01" type="EP" showDay />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText('1. Okt. · EP')).toBeInTheDocument()
+  })
 })

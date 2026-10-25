@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 import httpx
 from fastapi.testclient import TestClient
 
 from app.db import SessionLocal
-from app.models import LibraryArtist
-from app.services import cache, catalog, http
+from app.models import LibraryArtist, utcnow
+from app.services import cache, catalog, http, listenbrainz
 from app.services.lidarr import LidarrError
-from app.services.recommendations import TRENDING_ALBUMS_KEY, TRENDING_ARTISTS_KEY
+from app.services.recommendations import FRESH_KEY, FRESH_TYPES, TRENDING_ALBUMS_KEY, TRENDING_ARTISTS_KEY, pick_fresh
 from app.services.settings_service import save_settings
 from tests.fakes import FakeLidarr
 
@@ -54,6 +54,7 @@ def _prepare_library() -> None:
             day,
         )
         cache.write(db, TRENDING_ARTISTS_KEY, [], day)
+        cache.write(db, FRESH_KEY, [], day)
 
 
 def test_for_you_skips_known_artists_and_explains(admin_client: TestClient) -> None:
@@ -72,6 +73,7 @@ def test_for_you_skips_known_artists_and_explains(admin_client: TestClient) -> N
     trending = rows["trending_albums"]["items"]
     assert trending[0]["cover"] == f"https://coverartarchive.org/release-group/{TRENDING_ALBUM}/front-250"
     assert "trending_artists" not in rows
+    assert "fresh_releases" not in rows
     assert body["library_size"] == 3
 
 
@@ -275,3 +277,132 @@ def test_artist_image_cannot_be_chosen_by_the_first_caller(client: TestClient, d
     real = client.get(f"/api/images/artist/{NEW_ONE}?name=Real%20Band", follow_redirects=False)
     assert wrong.headers["location"] == "https://cdn.example.com/wrong.jpg"
     assert real.headers["location"] == "https://cdn.example.com/real.jpg"
+
+
+FRESH_OLD = "78787878-7878-4787-8787-787878787878"
+FRESH_FUTURE = "90909090-9090-4909-8909-909090909090"
+FRESH_STRANGER = "13131313-1313-4313-8313-131313131313"
+FRESH_FEATURE = "24242424-2424-4242-8242-242424242424"
+
+
+def _fresh(mbid: str, title: str, artists: list[str], days_ago: int) -> dict[str, Any]:
+    day = (utcnow().date() - timedelta(days=days_ago)).isoformat()
+    return {
+        "mbid": mbid,
+        "title": title,
+        "artist_mbids": artists,
+        "artist_name": "Credit",
+        "date": day,
+        "primary_type": "Album",
+        "secondary_types": [],
+        "cover": "",
+    }
+
+
+def test_fresh_releases_show_what_library_artists_released(admin_client: TestClient, fake_lidarr: FakeLidarr) -> None:
+    # Issue #4: neue Veroeffentlichungen der Kuenstler im Bestand, aus dem letzten Monat.
+    _prepare_library()
+    with SessionLocal() as db:
+        cache.write(
+            db,
+            FRESH_KEY,
+            [
+                _fresh(ALBUM, "Older", [SEED], 3),
+                _fresh(FRESH_STRANGER, "Not Ours", [NEW_ONE], 1),
+                # Der Kuenstler aus dem Bestand steht nur an zweiter Stelle.
+                _fresh(FRESH_FEATURE, "Newest", [NEW_TWO, OWNED], 0),
+                _fresh(FRESH_OLD, "Too Old", [SEED], 31),
+                _fresh(FRESH_FUTURE, "Not Out Yet", [SEED], -2),
+            ],
+            timedelta(days=1),
+        )
+    fake_lidarr.album_rows.append(
+        {"id": 70, "artistId": 1, "foreignAlbumId": ALBUM, "monitored": True, "statistics": {"trackFileCount": 0}}
+    )
+
+    rows = {row["id"]: row for row in admin_client.get("/api/discover").json()["rows"]}
+    items = rows["fresh_releases"]["items"]
+    assert [item["mbid"] for item in items] == [FRESH_FEATURE, ALBUM]
+    assert items[0]["artist_mbid"] == OWNED
+    assert items[0]["cover"] == f"https://coverartarchive.org/release-group/{FRESH_FEATURE}/front-250"
+    assert items[1]["library"]["state"] == "wanted"
+    assert items[0]["library"] is None
+    assert items[0]["date"] == utcnow().date().isoformat()
+
+
+def test_fresh_releases_are_not_fetched_without_a_library(admin_client: TestClient) -> None:
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        asked.append(request.url.path)
+        return httpx.Response(200, json={})
+
+    http.use_transport(httpx.MockTransport(handler))
+    body = admin_client.get("/api/discover").json()
+    assert "fresh_releases" not in {row["id"] for row in body["rows"]}
+    assert "/1/explore/fresh-releases/" not in asked
+
+
+def test_pick_fresh_puts_the_newest_first_and_keeps_thirty_days() -> None:
+    today = date(2026, 10, 25)
+    releases = [
+        {"mbid": "a", "title": "beta", "artist_mbids": [SEED], "date": "2026-10-20"},
+        {"mbid": "b", "title": "Alpha", "artist_mbids": [SEED], "date": "2026-10-20"},
+        {"mbid": "c", "title": "Edge", "artist_mbids": [SEED], "date": "2026-09-25"},
+        {"mbid": "d", "title": "Gone", "artist_mbids": [SEED], "date": "2026-09-24"},
+        {"mbid": "e", "title": "Today", "artist_mbids": [SEED], "date": "2026-10-25"},
+    ]
+    assert [item["mbid"] for item in pick_fresh(releases, {SEED}, today)] == ["e", "b", "a", "c"]
+    assert pick_fresh(releases, {OWNED}, today) == []
+
+
+def test_pick_fresh_lets_no_artist_fill_the_row_alone() -> None:
+    # 25.10.2026: Ein Ambient-Kuenstler hatte in 30 Tagen 25 Alben und schob alle anderen aus der Reihe.
+    today = date(2026, 10, 25)
+    busy = [{"mbid": f"busy{day}", "title": "Busy", "artist_mbids": [SEED], "date": f"2026-10-{day:02d}"} for day in range(10, 25)]
+    other = {"mbid": "other", "title": "Other", "artist_mbids": [OWNED], "date": "2026-10-01"}
+    picked = pick_fresh([*busy, other], {SEED, OWNED}, today)
+    assert [item["mbid"] for item in picked] == [f"busy{day}" for day in range(24, 18, -1)] + ["other"]
+
+
+def test_fresh_releases_keep_albums_and_eps_once() -> None:
+    asked: list[httpx.Request] = []
+    entry = {
+        "artist_credit_name": "Seed Band",
+        "artist_mbids": [SEED],
+        "caa_id": 77,
+        "caa_release_mbid": FIRST_RELEASE,
+        "release_date": "2026-10-20",
+        "release_group_mbid": ALBUM,
+        "release_group_primary_type": "Album",
+        "release_group_secondary_type": "Live",
+        "release_name": "Record",
+    }
+    releases = [
+        entry,
+        {**entry, "release_name": "Same Group Again"},
+        {**entry, "release_group_mbid": NEW_ONE, "release_group_primary_type": "Single"},
+        {**entry, "release_group_mbid": NEW_TWO, "release_group_primary_type": None},
+        {**entry, "release_group_mbid": OWNED, "artist_mbids": []},
+        {**entry, "release_group_mbid": TRENDING_ALBUM, "release_group_primary_type": "EP"},
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        asked.append(request)
+        return httpx.Response(200, json={"payload": {"releases": releases}})
+
+    http.use_transport(httpx.MockTransport(handler))
+    found = asyncio.run(listenbrainz.fresh_releases(30, FRESH_TYPES))
+    assert [item["mbid"] for item in found] == [ALBUM, TRENDING_ALBUM]
+    assert found[0] == {
+        "mbid": ALBUM,
+        "title": "Record",
+        "artist_mbids": [SEED],
+        "artist_name": "Seed Band",
+        "date": "2026-10-20",
+        "primary_type": "Album",
+        "secondary_types": ["Live"],
+        "cover": f"https://coverartarchive.org/release/{FIRST_RELEASE}/77-250.jpg",
+    }
+    assert asked[0].url.path == "/1/explore/fresh-releases/"
+    assert dict(asked[0].url.params) == {"days": "30", "past": "true", "future": "false"}
