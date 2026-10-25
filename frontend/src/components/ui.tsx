@@ -21,10 +21,12 @@ export function Button({ variant = 'primary', loading = false, className = '', c
     variant === 'primary'
       ? 'bg-accent-500 text-white hover:bg-accent-400 shadow-lg shadow-accent-700/25'
       : 'border border-ink-700 bg-ink-850 text-mist-300 hover:bg-ink-800 hover:text-mist-100'
+  // Die Beschriftung steckt in einem eigenen Element: Uebersetzt der Browser die Seite, tauscht er Textknoten aus,
+  // und React faende den Text nicht mehr, vor den der Spinner soll. `contents` laesst das Layout unberuehrt.
   return (
     <button className={`${base} ${styles} ${className}`} disabled={disabled || loading} {...rest}>
       {loading && <Spinner />}
-      {children}
+      <span className="contents">{children}</span>
     </button>
   )
 }

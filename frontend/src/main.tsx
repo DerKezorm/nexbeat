@@ -7,6 +7,7 @@ import App from './App'
 import { AuthProvider } from './auth/AuthProvider'
 import { PlayerProvider } from './components/player/PlayerProvider'
 import { startI18n } from './i18n'
+import { bearTranslatedPages } from './lib/translatedPage'
 import './styles/index.css'
 
 const queryClient = new QueryClient({
@@ -20,6 +21,7 @@ const queryClient = new QueryClient({
 })
 
 function startApp(): void {
+  bearTranslatedPages()
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
