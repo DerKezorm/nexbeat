@@ -162,6 +162,20 @@
       "small": [
         "Auf dem Handy wechselt im Kopf ein einzelner Knopf zwischen hell und dunkel."
       ]
+    },
+    "1.5.0": {
+      "lead": "Neu von deinen Künstlern: Was im letzten Monat erschienen ist, steht jetzt auf der Startseite.",
+      "sections": [
+        {
+          "title": "Neu von deinen Künstlern",
+          "body": "Eine neue Reihe auf der Startseite zeigt Alben und EPs der letzten 30 Tage von Künstlern, die schon im Bestand sind, das Neueste zuerst, mit Erscheinungstag. Was schon da ist oder gerade lädt, ist markiert, alles andere lässt sich wie gewohnt anfragen. Die Liste kommt von ListenBrainz. Danke an xkevinx für den Vorschlag.",
+          "where": "Entdecken"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Übersetzt der Browser die Seite, etwa Chrome oder Edge, bleibt nexbeat jetzt bedienbar. Vorher konnte die Seite beim Klick auf einen Knopf leer werden."
+      ]
     }
   }
 }

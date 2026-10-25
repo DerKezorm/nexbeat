@@ -162,6 +162,20 @@
       "small": [
         "On a phone, a single button in the header switches between light and dark."
       ]
+    },
+    "1.5.0": {
+      "lead": "New from your artists: what came out in the past month is now on the start page.",
+      "sections": [
+        {
+          "title": "New from your artists",
+          "body": "A new row on the start page shows albums and EPs from the past 30 days by artists already in the library, newest first, with the release day. What is already there or downloading is marked, everything else can be requested as usual. The list comes from ListenBrainz. Thanks to xkevinx for the suggestion.",
+          "where": "Discover"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "When the browser translates the page, for example Chrome or Edge, nexbeat now keeps working. Before, the page could go blank when you clicked a button."
+      ]
     }
   }
 }
