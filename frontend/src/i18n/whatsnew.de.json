@@ -176,6 +176,27 @@
       "small": [
         "Übersetzt der Browser die Seite, etwa Chrome oder Edge, bleibt nexbeat jetzt bedienbar. Vorher konnte die Seite beim Klick auf einen Knopf leer werden."
       ]
+    },
+    "1.6.0": {
+      "lead": "Beim ganzen Künstler wählst du jetzt, welche Arten von Alben kommen sollen, wenn nexbeat bei nexcrate anfragt.",
+      "sections": [
+        {
+          "title": "Arten beim ganzen Künstler",
+          "body": "Fragst du einen ganzen Künstler an, wählst du im Dialog die Arten: Studioalben, EPs, Singles, Live-Alben, Sammlungen, Soundtracks, Remixe, Wortbeiträge oder Sonstiges, auch mehrere. Vorgewählt sind die Studioalben. Künftige Alben dieser Arten kommen von selbst dazu. Das geht, wenn nexbeat bei nexcrate anfragt; mit Lidarr entscheidet weiter dessen Metadatenprofil. Danke an luiscarrasco2324 für den Vorschlag.",
+          "where": "Seite eines Künstlers › Ganzen Künstler anfragen"
+        },
+        {
+          "title": "Was vorgewählt ist",
+          "body": "Welche Arten im Dialog vorgewählt sind, legst du fest. Ab Werk sind es die Studioalben.",
+          "where": "Einstellungen › Dienste › Ziel › Ganzer Künstler",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Steht ein Künstler schon in nexcrate, nimmt eine Anfrage dort keine Art mehr weg. Vorher stellte jede Anfrage den Künstler auf reine Studioalben, und künftige EPs kamen nicht mehr.",
+        "Bei ganzen Künstlern zeigen die Anfragelisten, welche Arten angefragt sind."
+      ]
     }
   }
 }

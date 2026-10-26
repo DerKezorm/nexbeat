@@ -176,6 +176,27 @@
       "small": [
         "When the browser translates the page, for example Chrome or Edge, nexbeat now keeps working. Before, the page could go blank when you clicked a button."
       ]
+    },
+    "1.6.0": {
+      "lead": "When you request a whole artist, you now choose which kinds of albums come, when nexbeat requests from nexcrate.",
+      "sections": [
+        {
+          "title": "Album types for a whole artist",
+          "body": "When you request a whole artist, the dialog lets you choose the types: studio albums, EPs, singles, live albums, compilations, soundtracks, remixes, spoken word or other, several at once. Studio albums are preselected. Future albums of these types follow on their own. This works when nexbeat requests from nexcrate; with Lidarr its metadata profile still decides. Thanks to luiscarrasco2324 for the suggestion.",
+          "where": "An artist's page › Request the whole artist"
+        },
+        {
+          "title": "What is preselected",
+          "body": "You decide which types the dialog preselects. Out of the box it is studio albums.",
+          "where": "Settings › Services › Target › Whole artist",
+          "admin": true
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "If an artist is already in nexcrate, a request no longer takes a type away there. Before, every request set the artist to studio albums only, and future EPs stopped coming.",
+        "For whole artists, the request lists show which types were requested."
+      ]
     }
   }
 }
