@@ -73,6 +73,8 @@ export type RequestState = {
   mine: boolean
   progress: number
   error_code: string
+  /** Nur beim ganzen Kuenstler: die angefragten Arten von Alben. */
+  album_types?: string[]
 }
 
 export type LibraryState = {
@@ -191,6 +193,8 @@ export type ArtistPageData = {
   requires_approval: boolean
   dry_run: boolean
   quota: Quota
+  /** Vorgewaehlte Arten fuer "Ganzer Kuenstler". Null, wenn das Ziel keine Wahl kennt (Lidarr). */
+  album_types: string[] | null
 }
 
 /** Die Teile der Kuenstlerseite kommen einzeln, jeder mit eigenem Fehler. */
@@ -250,6 +254,8 @@ export type MusicRequest = {
   completed_at: string | null
   progress: number
   error_code: string
+  /** Beim ganzen Kuenstler die angefragten Arten, sonst leer. */
+  album_types: string[]
   user?: { id: number; username: string; display_name: string }
   error_message?: string
 }
@@ -287,6 +293,8 @@ export type AppSettings = {
   lidarr_metadata_profile_id: number | null
   lidarr_dry_run: boolean
   request_mode: '' | 'arr' | 'nex'
+  /** Was "Ganzer Kuenstler" im NEX-Modus vorgewaehlt bringt. */
+  artist_album_types: string[]
   nexcrate_url: string
   nexcrate_api_key: string
   nexcrate_api_key_set: boolean

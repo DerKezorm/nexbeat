@@ -162,7 +162,7 @@ class FakeNexcrate:
                 "country": "GB",
                 "disambiguation": None,
                 "new_albums": "all",
-                "album_types": ["studio"],
+                "album_types": artist.get("album_types", ["studio"]),
                 "albums": {
                     "total": len(own),
                     "watched": len(watched),
@@ -330,6 +330,9 @@ class FakeNexcrate:
         created = mbid not in self.artists
         if created:
             self.add_artist(mbid)
+        if body["artist"].get("types"):
+            # Wie nexcrate: die Arten ersetzen, nicht ergaenzen.
+            self.artists[mbid]["album_types"] = sorted(set(body["artist"]["types"]))
         watched = 0
         for album_mbid in self.studio.get(mbid, []):
             if album_mbid not in self.albums:

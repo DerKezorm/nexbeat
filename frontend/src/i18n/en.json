@@ -176,9 +176,25 @@
     "button": "Request the whole artist",
     "title": "Request every album by {{name}}?",
     "text": "{{target}} fetches every studio album that is missing and each new album from now on. EPs, singles, live recordings and compilations stay out.",
+    "textChoice": "{{target}} fetches every album of these types that is missing and each new one from now on.",
+    "typesLabel": "Album types",
+    "many": "For well-known artists this can be a lot, often hundreds of singles, live recordings or compilations.",
+    "editions": "Reissues and deluxe editions usually belong to the original in MusicBrainz and are not added separately.",
     "counts": "This counts as one request.",
     "confirm": "Request every album",
     "kind": "Whole artist"
+  },
+  "albumTypes": {
+    "studio": "Studio albums",
+    "ep": "EPs",
+    "single": "Singles",
+    "live": "Live albums",
+    "compilation": "Compilations",
+    "soundtrack": "Soundtracks",
+    "remix": "Remixes",
+    "spoken": "Spoken word",
+    "other": "Other",
+    "atLeastOne": "At least one type stays selected."
   },
   "artistType": {
     "person": "Person",
@@ -570,7 +586,7 @@
       "nexcrate_unexpected_answer": "nexcrate answered unexpectedly.",
       "nexcrate_title_gone": "nexcrate no longer has this. Was it removed there?",
       "nexcrate_not_watched": "nexcrate no longer watches this album. Was it taken back or frozen there?",
-      "artist_albums_not_in_nexcrate": "nexcrate watches no studio album of this artist.",
+      "artist_albums_not_in_nexcrate": "nexcrate watches no album of the chosen types for this artist.",
       "nexcrate_unavailable": "nexcrate cannot be reached right now: the address answers with a server error instead of nexcrate, usually the proxy in front of it. Is nexcrate running, or is it being restarted? nexbeat keeps trying on its own.",
       "api_key_read_only": "This API token may only read.",
       "api_key_not_here": "This needs a sign-in in the browser, not an API token.",
@@ -581,7 +597,9 @@
       "password_login_needs_provider": "Switch a sign-in provider on first. Otherwise nobody but you could get in.",
       "public_url_change": "The new address changes the redirect addresses of the providers.",
       "public_url_invalid": "This address cannot be used. Check how it is written.",
-      "public_url_needed": "nexbeat has no public address yet."
+      "public_url_needed": "nexbeat has no public address yet.",
+      "invalid_album_types": "nexbeat does not know this album type.",
+      "album_types_need_nexcrate": "Types other than studio albums only work with nexcrate as the target. Lidarr follows the artist's metadata profile."
     }
   },
   "services": {
@@ -642,7 +660,8 @@
     "disconnectTitle": "Disconnect from nexcrate?",
     "disconnectText": "nexbeat forgets the key. It stays in nexcrate until you revoke it there. Nothing can be requested until you connect again.",
     "wholeArtist": "Whole artist",
-    "wholeArtistIntro": "What nexcrate watches for “Whole artist”: every studio album and future studio albums. EPs, singles, live recordings and compilations stay out.",
+    "wholeArtistIntro": "What is preselected for “Whole artist”. Whoever requests can change it in the dialog. nexcrate watches every album of these types and future ones.",
+    "wholeArtistHint": "If an artist is already in nexcrate, its earlier types stay for future albums. A request only adds.",
     "dryRun": "Dry run",
     "dryRunIntro": "For trying things against a real nexcrate.",
     "dryRunToggle": "Do not send requests to nexcrate",

@@ -29,6 +29,7 @@ function page(overrides: Partial<ArtistPageData> = {}): ArtistPageData {
     dry_run: false,
     blocked: null,
     quota: { limit: null, used: 0, remaining: null, period: 'week', resets_at: '2026-09-14T00:00:00Z' },
+    album_types: null,
     ...overrides,
   }
 }
@@ -86,6 +87,64 @@ describe('whole artist request', () => {
     // 25.09.2026: nexcrate brauchte 90 Sekunden, der Proxy meldete 504, obwohl die Anfrage ankam.
     show(page({ request: { id: 7, status: 'approved', mine: true, progress: 0, error_code: 'nexcrate_pending' } }))
     expect(screen.getByText(i18n.t('requestStatus.handing_over'))).toBeInTheDocument()
+  })
+
+  it('lets the album types be chosen when nexcrate is the target, studio albums preselected', async () => {
+    // Issue #5: nexcrate kennt Arten je Kuenstler, also waehlt man sie beim Anfragen.
+    const post = vi.spyOn(api, 'post').mockResolvedValue({
+      request: { kind: 'artist', status: 'searching', error_code: '' },
+      quota: page().quota,
+    } as unknown as CreatedRequest)
+    show(page({ album_types: ['studio'] }))
+
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('artistRequest.button') }))
+    const dialog = screen.getByRole('dialog')
+    const types = within(dialog).getByRole('group', { name: i18n.t('artistRequest.typesLabel') })
+    const studio = within(types).getByRole('button', { name: i18n.t('albumTypes.studio') })
+    const live = within(types).getByRole('button', { name: i18n.t('albumTypes.live') })
+    expect(studio).toHaveAttribute('aria-pressed', 'true')
+    expect(live).toHaveAttribute('aria-pressed', 'false')
+    // Die letzte gewaehlte Art bleibt, sonst braechte die Anfrage nichts.
+    expect(studio).toBeDisabled()
+    expect(within(dialog).queryByText(i18n.t('artistRequest.many'))).not.toBeInTheDocument()
+
+    fireEvent.click(live)
+    expect(live).toHaveAttribute('aria-pressed', 'true')
+    expect(studio).toBeEnabled()
+    expect(within(dialog).getByText(i18n.t('artistRequest.many'))).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: i18n.t('artistRequest.confirm') }))
+    await vi.waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/api/requests/artist', {
+        artist_mbid: '22222222-2222-4222-8222-222222222222',
+        types: ['studio', 'live'],
+      }),
+    )
+  })
+
+  it('offers no choice and sends no types when Lidarr is the target', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({
+      request: { kind: 'artist', status: 'searching', error_code: '' },
+      quota: page().quota,
+    } as unknown as CreatedRequest)
+    show(page())
+
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('artistRequest.button') }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).queryByRole('group')).not.toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: i18n.t('artistRequest.confirm') }))
+    await vi.waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/api/requests/artist', { artist_mbid: '22222222-2222-4222-8222-222222222222' }),
+    )
+  })
+
+  it('names the requested types next to the status', () => {
+    show(
+      page({
+        album_types: ['studio'],
+        request: { id: 7, status: 'searching', mine: true, progress: 0, error_code: '', album_types: ['studio', 'compilation'] },
+      }),
+    )
+    expect(screen.getByText(`${i18n.t('albumTypes.studio')}, ${i18n.t('albumTypes.compilation')}`)).toBeInTheDocument()
   })
 
   it('says why a whole artist cannot be requested instead of offering the button', () => {

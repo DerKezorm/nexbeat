@@ -10,6 +10,7 @@ import { Cover } from '../components/music/Cover'
 import { RequestStatusChip } from '../components/music/RequestStatusChip'
 import { Symbol } from '../components/Symbol'
 import { Button, ErrorBanner, KeyFigure, PageLoading, PageTitle } from '../components/ui'
+import { artistKindLabel } from '../lib/albumTypes'
 import { formatDate } from '../lib/format'
 import { useTarget } from '../lib/target'
 
@@ -89,7 +90,7 @@ export function MyRequestsPage() {
                       {request.title}
                     </Link>
                     {wholeArtist ? (
-                      <p className="line-clamp-1 text-sm text-mist-400">{t('artistRequest.kind')}</p>
+                      <p className="line-clamp-1 text-sm text-mist-400">{artistKindLabel(t, request.album_types)}</p>
                     ) : (
                       <Link to={`/kuenstler/${request.artist_mbid}`} className="nv-text-link line-clamp-1 text-sm text-mist-400 hover:text-mist-200">
                         {request.artist_name}

@@ -25,8 +25,11 @@ library.
   similar artists, listen to 30 second previews.
 - **Request** a single album, EP or single. In ARR mode unknown artists are
   added to Lidarr with only the requested album monitored.
-- **Whole artists:** one request for every studio album and future ones. Only
-  offered when the metadata profile keeps Lidarr to official studio albums.
+- **Whole artists:** one request for every studio album and future ones. With
+  Lidarr only offered when the metadata profile keeps it to official studio
+  albums. With nexcrate the request picks the album types (studio albums, EPs,
+  live albums, compilations and more), studio albums preselected unless the
+  administrator chose another default.
 - **Quotas** count requests per day, week or month. Rejected and failed
   requests do not count.
 - **Accounts:** invitations and password reset by email, or as a link to pass
@@ -44,7 +47,7 @@ and starts searches, nothing else.
 **Two modes.** The administrator picks where requests go. In **ARR mode** it is
 Lidarr, as described above. In **NEX mode** it is nexcrate, through its
 interface for other programs (`/api/v1`, contract 1 with music): nexbeat asks
-for albums and whole artists (studio albums only), reads their state in batches
+for albums and whole artists (in the chosen album types), reads their state in batches
 and listens to nexcrate's event stream, so a change shows up within seconds.
 Connecting takes one step: nexbeat asks for a key, nexcrate shows a code, the
 owner confirms it there. A key made by hand works too. nexbeat changes nothing

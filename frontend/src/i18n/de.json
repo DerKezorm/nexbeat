@@ -176,9 +176,25 @@
     "button": "Ganzen Künstler anfragen",
     "title": "Alle Alben von {{name}} anfragen?",
     "text": "{{target}} lädt alle Studioalben, die noch fehlen, und künftig jedes neue Album. EPs, Singles, Live-Mitschnitte und Sammlungen bleiben außen vor.",
+    "textChoice": "{{target}} lädt alle Alben dieser Arten, die noch fehlen, und künftig jedes neue davon.",
+    "typesLabel": "Arten von Alben",
+    "many": "Bei bekannten Künstlern können das viele werden, oft Hunderte Singles, Live-Mitschnitte oder Sammlungen.",
+    "editions": "Neuauflagen und Deluxe-Fassungen gehören in MusicBrainz meist zum Original und kommen nicht extra dazu.",
     "counts": "Das zählt als eine Anfrage.",
     "confirm": "Alle Alben anfragen",
     "kind": "Ganzer Künstler"
+  },
+  "albumTypes": {
+    "studio": "Studioalben",
+    "ep": "EPs",
+    "single": "Singles",
+    "live": "Live-Alben",
+    "compilation": "Sammlungen",
+    "soundtrack": "Soundtracks",
+    "remix": "Remixe",
+    "spoken": "Wortbeiträge",
+    "other": "Sonstiges",
+    "atLeastOne": "Mindestens eine Art bleibt gewählt."
   },
   "artistType": {
     "person": "Person",
@@ -570,7 +586,7 @@
       "nexcrate_unexpected_answer": "nexcrate hat unerwartet geantwortet.",
       "nexcrate_title_gone": "nexcrate führt das nicht mehr. Wurde es dort entfernt?",
       "nexcrate_not_watched": "nexcrate überwacht dieses Album nicht mehr. Wurde es dort zurückgenommen oder eingefroren?",
-      "artist_albums_not_in_nexcrate": "nexcrate überwacht zu diesem Künstler kein Studioalbum.",
+      "artist_albums_not_in_nexcrate": "nexcrate überwacht zu diesem Künstler kein Album der gewählten Arten.",
       "nexcrate_unavailable": "nexcrate ist gerade nicht erreichbar: Unter der Adresse antwortet ein Serverfehler statt nexcrate, meist der Proxy davor. Läuft nexcrate, oder wird es gerade neu gestartet? nexbeat versucht es von selbst weiter.",
       "api_key_read_only": "Dieser API-Token darf nur lesen.",
       "api_key_not_here": "Das geht nur angemeldet im Browser, nicht mit einem API-Token.",
@@ -581,7 +597,9 @@
       "password_login_needs_provider": "Schalte erst einen Anmeldeanbieter ein. Sonst käme niemand außer dir herein.",
       "public_url_change": "Die neue Adresse ändert die Rückleitadressen der Anbieter.",
       "public_url_invalid": "Diese Adresse lässt sich nicht verwenden. Prüf, wie sie geschrieben ist.",
-      "public_url_needed": "nexbeat hat noch keine öffentliche Adresse."
+      "public_url_needed": "nexbeat hat noch keine öffentliche Adresse.",
+      "invalid_album_types": "Diese Art von Alben kennt nexbeat nicht.",
+      "album_types_need_nexcrate": "Andere Arten als Studioalben gehen nur mit nexcrate als Ziel. Lidarr folgt dem Metadatenprofil des Künstlers."
     }
   },
   "services": {
@@ -642,7 +660,8 @@
     "disconnectTitle": "Von nexcrate trennen?",
     "disconnectText": "nexbeat vergisst den Schlüssel. In nexcrate bleibt er stehen, bis du ihn dort widerrufst. Bis zur nächsten Verbindung lässt sich nichts anfragen.",
     "wholeArtist": "Ganzer Künstler",
-    "wholeArtistIntro": "Was nexcrate bei „Ganzer Künstler“ überwacht: alle Studioalben und künftige Studioalben. EPs, Singles, Live-Mitschnitte und Sammlungen bleiben außen vor.",
+    "wholeArtistIntro": "Was bei „Ganzer Künstler“ vorgewählt ist. Wer anfragt, kann es im Dialog ändern. nexcrate überwacht alle Alben dieser Arten und künftige.",
+    "wholeArtistHint": "Steht ein Künstler schon in nexcrate, bleiben seine bisherigen Arten für künftige Alben erhalten. Eine Anfrage fügt nur hinzu.",
     "dryRun": "Probelauf",
     "dryRunIntro": "Zum Ausprobieren gegen ein echtes nexcrate.",
     "dryRunToggle": "Anfragen nicht an nexcrate senden",

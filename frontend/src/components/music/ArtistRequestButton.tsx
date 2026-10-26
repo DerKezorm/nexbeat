@@ -5,15 +5,18 @@ import { useTranslation } from 'react-i18next'
 import { api, errorMessage, storedError } from '../../api/client'
 import type { ArtistPageData, CreatedRequest } from '../../api/types'
 import { useAuth } from '../../auth/useAuth'
+import { albumTypeList, bringsMany } from '../../lib/albumTypes'
 import { formatDate } from '../../lib/format'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { Symbol } from '../Symbol'
+import { AlbumTypePicker } from './AlbumTypePicker'
 import { RequestStatusChip } from './RequestStatusChip'
 import { useTarget } from '../../lib/target'
 
 /**
  * Der ganze Kuenstler auf einmal: alle Studioalben und die kuenftigen. Zaehlt als
  * eine Anfrage. Die Rueckfrage sagt vorher, was genau passiert und was nicht.
+ * Mit nexcrate als Ziel waehlt man dort die Arten, vorgewaehlt ist der Standard des Admins.
  */
 export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
   const { t, i18n } = useTranslation()
@@ -22,9 +25,12 @@ export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
   const queryClient = useQueryClient()
   const [asking, setAsking] = useState(false)
   const { artist, request, quota } = data
+  const choosing = data.album_types !== null
+  const [types, setTypes] = useState<string[]>(data.album_types ?? [])
 
   const create = useMutation({
-    mutationFn: () => api.post<CreatedRequest>('/api/requests/artist', { artist_mbid: artist.mbid }),
+    mutationFn: () =>
+      api.post<CreatedRequest>('/api/requests/artist', choosing ? { artist_mbid: artist.mbid, types } : { artist_mbid: artist.mbid }),
     onSuccess: async (created) => {
       // Eine sofort gescheiterte Anfrage zaehlt nicht, und danach stuende wieder der Knopf
       // da. Die Rueckfrage bleibt dann offen und sagt, warum.
@@ -41,6 +47,7 @@ export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
     return (
       <span className="inline-flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850 px-4 py-2 text-sm font-semibold text-mist-300">
         {t('artistRequest.kind')}
+        {choosing && request.album_types && <span className="font-normal text-mist-500">{albumTypeList(t, request.album_types)}</span>}
         <RequestStatusChip request={request} />
       </span>
     )
@@ -79,6 +86,7 @@ export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
         title={exhausted ? t('quota.exhaustedUntil', { date: formatDate(quota.resets_at, i18n.language) }) : undefined}
         onClick={() => {
           create.reset()
+          setTypes(data.album_types ?? [])
           setAsking(true)
         }}
         className="inline-flex items-center gap-2 rounded-full border border-accent-600/60 bg-accent-700/15 px-5 py-2.5 text-sm font-semibold text-accent-400 transition-colors hover:bg-accent-700/25 disabled:cursor-not-allowed disabled:opacity-50"
@@ -91,7 +99,16 @@ export function ArtistRequestButton({ data }: { data: ArtistPageData }) {
         title={t('artistRequest.title', { name: artist.name })}
         description={
           <div className="flex flex-col gap-2">
-            <p>{t('artistRequest.text', { target })}</p>
+            {choosing ? (
+              <>
+                <p>{t('artistRequest.textChoice', { target })}</p>
+                <AlbumTypePicker label={t('artistRequest.typesLabel')} value={types} onChange={setTypes} />
+                {bringsMany(types) && <p className="text-warn-500">{t('artistRequest.many')}</p>}
+                <p className="text-mist-500">{t('artistRequest.editions')}</p>
+              </>
+            ) : (
+              <p>{t('artistRequest.text', { target })}</p>
+            )}
             <p className="text-mist-500">{t('artistRequest.counts')}</p>
             {data.requires_approval && <p className="text-warn-500">{t('request.needsApproval')}</p>}
             {data.dry_run && user?.is_admin && <p className="text-warn-500">{t('request.dryRunHint', { target })}</p>}

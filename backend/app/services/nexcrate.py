@@ -37,8 +37,6 @@ SLOW_TIMEOUT = httpx.Timeout(90.0, connect=6.0)
 STREAM_TIMEOUT = httpx.Timeout(connect=6.0, read=60.0, write=10.0, pool=10.0)
 #: Hoechstens so viele Eintraege nimmt ``titles/lookup`` je Aufruf.
 LOOKUP_BATCH = 100
-#: Was ein ganzer Kuenstler bringt: nur Studioalben, auch kuenftige.
-WHOLE_ARTIST = {"albums": "studio", "types": ["studio"]}
 #: Die Rechte, um die nexbeat beim Koppeln bittet. ``operate`` braucht es nicht.
 SCOPES = ["read", "request"]
 
@@ -236,6 +234,11 @@ class NexcrateClient:
 
     async def pairing_poll(self, pairing_id: str, secret: str) -> dict[str, Any]:
         return await self._request("GET", f"/pairing/{pairing_id}", headers={"X-Pairing-Secret": secret}) or {}
+
+
+def whole_artist(types: list[str]) -> dict[str, Any]:
+    """Was ein ganzer Kuenstler bringt: jedes Album dieser Arten, auch kuenftige."""
+    return {"albums": "studio", "types": list(types)}
 
 
 def ref(mbid: str) -> str:

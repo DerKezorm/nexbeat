@@ -26,7 +26,9 @@ sobald klar ist, was angekommen ist (``_resume_now``).
 Ganzer Kuenstler: zaehlt als eine Anfrage, Freigabe
 wie bei Alben. Ueberwacht werden alle Alben ohne Zusatztyp und alle kuenftigen
 Veroeffentlichungen (``monitorNewItems: all``). Bei kuenftigen filtert Lidarr
-nicht nach Art, das tut nur sein Metadatenprofil.
+nicht nach Art, das tut nur sein Metadatenprofil. Im NEX-Modus waehlt, wer anfragt, die Arten
+(``album_groups``), vorgewaehlt ist ``artist_album_types`` aus den Einstellungen. Steht der Kuenstler
+schon in nexcrate, nimmt nexbeat dort keine Art weg (``_artist_bodies``).
 
 ⚠️ Im Probelauf (``lidarr_dry_run``) geht nichts an Lidarr, auch nicht aus dem Abgleich.
 Die Anfrage bleibt mit der Kennung ``dry_run`` stehen und laesst sich spaeter erneut senden.
@@ -55,7 +57,7 @@ from sqlalchemy.orm import Session
 
 from ..db import SessionLocal
 from ..models import ALBUM_KIND, ARTIST_KIND, OPEN_STATUSES, MusicRequest, RequestStatus, User, utcnow
-from . import catalog, coverart, library, lidarr, nexcrate, quota
+from . import album_groups, catalog, coverart, library, lidarr, nexcrate, quota
 from .musicbrainz import MusicBrainzError
 from .settings_service import AppSettings
 
@@ -131,6 +133,7 @@ def serialize(request: MusicRequest, *, with_user: bool = False) -> dict[str, An
         "completed_at": iso(request.completed_at),
         "progress": request.progress,
         "error_code": request.error_code,
+        "album_types": album_groups.parse(request.album_types) if request.kind == ARTIST_KIND else [],
     }
     if with_user:
         data["user"] = {
@@ -218,10 +221,28 @@ async def create(db: Session, settings: AppSettings, user: User, release_group_m
     return request
 
 
-async def create_artist(db: Session, settings: AppSettings, user: User, artist_mbid: str) -> MusicRequest:
-    """Alle Studioalben eines Kuenstlers und die kuenftigen, als eine Anfrage."""
+def _artist_types(settings: AppSettings, asked: list[str] | None) -> list[str]:
+    """Die Arten fuer einen ganzen Kuenstler. Nur der NEX-Modus kennt eine Wahl, Lidarr folgt seinem Profil."""
+    try:
+        chosen = album_groups.clean(asked) if asked is not None else None
+    except ValueError as error:
+        raise RequestProblem("invalid_album_types", "These album types are not known.", 422) from error
+    if settings.mode == "nex":
+        return chosen or settings.artist_album_types
+    if chosen is not None and chosen != list(album_groups.DEFAULT):
+        raise RequestProblem(
+            "album_types_need_nexcrate", "Only studio albums can be chosen while requests go to Lidarr.", 422
+        )
+    return list(album_groups.DEFAULT)
+
+
+async def create_artist(
+    db: Session, settings: AppSettings, user: User, artist_mbid: str, types: list[str] | None = None
+) -> MusicRequest:
+    """Alle Alben eines Kuenstlers in den gewaehlten Arten und die kuenftigen, als eine Anfrage."""
     if not settings.requests_ready:
         raise RequestProblem("requests_not_ready", "Requests are not set up yet.", 409)
+    chosen = _artist_types(settings, types)
     _check_duplicate(db, user.id, ARTIST_KIND, artist_mbid)
     blocked = await library.whole_artist_block(db, settings, artist_mbid)
     if blocked:
@@ -231,7 +252,8 @@ async def create_artist(db: Session, settings: AppSettings, user: User, artist_m
 
     try:
         info = await catalog.artist_info(db, artist_mbid)
-        albums = await catalog.studio_albums(db, artist_mbid)
+        # Andere Arten zaehlt nexcrate selbst; ohne passendes Album scheitert die Anfrage im Abgleich.
+        albums = await catalog.studio_albums(db, artist_mbid) if chosen == list(album_groups.DEFAULT) else [{}]
     except MusicBrainzError as error:
         raise _musicbrainz_problem(error) from error
     if not albums:
@@ -251,6 +273,7 @@ async def create_artist(db: Session, settings: AppSettings, user: User, artist_m
         title=name,
         artist_name=name,
         cover_url=catalog.artist_image_path(artist_mbid, name),
+        album_types=album_groups.as_text(chosen) if settings.mode == "nex" else "",
         status=RequestStatus.pending_approval if needs_approval else RequestStatus.approved,
     )
     db.add(request)
@@ -336,7 +359,7 @@ async def _submit_to_nexcrate(db: Session, settings: AppSettings, request: Music
         "search_now": True,
     }
     if whole_artist:
-        body["artist"] = dict(nexcrate.WHOLE_ARTIST)
+        body["artist"] = nexcrate.whole_artist(album_groups.parse(request.album_types))
     request_id = request.id
     task = asyncio.create_task(_hand_over(client, request_id, body))
     _handovers[request_id] = task
@@ -354,10 +377,35 @@ async def _submit_to_nexcrate(db: Session, settings: AppSettings, request: Music
     db.refresh(request)
 
 
+async def _artist_bodies(client: nexcrate.NexcrateClient, body: dict[str, Any]) -> list[dict[str, Any]]:
+    """Was fuer einen ganzen Kuenstler an nexcrate geht, der Reihe nach.
+
+    nexcrate ersetzt mit ``types`` die Arten des Kuenstlers. Hat er dort schon weitere (etwa Studioalben
+    und Live, und angefragt wird nur Live), kaeme danach kein neues Studioalbum mehr. Deshalb ein zweiter
+    Aufruf mit allen Arten zusammen und ``albums: future``: Er ueberwacht jetzt nichts, behaelt aber jede
+    Art fuer kuenftige Alben. Jetzt ueberwacht wird nur, was gewaehlt ist.
+    """
+    found = await client.lookup([{"kind": ARTIST_KIND, "ref": body["ref"]}])
+    title = (found[0].get("title") if found else None) or {}
+    chosen = body["artist"]["types"]
+    try:
+        had = album_groups.clean((title.get("artist") or {}).get("album_types") or [])
+    except ValueError:
+        had = []
+    together = album_groups.clean([*chosen, *had])
+    if together == chosen:
+        return [body]
+    keep = {**body, "artist": {"albums": "future", "types": together}, "search_now": False}
+    return [body, keep]
+
+
 async def _hand_over(client: nexcrate.NexcrateClient, request_id: int, body: dict[str, Any]) -> None:
     try:
         try:
-            answer, failure = await client.request(body), None
+            bodies = await _artist_bodies(client, body) if body["kind"] == ARTIST_KIND else [body]
+            answer, failure = await client.request(bodies[0]), None
+            for later in bodies[1:]:
+                await client.request(later)
         except nexcrate.NexcrateError as error:
             answer, failure = {}, error
         with SessionLocal() as db:

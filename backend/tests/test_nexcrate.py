@@ -140,6 +140,139 @@ def test_a_whole_artist_asks_for_studio_albums_only(
     assert sent[0]["artist"] == {"albums": "studio", "types": ["studio"]}
 
 
+# ---- Arten fuer einen ganzen Kuenstler (Issue #5) -------------------------------------------------
+
+
+def _artist_catalogue(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """MusicBrainz fuer eine Kuenstleranfrage. Gibt zurueck, fuer wen Studioalben gefragt wurden."""
+    asked: list[str] = []
+
+    async def info(_db: Any, mbid: str) -> dict[str, Any]:
+        return {"mbid": mbid, "name": "Example Artist"}
+
+    async def studio(_db: Any, mbid: str) -> list[dict[str, Any]]:
+        asked.append(mbid)
+        return [{"mbid": STUDIO_ONE}]
+
+    monkeypatch.setattr(requests_service.catalog, "artist_info", info)
+    monkeypatch.setattr(requests_service.catalog, "studio_albums", studio)
+    return asked
+
+
+def _ask_artist(client: TestClient, headers: dict[str, str], **extra: Any) -> Any:
+    return client.post("/api/requests/artist", json={"artist_mbid": ARTIST, **extra}, headers=headers)
+
+
+def test_a_whole_artist_brings_the_chosen_types(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    asked = _artist_catalogue(monkeypatch)
+    create_user("lena")
+    response = _ask_artist(admin_client, auth_headers(admin_client, "lena"), types=["live", "studio", "live"])
+    assert response.status_code == 201, response.text
+    # Ohne Doppelte, in nexcrates Reihenfolge.
+    assert fake_nexcrate.requests_sent()[0]["artist"] == {"albums": "studio", "types": ["studio", "live"]}
+    request = response.json()["request"]
+    assert request["album_types"] == ["studio", "live"]
+    assert _stored(request["id"]).album_types == "studio,live"
+    # Ob es Live-Alben gibt, weiss nur nexcrate; MusicBrainz wird nicht nach Studioalben gefragt.
+    assert asked == []
+
+
+def test_without_a_choice_the_administrators_default_applies(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _artist_catalogue(monkeypatch)
+    saved = admin_client.put("/api/settings", json={"artist_album_types": ["compilation", "studio"]})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["artist_album_types"] == ["studio", "compilation"]
+    create_user("lena")
+    assert _ask_artist(admin_client, auth_headers(admin_client, "lena")).status_code == 201
+    assert fake_nexcrate.requests_sent()[0]["artist"]["types"] == ["studio", "compilation"]
+
+
+def test_the_default_must_name_known_types(admin_client: TestClient, fake_nexcrate: FakeNexcrate) -> None:
+    assert admin_client.get("/api/settings").json()["artist_album_types"] == ["studio"]
+    for wrong in ([], ["bootleg"], "studio,bootleg"):
+        response = admin_client.put("/api/settings", json={"artist_album_types": wrong})
+        assert response.status_code == 422, wrong
+    assert admin_client.get("/api/settings").json()["artist_album_types"] == ["studio"]
+
+
+def test_unknown_or_no_types_are_refused(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _artist_catalogue(monkeypatch)
+    create_user("lena")
+    headers = auth_headers(admin_client, "lena")
+    for wrong in (["bootleg"], [], ["studio", "Live"]):
+        response = _ask_artist(admin_client, headers, types=wrong)
+        assert response.status_code == 422, wrong
+        assert response.json()["detail"]["code"] == "invalid_album_types"
+    assert fake_nexcrate.requests_sent() == []
+
+
+def test_a_request_never_takes_types_away_in_nexcrate(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Die Band steht schon mit Studioalben und EPs in nexcrate. Nur Live anzufragen darf ihr kuenftige
+    # Studioalben nicht nehmen: nexcrate ersetzt die Arten, also ein zweiter Aufruf mit allen zusammen.
+    _artist_catalogue(monkeypatch)
+    fake_nexcrate.add_artist(ARTIST, album_types=["ep", "studio"])
+    create_user("lena")
+    assert _ask_artist(admin_client, auth_headers(admin_client, "lena"), types=["live"]).status_code == 201
+    first, keep = fake_nexcrate.requests_sent()
+    assert first["artist"] == {"albums": "studio", "types": ["live"]}
+    assert first["search_now"] is True
+    assert keep["artist"] == {"albums": "future", "types": ["studio", "ep", "live"]}
+    assert keep["search_now"] is False
+    assert keep["origin"] == first["origin"]
+    assert fake_nexcrate.artists[ARTIST]["album_types"] == ["ep", "live", "studio"]
+
+
+def test_a_known_artist_with_nothing_more_gets_one_call(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _artist_catalogue(monkeypatch)
+    fake_nexcrate.add_artist(ARTIST, album_types=["studio"])
+    create_user("lena")
+    assert _ask_artist(admin_client, auth_headers(admin_client, "lena"), types=["studio", "live"]).status_code == 201
+    assert [body["artist"] for body in fake_nexcrate.requests_sent()] == [
+        {"albums": "studio", "types": ["studio", "live"]}
+    ]
+
+
+def test_without_knowing_the_artists_types_nothing_is_sent(
+    admin_client: TestClient, fake_nexcrate: FakeNexcrate, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Antwortet nexcrate auf die Frage nach dem Kuenstler nicht, geht keine Anfrage los, die Arten
+    # wegnehmen koennte. Die Anfrage wartet und geht beim naechsten Abgleich noch einmal.
+    _artist_catalogue(monkeypatch)
+    fake_nexcrate.add_artist(ARTIST, album_types=["ep", "studio"])
+    fake_nexcrate.next_answer["POST /api/v1/titles/lookup"] = httpx.ConnectError("down")
+    create_user("lena")
+    request = _ask_artist(admin_client, auth_headers(admin_client, "lena"), types=["live"]).json()["request"]
+    assert fake_nexcrate.requests_sent() == []
+    assert _stored(request["id"]).error_code == "nexcrate_unreachable"
+    assert fake_nexcrate.artists[ARTIST]["album_types"] == ["ep", "studio"]
+
+
+def test_with_lidarr_only_studio_albums_can_be_chosen(
+    admin_client: TestClient, fake_lidarr: FakeLidarr, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _artist_catalogue(monkeypatch)
+    create_user("lena")
+    headers = auth_headers(admin_client, "lena")
+    refused = _ask_artist(admin_client, headers, types=["studio", "live"])
+    assert refused.status_code == 422
+    assert refused.json()["detail"]["code"] == "album_types_need_nexcrate"
+    allowed = _ask_artist(admin_client, headers, types=["studio"])
+    assert allowed.status_code == 201, allowed.text
+    request = allowed.json()["request"]
+    assert request["album_types"] == ["studio"]
+    assert _stored(request["id"]).album_types == ""
+
+
 def test_a_dry_run_sends_nothing_to_nexcrate(
     admin_client: TestClient, fake_nexcrate: FakeNexcrate, release_groups
 ) -> None:

@@ -34,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import ARTIST_KIND, COUNTED_STATUSES, LibraryArtist, MusicRequest, User
-from . import cache, coverart, deezer, library, listenbrainz, musicbrainz, quota
+from . import album_groups, cache, coverart, deezer, library, listenbrainz, musicbrainz, quota
 from .deezer import DeezerError
 from .lidarr import LidarrError
 from .listenbrainz import ListenBrainzError
@@ -129,7 +129,9 @@ def artist_request_state(db: Session, user: User, artist_mbid: str) -> dict[str,
         .order_by(MusicRequest.requested_at.desc())
         .limit(1)
     )
-    return _request_state(row, user) if row is not None else None
+    if row is None:
+        return None
+    return {**_request_state(row, user), "album_types": album_groups.parse(row.album_types)}
 
 
 def deezer_match_key(mbid: str, name: str) -> str:
@@ -318,6 +320,8 @@ async def artist_page(db: Session, settings: AppSettings, user: User, mbid: str)
         "requires_approval": user.requires_approval and not user.is_admin,
         "dry_run": settings.flag("lidarr_dry_run"),
         "quota": quota.as_dict(quota.state(db, user, settings)),
+        # Vorgewaehlte Arten fuer "Ganzer Kuenstler". Nur nexcrate nimmt eine Wahl, sonst None.
+        "album_types": settings.artist_album_types if settings.mode == "nex" else None,
     }
 
 

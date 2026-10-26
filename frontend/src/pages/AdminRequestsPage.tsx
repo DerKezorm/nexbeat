@@ -12,6 +12,7 @@ import { Cover } from '../components/music/Cover'
 import { RequestStatusChip } from '../components/music/RequestStatusChip'
 import { Segmented } from '../components/Segmented'
 import { Button, ErrorBanner, PageLoading, PageTitle } from '../components/ui'
+import { artistKindLabel } from '../lib/albumTypes'
 import { formatDateTime } from '../lib/format'
 import { canRetry } from '../lib/requests'
 import { useTarget } from '../lib/target'
@@ -110,7 +111,7 @@ export function AdminRequestsPage() {
                   </Link>
                   <RequestStatusChip request={request} />
                 </div>
-                <p className="text-sm text-mist-400">{wholeArtist ? t('artistRequest.kind') : request.artist_name}</p>
+                <p className="text-sm text-mist-400">{wholeArtist ? artistKindLabel(t, request.album_types) : request.artist_name}</p>
                 <p className="flex items-center gap-2 text-xs text-mist-600">
                   <Avatar name={name} className="h-5 w-5 text-[9px]" />
                   {name} · {formatDateTime(request.requested_at, i18n.language)}

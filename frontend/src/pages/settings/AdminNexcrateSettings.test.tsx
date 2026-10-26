@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, renderHook, screen } from '@testing-library/react'
+import { fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 import { api } from '../../api/client'
@@ -19,6 +19,7 @@ const SETTINGS = {
   lidarr_api_key: '',
   lidarr_api_key_set: false,
   lidarr_dry_run: false,
+  artist_album_types: ['studio'],
 } as unknown as AppSettings
 
 const OFF: NexcrateStatus = {
@@ -89,6 +90,28 @@ afterEach(() => {
 })
 
 describe('nexcrate settings', () => {
+  it('save which album types a whole artist brings by default', async () => {
+    answer({
+      '/api/settings': { ...SETTINGS, artist_album_types: ['studio', 'ep'] },
+      '/api/settings/nexcrate/status': ON,
+      '/api/settings/nexcrate/pairing': { state: 'none' },
+    })
+    const put = vi.spyOn(api, 'put').mockResolvedValue({})
+    show(<AdminNexcrateSettings />)
+
+    const types = await screen.findByRole('group', { name: i18n.t('nexcrate.wholeArtist') })
+    await vi.waitFor(() =>
+      expect(within(types).getByRole('button', { name: i18n.t('albumTypes.ep') })).toHaveAttribute('aria-pressed', 'true'),
+    )
+    fireEvent.click(within(types).getByRole('button', { name: i18n.t('albumTypes.ep') }))
+    fireEvent.click(within(types).getByRole('button', { name: i18n.t('albumTypes.compilation') }))
+    const section = types.parentElement as HTMLElement
+    fireEvent.click(within(section).getByRole('button', { name: i18n.t('common.save') }))
+    await vi.waitFor(() =>
+      expect(put).toHaveBeenCalledWith('/api/settings', { artist_album_types: ['studio', 'compilation'] }),
+    )
+  })
+
   it('pair with a code the owner confirms in nexcrate', async () => {
     const answers: Record<string, unknown> = {
       '/api/settings': SETTINGS,

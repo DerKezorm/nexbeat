@@ -7,6 +7,7 @@ import { ApiError, api, errorMessage, storedError } from '../../api/client'
 import type { NexcrateFacts, NexcratePairing, NexcrateStatus } from '../../api/types'
 import { useAuth } from '../../auth/useAuth'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { AlbumTypePicker } from '../../components/music/AlbumTypePicker'
 import { Symbol } from '../../components/Symbol'
 import { Button, ErrorBanner, Field, OkBanner, PageLoading, Section, Toggle } from '../../components/ui'
 import { useSettings } from './useSettings'
@@ -102,6 +103,7 @@ export function AdminNexcrateSettings() {
   const [key, setKey] = useState('')
   const [manual, setManual] = useState(false)
   const [dryRun, setDryRun] = useState(false)
+  const [artistTypes, setArtistTypes] = useState<string[]>(['studio'])
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
   const [ended, setEnded] = useState<'denied' | 'expired' | null>(null)
   const [now, setNow] = useState(() => Date.now())
@@ -111,6 +113,7 @@ export function AdminNexcrateSettings() {
     filled.current = true
     setUrl(settings.nexcrate_url)
     setDryRun(settings.lidarr_dry_run)
+    setArtistTypes(settings.artist_album_types)
   }, [settings])
 
   const status = useQuery({
@@ -180,6 +183,7 @@ export function AdminNexcrateSettings() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['nexcrate-status'] }),
   })
   const saveDryRun = useMutation({ mutationFn: () => api.put('/api/settings', { lidarr_dry_run: dryRun }) })
+  const saveArtistTypes = useMutation({ mutationFn: () => api.put('/api/settings', { artist_album_types: artistTypes }) })
 
   if (query.isPending || status.isPending) return <PageLoading />
 
@@ -299,8 +303,16 @@ export function AdminNexcrateSettings() {
         )}
       </Section>
 
-      <Section title={t('nexcrate.wholeArtist')}>
-        <p className="-mt-3 text-sm text-mist-500">{t('nexcrate.wholeArtistIntro')}</p>
+      <Section title={t('nexcrate.wholeArtist')} intro={t('nexcrate.wholeArtistIntro')}>
+        <AlbumTypePicker label={t('nexcrate.wholeArtist')} value={artistTypes} onChange={setArtistTypes} />
+        <p className="text-xs text-mist-500">{t('nexcrate.wholeArtistHint')}</p>
+        {saveArtistTypes.isError && <ErrorBanner message={errorMessage(saveArtistTypes.error)} />}
+        {saveArtistTypes.isSuccess && <OkBanner message={t('common.saved')} />}
+        <div>
+          <Button onClick={() => saveArtistTypes.mutate()} loading={saveArtistTypes.isPending}>
+            {t('common.save')}
+          </Button>
+        </div>
       </Section>
 
       <Section title={t('nexcrate.dryRun')} intro={t('nexcrate.dryRunIntro')}>

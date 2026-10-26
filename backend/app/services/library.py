@@ -292,7 +292,7 @@ async def _relevant_profile(db: Session, settings: AppSettings, artist_mbid: str
     client = lidarr.client_for(settings)
     if client is None:
         # Im NEX-Modus gibt es kein Metadatenprofil. Welche Alben ein ganzer Kuenstler bringt, legt
-        # nexbeat selbst fest (``nexcrate.WHOLE_ARTIST``).
+        # nexbeat selbst fest (``nexcrate.whole_artist``).
         return None, False
     row = db.get(LibraryArtist, artist_mbid) if artist_mbid else None
     artist_profile = row.metadata_profile_id if row is not None else 0

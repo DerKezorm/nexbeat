@@ -183,8 +183,13 @@ router.add_api_route(
 )
 router.add_api_route(
     "/requests/artist", requests.create_artist_request, methods=["POST"], status_code=201,
-    summary="Request every studio album of an artist",
-    description="Body: `{\"artist_mbid\": \"…\"}`. Future releases are included. Needs a token that may write.",
+    summary="Request every album of an artist in the chosen types",
+    description=(
+        "Body: `{\"artist_mbid\": \"…\", \"types\": [\"studio\", \"live\"]}`. Future releases are included. "
+        "`types` may be left out, then the administrator's default applies, studio albums unless changed. "
+        "Known types: `studio`, `ep`, `single`, `live`, `compilation`, `soundtrack`, `remix`, `spoken`, "
+        "`other`. Only nexcrate takes a choice; with Lidarr it is studio albums. Needs a token that may write."
+    ),
 )
 router.add_api_route(
     "/requests/{request_id}/cancel", requests.cancel_request, methods=["POST"],

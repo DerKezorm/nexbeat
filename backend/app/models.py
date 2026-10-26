@@ -270,6 +270,8 @@ class MusicRequest(Base):
     title: Mapped[str] = mapped_column(String(512))
     artist_name: Mapped[str] = mapped_column(String(512))
     album_type: Mapped[str] = mapped_column(String(32), default="")
+    # Ganzer Kuenstler im NEX-Modus: die gewaehlten Arten mit Kommas (``album_groups``). Leer: nur Studioalben.
+    album_types: Mapped[str] = mapped_column(String(160), default="")
     release_date: Mapped[str] = mapped_column(String(10), default="")
     cover_url: Mapped[str] = mapped_column(String(1024), default="")
     status: Mapped[RequestStatus] = enum_column(RequestStatus, index=True, default=RequestStatus.pending_approval)

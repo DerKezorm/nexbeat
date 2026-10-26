@@ -26,6 +26,8 @@ class RequestIn(BaseModel):
 
 class ArtistRequestIn(BaseModel):
     artist_mbid: str = Field(pattern=MBID_PATTERN.pattern)
+    #: nexcrates Gruppen wie ``studio``, ``live``, ``compilation``. Fehlt sie, gilt der Standard des Admins.
+    types: list[str] | None = Field(default=None, max_length=20)
 
 
 class RejectIn(BaseModel):
@@ -67,12 +69,12 @@ async def create_request(payload: RequestIn, user: CurrentUser, db: DbSession) -
 @router.post(
     "/api/requests/artist",
     status_code=201,
-    summary="Request every studio album of an artist, future releases included",
+    summary="Request every album of an artist in the chosen types, future releases included",
 )
 async def create_artist_request(payload: ArtistRequestIn, user: CurrentUser, db: DbSession) -> dict[str, Any]:
     settings = load_settings(db)
     try:
-        request = await requests_service.create_artist(db, settings, user, payload.artist_mbid)
+        request = await requests_service.create_artist(db, settings, user, payload.artist_mbid, payload.types)
     except RequestProblem as error:
         raise _problem(error) from error
     return {"request": serialize(request), "quota": quota.as_dict(quota.state(db, user, settings))}

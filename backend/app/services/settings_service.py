@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from ..crypto import decrypt, encrypt, mask
 from ..models import Setting
 from ..vendor.nexoidc.flow import clean_public_url
+from . import album_groups
 from .mail import SECURITY_MODES, MailConfig
 
 DEFAULTS: dict[str, str] = {
@@ -46,6 +47,9 @@ DEFAULTS: dict[str, str] = {
     "nexcrate_marker": "",
     # Wann der Modus zuletzt wechselte (ISO, UTC). Offene Anfragen von davor reicht der Abgleich nach.
     "request_mode_changed_at": "",
+    # Was "Ganzer Kuenstler" im NEX-Modus vorgewaehlt bringt, nexcrates Gruppen mit Kommas. Nicht unter
+    # ``nexcrate_``: Diese Schluessel verbinden neu (``routers/settings.py``).
+    "artist_album_types": "studio",
     "webhook_secret": "",
     "source_listenbrainz": "true",
     "source_deezer": "false",
@@ -169,6 +173,10 @@ class AppSettings:
         return {"arr": "lidarr", "nex": "nexcrate"}.get(self.mode or "")
 
     @property
+    def artist_album_types(self) -> list[str]:
+        return album_groups.parse(self.text("artist_album_types"))
+
+    @property
     def quota_default_limit(self) -> int | None:
         value = self.number("quota_default_limit")
         return None if value is None or value < 0 else value
@@ -209,6 +217,11 @@ def _normalize(key: str, raw: Any) -> str:
         if key == "quota_default_limit" and int(value) < -1:
             raise SettingsError("invalid_setting", key)
         return str(int(value))
+    if key == "artist_album_types":
+        try:
+            return album_groups.as_text(raw if isinstance(raw, list) else value.split(","))
+        except ValueError as error:
+            raise SettingsError("invalid_setting", key) from error
     if key in CHOICES and value not in CHOICES[key]:
         raise SettingsError("invalid_setting", key)
     if key == "public_url":
@@ -310,6 +323,8 @@ def public_settings(settings: AppSettings) -> dict[str, Any]:
             result[key] = value == "true"
         elif key in INT_KEYS:
             result[key] = settings.number(key)
+        elif key == "artist_album_types":
+            result[key] = settings.artist_album_types
         else:
             result[key] = value
     return result
