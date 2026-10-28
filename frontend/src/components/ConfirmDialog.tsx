@@ -32,11 +32,17 @@ export function ConfirmDialog({
 }) {
   const { t } = useTranslation()
   const confirmRef = useRef<HTMLButtonElement>(null)
+  // Die Aufrufer reichen onCancel je Rendern neu herein. Haengt der Effekt daran, setzt jeder Tastendruck in einem
+  // Feld des Dialogs den Fokus zurueck auf den Knopf. Darum nur beim Oeffnen, onCancel ueber die Ref.
+  const cancelRef = useRef(onCancel)
+  useEffect(() => {
+    cancelRef.current = onCancel
+  })
 
   useEffect(() => {
     if (!open) return
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onCancel()
+      if (event.key === 'Escape') cancelRef.current()
     }
     document.addEventListener('keydown', onKeyDown)
     const previous = document.body.style.overflow
@@ -46,7 +52,7 @@ export function ConfirmDialog({
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previous
     }
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
 
