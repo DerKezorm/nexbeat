@@ -197,6 +197,23 @@
         "If an artist is already in nexcrate, a request no longer takes a type away there. Before, every request set the artist to studio albums only, and future EPs stopped coming.",
         "For whole artists, the request lists show which types were requested."
       ]
+    },
+    "1.6.1": {
+      "lead": "Two fixes: New from your artists no longer shows other people’s compilations, and linking a provider keeps the cursor in the password field.",
+      "sections": [
+        {
+          "title": "New from your artists",
+          "body": "If Lidarr lists “Various Artists” as an artist, every new compilation showed up in the row, whoever it was by. Various Artists and placeholders like “[unknown]” no longer count as your artists there. Thanks to xkevinx for pointing it out.",
+          "where": "Discover › New from your artists"
+        },
+        {
+          "title": "Linking a sign-in provider",
+          "body": "In the password field, the cursor jumped to the Link button after every letter. Now you type your password in one go.",
+          "where": "Profile › Sign-in providers › Link"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": []
     }
   }
 }

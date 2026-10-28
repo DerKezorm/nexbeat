@@ -197,6 +197,23 @@
         "Steht ein Künstler schon in nexcrate, nimmt eine Anfrage dort keine Art mehr weg. Vorher stellte jede Anfrage den Künstler auf reine Studioalben, und künftige EPs kamen nicht mehr.",
         "Bei ganzen Künstlern zeigen die Anfragelisten, welche Arten angefragt sind."
       ]
+    },
+    "1.6.1": {
+      "lead": "Zwei Fehler weniger: „Neu von deinen Künstlern“ zeigt keine fremden Sammlungen mehr, und beim Verknüpfen bleibt der Cursor im Passwortfeld.",
+      "sections": [
+        {
+          "title": "Neu von deinen Künstlern",
+          "body": "Führt Lidarr „Various Artists“ als Künstler, stand bisher jede neue Sammlung in der Reihe, egal von wem. Various Artists und Platzhalter wie „[unknown]“ zählen dort jetzt nicht mehr als deine Künstler. Danke an xkevinx für den Hinweis.",
+          "where": "Entdecken › Neu von deinen Künstlern"
+        },
+        {
+          "title": "Anmeldeanbieter verknüpfen",
+          "body": "Im Passwortfeld sprang der Cursor nach jedem Buchstaben auf den Knopf „Verknüpfen“. Jetzt tippst du das Passwort in einem Zug.",
+          "where": "Profil › Anmeldeanbieter › Verknüpfen"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": []
     }
   }
 }
