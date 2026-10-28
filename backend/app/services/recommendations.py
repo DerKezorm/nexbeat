@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import COUNTED_STATUSES, LibraryArtist, MusicRequest, User, utcnow
-from . import cache, catalog, coverart, library, listenbrainz
+from . import cache, catalog, coverart, genres, library, listenbrainz
 from .listenbrainz import ListenBrainzError
 from .settings_service import AppSettings
 
@@ -223,7 +223,9 @@ async def home(db: Session, settings: AppSettings, user: User) -> dict[str, Any]
         if mix:
             rows.append({"id": "for_you", "kind": "artists", "title_key": "discover.forYou", "items": mix})
 
-        fresh = await _fresh_row(db, settings, user, known)
+        # Issue #6: Lidarr fuehrt Various Artists oft als Kuenstler, dann stand jede Sammlung der Welt in der Reihe.
+        fresh_from = {row.mbid for row in library_rows if not genres.is_placeholder(row.mbid, row.name)}
+        fresh = await _fresh_row(db, settings, user, fresh_from)
         if fresh:
             rows.append(fresh)
 

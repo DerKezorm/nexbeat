@@ -92,10 +92,13 @@ def related_genres(genre: str, artists: list[dict[str, Any]], names: set[str]) -
     return [name for name, count in ranked if count >= 2][:RELATED_LIMIT]
 
 
-def _placeholder(artist: dict[str, Any]) -> bool:
+def is_placeholder(mbid: str, name: str) -> bool:
     """Various Artists und Platzhalter in eckigen Klammern wie "[unknown]"."""
-    name = artist["name"]
-    return artist["mbid"] == VARIOUS_ARTISTS or (name.startswith("[") and name.endswith("]"))
+    return mbid == VARIOUS_ARTISTS or (name.startswith("[") and name.endswith("]"))
+
+
+def _placeholder(artist: dict[str, Any]) -> bool:
+    return is_placeholder(artist["mbid"], artist["name"])
 
 
 async def _genre_names(db: Session) -> set[str]:

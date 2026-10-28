@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.db import SessionLocal
 from app.models import LibraryArtist, utcnow
 from app.services import cache, catalog, http, listenbrainz
+from app.services.genres import VARIOUS_ARTISTS
 from app.services.lidarr import LidarrError
 from app.services.recommendations import FRESH_KEY, FRESH_TYPES, TRENDING_ALBUMS_KEY, TRENDING_ARTISTS_KEY, pick_fresh
 from app.services.settings_service import save_settings
@@ -283,6 +284,7 @@ FRESH_OLD = "78787878-7878-4787-8787-787878787878"
 FRESH_FUTURE = "90909090-9090-4909-8909-909090909090"
 FRESH_STRANGER = "13131313-1313-4313-8313-131313131313"
 FRESH_FEATURE = "24242424-2424-4242-8242-242424242424"
+PLACEHOLDER = "97979797-9797-4979-8979-979797979797"
 
 
 def _fresh(mbid: str, title: str, artists: list[str], days_ago: int) -> dict[str, Any]:
@@ -328,6 +330,28 @@ def test_fresh_releases_show_what_library_artists_released(admin_client: TestCli
     assert items[1]["library"]["state"] == "wanted"
     assert items[0]["library"] is None
     assert items[0]["date"] == utcnow().date().isoformat()
+
+
+def test_fresh_releases_leave_out_various_artists(admin_client: TestClient) -> None:
+    # Issue #6: Lidarr fuehrt Various Artists als Kuenstler, die Reihe zeigte jede neue Sammlung.
+    _prepare_library()
+    with SessionLocal() as db:
+        db.add(LibraryArtist(mbid=VARIOUS_ARTISTS, lidarr_id=4, name="Various Artists", track_file_count=0))
+        db.add(LibraryArtist(mbid=PLACEHOLDER, lidarr_id=5, name="[unknown]", track_file_count=0))
+        db.commit()
+        cache.write(
+            db,
+            FRESH_KEY,
+            [
+                _fresh(FRESH_STRANGER, "Summer Hits", [VARIOUS_ARTISTS], 0),
+                _fresh(FRESH_OLD, "Untitled", [PLACEHOLDER], 1),
+                _fresh(ALBUM, "Record", [SEED], 2),
+            ],
+            timedelta(days=1),
+        )
+
+    rows = {row["id"]: row for row in admin_client.get("/api/discover").json()["rows"]}
+    assert [item["mbid"] for item in rows["fresh_releases"]["items"]] == [ALBUM]
 
 
 def test_fresh_releases_are_not_fetched_without_a_library(admin_client: TestClient) -> None:
