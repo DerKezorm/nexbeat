@@ -25,7 +25,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..models import User
-from . import cache, catalog, coverart, listenbrainz, musicbrainz
+from . import cache, catalog, coverart, covers, listenbrainz, musicbrainz
 from .listenbrainz import ListenBrainzError
 from .settings_service import AppSettings
 
@@ -246,7 +246,7 @@ async def genre_albums(db: Session, settings: AppSettings, user: User, tag: str)
                 "title": album["title"],
                 "artist_mbid": album["artist_mbid"],
                 "artist_name": album["artist_name"],
-                "cover": album["cover"] or coverart.release_group_front(album["mbid"], 250),
+                "cover": covers.served(album["cover"] or coverart.release_group_front(album["mbid"], 250)),
                 "request": states.get(album["mbid"]),
             }
             for album in chosen

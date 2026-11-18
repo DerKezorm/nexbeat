@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from ..deps import CurrentUser, DbSession
 from ..meldungen import fehler
-from ..services import catalog, genres
+from ..services import catalog, covers, genres
 from ..services.deezer import DeezerError
 from ..services.listenbrainz import ListenBrainzError
 from ..services.musicbrainz import MusicBrainzError
@@ -148,3 +148,25 @@ async def artist_image(
     if not url:
         return Response(status_code=404, headers={"Cache-Control": "public, max-age=3600"})
     return RedirectResponse(url, status_code=302, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/api/images/cover/{kind}/{mbid}/{name}", include_in_schema=False)
+async def cover_image(kind: str, mbid: str, name: str, db: DbSession) -> Response:
+    """Ein Albumcover aus dem Cover Art Archive, ueber nexbeat. Ohne Anmeldung, siehe ``services/covers``."""
+    cover = covers.parse(kind, mbid, name)
+    if cover is None:
+        return Response(status_code=404)
+    try:
+        path = await covers.obtain(db, cover)
+    except covers.CoverUnavailable:
+        # Lieber das langsame Original als gar kein Bild. Behalten darf der Browser die Umleitung nicht.
+        return RedirectResponse(cover.source, status_code=302, headers={"Cache-Control": "no-store"})
+    if path is None:
+        return Response(status_code=404, headers={"Cache-Control": "public, max-age=86400"})
+    with path.open("rb") as handle:
+        head = handle.read(16)
+    return FileResponse(
+        path,
+        media_type=covers.media_type(head),
+        headers={"Cache-Control": f"public, max-age={covers.BROWSER_MAX_AGE}"},
+    )

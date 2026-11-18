@@ -22,7 +22,7 @@ from collections.abc import Awaitable
 from typing import Any
 
 from ..db import SessionLocal
-from . import cache, library, nexcrate_events, recommendations, requests_service, sitzung, tokens, updates
+from . import cache, covers, library, nexcrate_events, recommendations, requests_service, sitzung, tokens, updates
 from .settings_service import load_settings
 
 logger = logging.getLogger("nexbeat.poller")
@@ -91,6 +91,7 @@ async def _requests_loop(stop: asyncio.Event) -> None:
                     cache.purge_expired(db)
                     tokens.purge_expired(db)
                     sitzung.purge_revoked(db)
+                    await asyncio.to_thread(covers.purge_unused)
                 except Exception:
                     logger.exception("Background task 'purge' failed")
         _wake_event.clear()

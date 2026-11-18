@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import COUNTED_STATUSES, LibraryArtist, MusicRequest, User, utcnow
-from . import cache, catalog, coverart, genres, library, listenbrainz
+from . import cache, catalog, coverart, covers, genres, library, listenbrainz
 from .listenbrainz import ListenBrainzError
 from .settings_service import AppSettings
 
@@ -48,7 +48,8 @@ FRESH_ROW_SIZE = 40
 #: Gemessen am 25.10.2026: Ein Ambient-Kuenstler hatte in 30 Tagen 25 Alben und fuellte die Reihe allein.
 FRESH_PER_ARTIST = 6
 TTL_FRESH = timedelta(hours=12)
-FRESH_STATE_CONCURRENCY = 4
+#: So lange wartet die Startseite hoechstens auf den Bestand von Kuenstlern, zu denen noch nichts vorliegt.
+FRESH_STATE_BUDGET = 1.5
 FRESH_KEY = f"lb:fresh-releases:{FRESH_DAYS}"
 WARM_PAUSE = 0.5
 #: So viele Fehlschlaege in Folge, dann ist ListenBrainz vermutlich weg.
@@ -163,23 +164,39 @@ def pick_fresh(releases: list[dict[str, Any]], known: set[str], today: date) -> 
     return kept[:FRESH_ROW_SIZE]
 
 
+async def _fresh_states(db: Session, settings: AppSettings, artists: list[str]) -> dict[str, dict[str, Any]]:
+    """Der Bestand je Album fuer die Reihe, ohne auf Lidarr oder nexcrate zu warten.
+
+    18.11.2026 gemessen: Die Startseite brauchte alle fuenf Minuten 8,4 statt 0,14 Sekunden, weil sie
+    den Stand von rund 20 Kuenstlern einzeln bei nexcrate abfragte, sobald der Speicher abgelaufen war.
+    Seitdem zeigt sie den letzten bekannten Stand und frischt ihn im Hintergrund auf. Gewartet wird
+    nur auf Kuenstler ohne jeden Stand, und auch das hoechstens ``FRESH_STATE_BUDGET``.
+    """
+    states: dict[str, dict[str, Any]] = {}
+    unknown: list[asyncio.Task[dict[str, dict[str, Any]]]] = []
+    for artist in artists:
+        known, fresh = library.known_album_states(db, settings, artist)
+        if known is not None:
+            states.update(known)
+        if not fresh:
+            task = library.refresh_album_states(artist)
+            if known is None:
+                unknown.append(task)
+    if unknown:
+        done, _pending = await asyncio.wait(unknown, timeout=FRESH_STATE_BUDGET)
+        for task in done:
+            if not task.cancelled() and task.exception() is None:
+                states.update(task.result())
+    return states
+
+
 async def _fresh_row(db: Session, settings: AppSettings, user: User, known: set[str]) -> dict[str, Any] | None:
     if not known:
         return None
     items = pick_fresh(await fresh_releases(db, settings), known, utcnow().date())
     if not items:
         return None
-    # Der Zustand je Album kommt je Kuenstler aus Lidarr oder nexcrate, fuenf Minuten im Speicher.
-    gate = asyncio.Semaphore(FRESH_STATE_CONCURRENCY)
-
-    async def states_of(artist: str) -> dict[str, dict[str, Any]]:
-        async with gate:
-            return await library.album_states(db, settings, artist)
-
-    artists = dict.fromkeys(item["artist_mbid"] for item in items)
-    states: dict[str, dict[str, Any]] = {}
-    for found in await asyncio.gather(*(states_of(artist) for artist in artists)):
-        states.update(found)
+    states = await _fresh_states(db, settings, list(dict.fromkeys(item["artist_mbid"] for item in items)))
     requests = catalog.request_states(db, user, [item["mbid"] for item in items])
     return {
         "id": "fresh_releases",
@@ -194,7 +211,7 @@ async def _fresh_row(db: Session, settings: AppSettings, user: User, known: set[
                 "date": item["date"],
                 "primary_type": item["primary_type"],
                 "secondary_types": item["secondary_types"],
-                "cover": item["cover"] or coverart.release_group_front(item["mbid"], 250),
+                "cover": covers.served(item["cover"] or coverart.release_group_front(item["mbid"], 250)),
                 "library": states.get(item["mbid"]),
                 "request": requests.get(item["mbid"]),
             }
@@ -262,7 +279,7 @@ async def home(db: Session, settings: AppSettings, user: User) -> dict[str, Any]
                     "items": [
                         {
                             **item,
-                            "cover": item["cover"] or coverart.release_group_front(item["mbid"], 250),
+                            "cover": covers.served(item["cover"] or coverart.release_group_front(item["mbid"], 250)),
                             "request": states.get(item["mbid"]),
                         }
                         for item in albums[:ROW_SIZE]

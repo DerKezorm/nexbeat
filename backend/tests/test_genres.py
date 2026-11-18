@@ -242,7 +242,7 @@ def test_genre_albums_come_from_the_top_artists_and_the_sitewide_list(admin_clie
         ("Second", "Vocalist"),
     ]
     assert body["albums"][1]["request"]["status"] == "searching"
-    assert body["albums"][2]["cover"] == f"https://coverartarchive.org/release-group/{SECOND_ALBUM}/front-250"
+    assert body["albums"][2]["cover"] == f"/api/images/cover/release-group/{SECOND_ALBUM}/front-250"
 
 
 def test_genre_albums_report_when_listenbrainz_does_not_answer(admin_client: TestClient) -> None:

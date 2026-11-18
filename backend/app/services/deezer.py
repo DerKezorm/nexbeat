@@ -91,11 +91,27 @@ def artist_url(artist_id: int) -> str:
     return f"https://www.deezer.com/artist/{artist_id}"
 
 
+#: Kantenlaenge der Kuenstlerfotos. Die groesste Darstellung ist der Kopf der Kuenstlerseite.
+PICTURE_SIZE = 500
+_PICTURE = re.compile(r"^(https://[a-z0-9.-]+\.dzcdn\.net/images/artist/[0-9a-f]+/)(\d+)x(\d+)(-.*)$")
+
+
+def sized(url: str, size: int = PICTURE_SIZE) -> str:
+    """Das Deezer-Foto in ``size`` Pixeln. 18.11.2026: Mit 1000 statt 500 waren es je Karte 84 statt 29 KB.
+
+    Gilt auch fuer Treffer, die noch mit der grossen Fassung im Speicher liegen.
+    """
+    match = _PICTURE.match(url or "")
+    if match is None:
+        return url or ""
+    return f"{match.group(1)}{size}x{size}{match.group(4)}"
+
+
 def _artist(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": item.get("id"),
         "name": item.get("name", ""),
-        "picture": item.get("picture_xl") or item.get("picture_big") or "",
+        "picture": sized(item.get("picture_big") or item.get("picture_xl") or ""),
         "fans": int(item.get("nb_fan") or 0),
     }
 

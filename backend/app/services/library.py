@@ -13,6 +13,7 @@ Metadatenprofile gibt es in nexcrate nicht, die Sperren danach entfallen.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
@@ -21,9 +22,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..db import SessionLocal
 from ..models import LibraryArtist, utcnow
 from . import cache, lidarr, nexcrate
-from .settings_service import AppSettings, save_settings
+from .settings_service import AppSettings, load_settings, save_settings
 
 logger = logging.getLogger("nexbeat.library")
 
@@ -167,7 +169,7 @@ async def _sync_from_nexcrate(db: Session, settings: AppSettings) -> int | None:
     for row in gone:
         db.delete(row)
     for mbid in seen:
-        cache.forget(db, nexcrate_albums_key(mbid))
+        cache.expire(db, nexcrate_albums_key(mbid))
     db.commit()
     record = {
         "url": settings.text("nexcrate_url"),
@@ -235,12 +237,20 @@ async def _nexcrate_album_states(db: Session, settings: AppSettings, artist_mbid
     except nexcrate.NexcrateError as error:
         logger.warning("Album states for artist %s unavailable: %s", artist_mbid, error.code)
         return {}
+    return _nexcrate_states(albums)
+
+
+def _nexcrate_states(albums: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     states: dict[str, dict[str, Any]] = {}
     for album in albums:
         mbid = nexcrate.mbid_of(album.get("ref"))
         if mbid:
             states[mbid] = {"state": album["state"], "percent": album["percent"], "lidarr_id": None}
     return states
+
+
+def _lidarr_states(albums: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {album["foreignAlbumId"]: album_state(album) for album in albums if album.get("foreignAlbumId")}
 
 
 async def album_states(db: Session, settings: AppSettings, artist_mbid: str) -> dict[str, dict[str, Any]]:
@@ -259,17 +269,81 @@ async def album_states(db: Session, settings: AppSettings, artist_mbid: str) -> 
     except lidarr.LidarrError as error:
         logger.warning("Album states for artist %s unavailable: %s", artist_mbid, error.code)
         return {}
-    return {album["foreignAlbumId"]: album_state(album) for album in albums if album.get("foreignAlbumId")}
+    return _lidarr_states(albums)
+
+
+#: So viele Kuenstler fragt das Auffrischen im Hintergrund gleichzeitig bei Lidarr oder nexcrate nach.
+REFRESH_CONCURRENCY = 4
+_refreshing: dict[str, asyncio.Task[dict[str, dict[str, Any]]]] = {}
+_refresh_gate: asyncio.Semaphore | None = None
+_refresh_loop: asyncio.AbstractEventLoop | None = None
+
+
+AlbumStates = dict[str, dict[str, Any]]
+
+
+def known_album_states(db: Session, settings: AppSettings, artist_mbid: str) -> tuple[AlbumStates | None, bool]:
+    """Der Albenstand, wie er gerade im Speicher liegt, auch abgelaufen, und ob er noch gilt.
+
+    ``None``: Es liegt nichts vor. Ein Kuenstler ohne Ziel oder ausserhalb des Bestands hat
+    sicher keinen Stand, das zaehlt als ``({}, True)``.
+    """
+    row = db.get(LibraryArtist, artist_mbid)
+    if row is None:
+        return {}, True
+    if settings.mode == "nex":
+        if nexcrate.client_for(settings) is None:
+            return {}, True
+        albums, fresh = cache.read_stale(db, nexcrate_albums_key(artist_mbid))
+        return (None if albums is None else _nexcrate_states(albums)), fresh
+    if lidarr.client_for(settings) is None:
+        return {}, True
+    albums, fresh = cache.read_stale(db, albums_key(row.lidarr_id))
+    return (None if albums is None else _lidarr_states(albums)), fresh
+
+
+def refresh_album_states(artist_mbid: str) -> asyncio.Task[dict[str, dict[str, Any]]]:
+    """Den Albenstand im Hintergrund neu holen, mit eigener Sitzung. Laeuft er schon, dieselbe Aufgabe.
+
+    Die Aufgabe ueberlebt die Anfrage, die sie anstiess: Wer nicht warten will, bekommt beim
+    naechsten Aufruf den frischen Stand.
+    """
+    global _refresh_gate, _refresh_loop
+    running = _refreshing.get(artist_mbid)
+    if running is not None and not running.done():
+        return running
+    loop = asyncio.get_running_loop()
+    if _refresh_gate is None or _refresh_loop is not loop:
+        _refresh_gate = asyncio.Semaphore(REFRESH_CONCURRENCY)
+        _refresh_loop = loop
+    gate = _refresh_gate
+
+    async def run() -> dict[str, dict[str, Any]]:
+        try:
+            async with gate:
+                with SessionLocal() as db:
+                    return await album_states(db, load_settings(db), artist_mbid)
+        except Exception:
+            # Niemand wartet sicher auf diese Aufgabe. Ein Fehler darf nur den Stand fehlen lassen.
+            logger.exception("Refreshing album states for artist %s failed", artist_mbid)
+            return {}
+        finally:
+            if _refreshing.get(artist_mbid) is task:
+                del _refreshing[artist_mbid]
+
+    task = loop.create_task(run())
+    _refreshing[artist_mbid] = task
+    return task
 
 
 def forget_albums(db: Session, lidarr_artist_id: int | None) -> None:
     if lidarr_artist_id:
-        cache.forget(db, albums_key(lidarr_artist_id))
+        cache.expire(db, albums_key(lidarr_artist_id))
 
 
 def forget_nexcrate_albums(db: Session, artist_mbid: str | None) -> None:
     if artist_mbid:
-        cache.forget(db, nexcrate_albums_key(artist_mbid))
+        cache.expire(db, nexcrate_albums_key(artist_mbid))
 
 
 def profile_key(profile_id: int) -> str:

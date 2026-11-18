@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+import time
 from datetime import date, timedelta
 from typing import Any
 
@@ -9,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.db import SessionLocal
 from app.models import LibraryArtist, utcnow
-from app.services import cache, catalog, http, listenbrainz
+from app.services import cache, catalog, http, library, listenbrainz, recommendations
 from app.services.genres import VARIOUS_ARTISTS
 from app.services.lidarr import LidarrError
 from app.services.recommendations import FRESH_KEY, FRESH_TYPES, TRENDING_ALBUMS_KEY, TRENDING_ARTISTS_KEY, pick_fresh
@@ -72,7 +74,7 @@ def test_for_you_skips_known_artists_and_explains(admin_client: TestClient) -> N
     assert all(item["image"].startswith("/api/images/artist/") for item in for_you)
 
     trending = rows["trending_albums"]["items"]
-    assert trending[0]["cover"] == f"https://coverartarchive.org/release-group/{TRENDING_ALBUM}/front-250"
+    assert trending[0]["cover"] == f"/api/images/cover/release-group/{TRENDING_ALBUM}/front-250"
     assert "trending_artists" not in rows
     assert "fresh_releases" not in rows
     assert body["library_size"] == 3
@@ -326,7 +328,7 @@ def test_fresh_releases_show_what_library_artists_released(admin_client: TestCli
     items = rows["fresh_releases"]["items"]
     assert [item["mbid"] for item in items] == [FRESH_FEATURE, ALBUM]
     assert items[0]["artist_mbid"] == OWNED
-    assert items[0]["cover"] == f"https://coverartarchive.org/release-group/{FRESH_FEATURE}/front-250"
+    assert items[0]["cover"] == f"/api/images/cover/release-group/{FRESH_FEATURE}/front-250"
     assert items[1]["library"]["state"] == "wanted"
     assert items[0]["library"] is None
     assert items[0]["date"] == utcnow().date().isoformat()
@@ -430,3 +432,86 @@ def test_fresh_releases_keep_albums_and_eps_once() -> None:
     }
     assert asked[0].url.path == "/1/explore/fresh-releases/"
     assert dict(asked[0].url.params) == {"days": "30", "past": "true", "future": "false"}
+
+
+def _gate_albums(fake_lidarr: FakeLidarr, monkeypatch: Any) -> threading.Event:
+    """Lidarr antwortet erst, wenn das Ereignis gesetzt ist. Zaehlt mit, wie oft gefragt wurde."""
+    opened = threading.Event()
+    real = fake_lidarr.albums_for_artist
+
+    async def held(artist_id: int) -> list[dict[str, Any]]:
+        while not opened.is_set():
+            await asyncio.sleep(0.01)
+        return await real(artist_id)
+
+    monkeypatch.setattr(fake_lidarr, "albums_for_artist", held)
+    return opened
+
+
+def _fresh_state(client: TestClient) -> Any:
+    rows = {row["id"]: row for row in client.get("/api/discover").json()["rows"]}
+    return rows["fresh_releases"]["items"][0]["library"]
+
+
+def _wait_for_refresh() -> None:
+    deadline = time.monotonic() + 5
+    while library._refreshing and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert not library._refreshing
+
+
+def test_fresh_releases_show_the_last_known_state_without_waiting(
+    admin_client: TestClient, fake_lidarr: FakeLidarr, monkeypatch: Any
+) -> None:
+    # 18.11.2026: Die Startseite wartete alle fuenf Minuten 8,4 s auf den Bestand je Kuenstler.
+    _prepare_library()
+    with SessionLocal() as db:
+        cache.write(db, FRESH_KEY, [_fresh(ALBUM, "Record", [SEED], 1)], timedelta(days=1))
+    row = {"id": 70, "artistId": 1, "foreignAlbumId": ALBUM, "monitored": True, "statistics": {"trackFileCount": 0}}
+    fake_lidarr.album_rows.append(row)
+    assert _fresh_state(admin_client)["state"] == "wanted"
+
+    with SessionLocal() as db:
+        cache.expire(db, library.albums_key(1))
+    row["statistics"] = {"trackFileCount": 9, "percentOfTracks": 100}
+    opened = _gate_albums(fake_lidarr, monkeypatch)
+    asked_before = len(fake_lidarr.calls)
+
+    # Lidarr haengt, die Seite kommt trotzdem, mit dem alten Stand, und stoesst das Auffrischen an.
+    assert _fresh_state(admin_client)["state"] == "wanted"
+    assert library._refreshing
+    opened.set()
+    _wait_for_refresh()
+    assert len(fake_lidarr.calls) == asked_before + 1
+    assert _fresh_state(admin_client)["state"] == "available"
+
+
+def test_fresh_releases_wait_only_briefly_for_an_unknown_state(
+    admin_client: TestClient, fake_lidarr: FakeLidarr, monkeypatch: Any
+) -> None:
+    _prepare_library()
+    with SessionLocal() as db:
+        cache.write(db, FRESH_KEY, [_fresh(ALBUM, "Record", [SEED], 1)], timedelta(days=1))
+    fake_lidarr.album_rows.append(
+        {"id": 70, "artistId": 1, "foreignAlbumId": ALBUM, "monitored": True, "statistics": {"trackFileCount": 0}}
+    )
+    monkeypatch.setattr(recommendations, "FRESH_STATE_BUDGET", 0.2)
+    opened = _gate_albums(fake_lidarr, monkeypatch)
+
+    started = time.monotonic()
+    assert _fresh_state(admin_client) is None
+    assert time.monotonic() - started < 2
+    opened.set()
+    _wait_for_refresh()
+    assert _fresh_state(admin_client)["state"] == "wanted"
+
+
+def test_an_expired_entry_is_gone_for_readers_but_not_for_stale_ones() -> None:
+    with SessionLocal() as db:
+        cache.write(db, "probe", {"a": 1}, timedelta(days=1))
+        cache.expire(db, "probe")
+        assert cache.read(db, "probe") is None
+        assert cache.read_stale(db, "probe") == ({"a": 1}, False)
+        # Das taegliche Aufraeumen laesst Abgelaufenes noch liegen, damit es als alter Stand taugt.
+        assert cache.purge_expired(db) == 0
+        assert cache.read_stale(db, "probe") == ({"a": 1}, False)

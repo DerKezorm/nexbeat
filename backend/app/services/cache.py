@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
@@ -29,14 +29,25 @@ def _key(key: str) -> str:
     return f"{key[:120]}#{digest}"
 
 
+#: Abgelaufenes bleibt so lange liegen, bevor das taegliche Aufraeumen es loescht. ``read_stale`` lebt davon.
+PURGE_GRACE = timedelta(days=2)
+
+
 def read(db: Session, key: str) -> Any | None:
+    value, fresh = read_stale(db, key)
+    return value if fresh else None
+
+
+def read_stale(db: Session, key: str) -> tuple[Any | None, bool]:
+    """Auch Abgelaufenes, dazu ob es noch gilt. Fuer Stellen, die lieber kurz Altes zeigen als warten."""
     row = db.execute(select(CacheEntry.payload, CacheEntry.expires_at).where(CacheEntry.key == _key(key))).first()
-    if row is None or row.expires_at <= utcnow():
-        return None
+    if row is None:
+        return None, False
     try:
-        return json.loads(row.payload)
+        value = json.loads(row.payload)
     except json.JSONDecodeError:
-        return None
+        return None, False
+    return value, row.expires_at > utcnow()
 
 
 def write(db: Session, key: str, value: Any, ttl: timedelta) -> None:
@@ -66,12 +77,18 @@ def forget(db: Session, key: str) -> None:
     db.commit()
 
 
+def expire(db: Session, key: str) -> None:
+    """Sofort ungueltig, aber nicht weg: ``read`` liefert nichts mehr, ``read_stale`` noch den alten Stand."""
+    db.execute(update(CacheEntry).where(CacheEntry.key == _key(key)).values(expires_at=utcnow()))
+    db.commit()
+
+
 def forget_prefix(db: Session, prefix: str) -> None:
     db.execute(delete(CacheEntry).where(CacheEntry.key.startswith(prefix)))
     db.commit()
 
 
 def purge_expired(db: Session) -> int:
-    result = db.execute(delete(CacheEntry).where(CacheEntry.expires_at <= utcnow()))
+    result = db.execute(delete(CacheEntry).where(CacheEntry.expires_at <= utcnow() - PURGE_GRACE))
     db.commit()
     return int(result.rowcount or 0)

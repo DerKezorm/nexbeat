@@ -34,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import ARTIST_KIND, COUNTED_STATUSES, LibraryArtist, MusicRequest, User
-from . import album_groups, cache, coverart, deezer, library, listenbrainz, musicbrainz, quota
+from . import album_groups, cache, coverart, covers, deezer, library, listenbrainz, musicbrainz, quota
 from .deezer import DeezerError
 from .lidarr import LidarrError
 from .listenbrainz import ListenBrainzError
@@ -172,7 +172,7 @@ async def resolve_artist_image(
         return ""
     if match is None:
         return None
-    return match.get("picture", "")
+    return deezer.sized(match.get("picture", ""))
 
 
 async def _deezer_owners(db: Session, deezer_id: int) -> list[str]:
@@ -275,7 +275,11 @@ async def search_albums(db: Session, settings: AppSettings, user: User, query: s
     )
     states = request_states(db, user, [item["mbid"] for item in results])
     return [
-        {**item, "cover": coverart.release_group_front(item["mbid"], 250), "request": states.get(item["mbid"])}
+        {
+            **item,
+            "cover": covers.served(coverart.release_group_front(item["mbid"], 250)),
+            "request": states.get(item["mbid"]),
+        }
         for item in results
     ]
 
@@ -363,7 +367,7 @@ async def artist_discography(db: Session, settings: AppSettings, user: User, mbi
                 "secondary_types": group["secondary_types"],
                 "date": group["first_release_date"],
                 "listen_count": known.get("listen_count", 0),
-                "cover": known.get("cover") or coverart.release_group_front(group["mbid"], 250),
+                "cover": covers.served(known.get("cover") or coverart.release_group_front(group["mbid"], 250)),
             }
         )
     albums.sort(key=lambda album: album["date"] or "0000", reverse=True)
@@ -398,7 +402,7 @@ async def artist_popular(db: Session, settings: AppSettings, user: User, mbid: s
             "secondary_types": [],
             "date": item["date"],
             "listen_count": item["listen_count"],
-            "cover": item["cover"] or coverart.release_group_front(item["mbid"], 250),
+            "cover": covers.served(item["cover"] or coverart.release_group_front(item["mbid"], 250)),
         }
         for item in ranked
         if (item["type"] or "").casefold() in POPULAR_TYPES and credited(item, mbid)
@@ -521,7 +525,7 @@ async def album_page(db: Session, settings: AppSettings, user: User, release_gro
             "date": group["first_release_date"],
             "artist_mbid": group["artist_mbid"],
             "artist_name": group["artist_name"],
-            "cover": coverart.release_group_front(release_group_mbid, 500),
+            "cover": covers.served(coverart.release_group_front(release_group_mbid, 500)),
             "artist_image": artist_image_path(group["artist_mbid"], group["artist_name"]),
         },
         "tracks": tracks,

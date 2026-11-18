@@ -57,7 +57,7 @@ from sqlalchemy.orm import Session
 
 from ..db import SessionLocal
 from ..models import ALBUM_KIND, ARTIST_KIND, OPEN_STATUSES, MusicRequest, RequestStatus, User, utcnow
-from . import album_groups, catalog, coverart, library, lidarr, nexcrate, quota
+from . import album_groups, catalog, coverart, covers, library, lidarr, nexcrate, quota
 from .musicbrainz import MusicBrainzError
 from .settings_service import AppSettings
 
@@ -124,7 +124,7 @@ def serialize(request: MusicRequest, *, with_user: bool = False) -> dict[str, An
         "artist_name": request.artist_name,
         "album_type": request.album_type,
         "release_date": request.release_date,
-        "cover_url": request.cover_url,
+        "cover_url": covers.served(request.cover_url),
         "status": request.status.value,
         "requested_at": iso(request.requested_at),
         "decided_at": iso(request.decided_at),
