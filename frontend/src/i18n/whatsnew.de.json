@@ -214,6 +214,26 @@
       ],
       "smallTitle": "Außerdem",
       "small": []
+    },
+    "1.6.2": {
+      "lead": "nexbeat lädt schneller: Die Startseite wartet nicht mehr auf den Bestand, und Albumcover kommen von nexbeat selbst.",
+      "sections": [
+        {
+          "title": "Startseite",
+          "body": "Die Reihe „Neu von deinen Künstlern“ hielt die ganze Startseite alle paar Minuten mehrere Sekunden auf, weil nexbeat erst bei Lidarr oder nexcrate nachfragte, was davon schon im Bestand ist. Jetzt zeigt sie sofort den letzten bekannten Stand und frischt ihn im Hintergrund auf.",
+          "where": "Entdecken"
+        },
+        {
+          "title": "Albumcover",
+          "body": "Cover kamen bisher bei jedem Aufruf neu vom Cover Art Archive, über zwei Umwege zu archive.org, oft mehrere Sekunden je Bild. nexbeat holt jedes Cover jetzt einmal, legt es im Datenordner ab und liefert es selbst aus. Danach ist es sofort da.",
+          "where": "Überall, wo Cover stehen"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Künstlerfotos von Deezer kommen in 500 statt 1000 Pixeln, das spart vor allem am Handy Daten.",
+        "Die Cover liegen im Datenordner unter covers. Was 90 Tage niemand aufgerufen hat, räumt nexbeat wieder weg."
+      ]
     }
   }
 }
