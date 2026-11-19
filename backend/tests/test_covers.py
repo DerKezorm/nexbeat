@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 import os
 import shutil
 import time
@@ -88,6 +89,26 @@ def test_a_missing_cover_is_remembered(client: TestClient) -> None:
     assert client.get(address).status_code == 404
     assert client.get(address).status_code == 404
     assert len(asked) == 1
+
+
+def test_a_missing_cover_is_asked_for_again_the_same_day(client: TestClient) -> None:
+    """New albums get their cover in the archive days after release; "missing" must not stick for a week."""
+    asked: list[httpx.Request] = []
+    _archive(asked, status=404, body=b"not found", kind="text/plain")
+    address = f"/api/images/cover/release-group/{RELEASE_GROUP}/front-250"
+    first = client.get(address)
+    assert first.status_code == 404
+    assert first.headers["cache-control"] == "public, max-age=3600"
+    assert covers.TTL_MISSING <= timedelta(hours=6)
+    # Six hours later the archive has it: nexbeat asks again and keeps it.
+    from app.models import CacheEntry
+    with SessionLocal() as db:
+        for row in db.query(CacheEntry).all():
+            row.expires_at = row.expires_at - covers.TTL_MISSING
+        db.commit()
+    _archive(asked, status=200, body=JPEG, kind="image/jpeg")
+    assert client.get(address).status_code == 200
+    assert len(asked) == 2
 
 
 def test_an_unreachable_archive_sends_the_browser_there_and_keeps_nothing(client: TestClient) -> None:

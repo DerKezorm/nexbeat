@@ -8,7 +8,7 @@ selbst und liefert es mit langer Gueltigkeit aus.
 
 ⚠️ Ohne Anmeldung erreichbar wie die Kuenstlerbilder, weil ``<img>`` keinen Authorization-Kopf mitschickt.
 Angenommen werden nur die Adressformen, die nexbeat selbst ausgibt, nur bei coverartarchive.org, nur in den
-Groessen 250 und 500. Ein fehlendes Cover merkt sich nexbeat eine Woche, damit sich die Adresse nicht zum
+Groessen 250 und 500. Ein fehlendes Cover merkt sich nexbeat sechs Stunden, damit sich die Adresse nicht zum
 Anstossen von Abrufen missbrauchen laesst.
 """
 
@@ -42,7 +42,12 @@ _SOURCE = re.compile(rf"^{re.escape(BASE_URL)}/(release-group|release)/({_MBID})
 _VALID_MBID = re.compile(rf"^{_MBID}$")
 
 MAX_BYTES = 5 * 1024 * 1024
-TTL_MISSING = timedelta(days=7)
+#: 19.11.2026: Vorher eine Woche. Neue Alben bekommen ihr Cover im Archiv oft erst Tage nach der Veroeffentlichung;
+#: "Neu von deinen Kuenstlern" fragte am ersten Tag, hoerte "fehlt" und zeigte das spaeter vorhandene Cover eine
+#: Woche lang nicht (U2, Carnaval de Luz). Sechs Stunden halten das Anstossen von Abrufen trotzdem klein.
+TTL_MISSING = timedelta(hours=6)
+#: So lange darf der Browser "kein Cover" behalten, aus demselben Grund kurz.
+BROWSER_MISSING_MAX_AGE = int(timedelta(hours=1).total_seconds())
 #: So viele Cover holt nexbeat gleichzeitig. Mehr nimmt archive.org ohnehin nicht schneller an.
 FETCH_CONCURRENCY = 6
 #: Cover, die so lange niemand abgerufen hat, raeumt das taegliche Aufraeumen weg.

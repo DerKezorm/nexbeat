@@ -33,7 +33,7 @@ export function Slider({ children }: { children: ReactNode }) {
           if (element) requestAnimationFrame(measure)
         }}
         onScroll={measure}
-        className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-1 -my-3 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {children}
       </div>

@@ -162,7 +162,7 @@ async def cover_image(kind: str, mbid: str, name: str, db: DbSession) -> Respons
         # Lieber das langsame Original als gar kein Bild. Behalten darf der Browser die Umleitung nicht.
         return RedirectResponse(cover.source, status_code=302, headers={"Cache-Control": "no-store"})
     if path is None:
-        return Response(status_code=404, headers={"Cache-Control": "public, max-age=86400"})
+        return Response(status_code=404, headers={"Cache-Control": f"public, max-age={covers.BROWSER_MISSING_MAX_AGE}"})
     with path.open("rb") as handle:
         head = handle.read(16)
     return FileResponse(
