@@ -309,3 +309,27 @@ class LibraryArtist(Base):
     # Das eigene Metadatenprofil des Kuenstlers in Lidarr. 0 heisst: noch nicht abgeglichen.
     metadata_profile_id: Mapped[int] = mapped_column(Integer, default=0)
     synced_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class PairingRequest(Base):
+    """Ein Geraet ohne Browser bittet um einen Token: Es zeigt einen Code, der Mensch bestaetigt ihn im Browser.
+
+    Gebaut wie nexbooks' Kopplung per Code (S1b). Gespeichert wird nur die Pruefsumme des Geheimnisses, mit
+    dem das Geraet nachfragt. Der Token entsteht erst, wenn das Geraet ihn nach der Bestaetigung abholt, und
+    steht nie im Klartext in der Datenbank.
+    """
+
+    __tablename__ = "pairing_requests"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    secret_hash: Mapped[str] = mapped_column(String(64))
+    # Ohne Bindestrich und gross, so wie ``services.pairing.normalize`` ihn liest.
+    code: Mapped[str] = mapped_column(String(8), index=True)
+    device_name: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column()
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), default=None)
+    confirmed_at: Mapped[datetime | None] = mapped_column(default=None)
+    used_at: Mapped[datetime | None] = mapped_column(default=None)
+
+    user: Mapped[User | None] = relationship()

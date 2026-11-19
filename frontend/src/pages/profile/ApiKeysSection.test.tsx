@@ -76,3 +76,33 @@ describe('API tokens in the profile', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith('/api/auth/me/keys/7'))
   })
 })
+
+describe('Connecting a device with a code', () => {
+  it('sends the code the app shows and says which device is connected', async () => {
+    vi.spyOn(api, 'get').mockImplementation((async () => []) as typeof api.get)
+    const post = vi.spyOn(api, 'post').mockImplementation((async () => ({ device_name: 'nextune' })) as typeof api.post)
+    show()
+
+    fireEvent.click(await screen.findByRole('button', { name: i18n.t('apiKeys.pairing.open') }))
+    fireEvent.change(screen.getByLabelText(i18n.t('apiKeys.pairing.label')), { target: { value: ' abcd-2345 ' } })
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('apiKeys.pairing.confirm') }))
+
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/api/pairing/confirm', { code: 'abcd-2345' }))
+    expect(await screen.findByText(i18n.t('apiKeys.pairing.done', { name: 'nextune' }))).toBeInTheDocument()
+  })
+
+  it('keeps the dialog open with the reason when the code is wrong', async () => {
+    vi.spyOn(api, 'get').mockImplementation((async () => []) as typeof api.get)
+    vi.spyOn(api, 'post').mockRejectedValue(
+      Object.assign(new Error('pairing_unknown'), { code: 'pairing_unknown', status: 404 }),
+    )
+    show()
+
+    fireEvent.click(await screen.findByRole('button', { name: i18n.t('apiKeys.pairing.open') }))
+    fireEvent.change(screen.getByLabelText(i18n.t('apiKeys.pairing.label')), { target: { value: 'WXYZ-2345' } })
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('apiKeys.pairing.confirm') }))
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByLabelText(i18n.t('apiKeys.pairing.label'))).toBeInTheDocument()
+  })
+})

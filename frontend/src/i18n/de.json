@@ -357,7 +357,16 @@
     "neverUsed": "nie benutzt",
     "revoke": "Widerrufen",
     "revokeTitle": "Token widerrufen",
-    "revokeText": "„{{name}}“ funktioniert ab sofort nicht mehr. Alles, was ihn benutzt, bleibt draußen."
+    "revokeText": "„{{name}}“ funktioniert ab sofort nicht mehr. Alles, was ihn benutzt, bleibt draußen.",
+    "pairing": {
+      "open": "Gerät mit Code verbinden",
+      "hint": "Für Apps wie nextune: Die App zeigt einen Code, du gibst ihn hier ein. Sie bekommt dann einen eigenen Token mit deinen Rechten, der hier in der Liste erscheint und sich widerrufen lässt.",
+      "title": "Gerät mit Code verbinden",
+      "text": "Gib den Code ein, den die App gerade zeigt.",
+      "label": "Code",
+      "confirm": "Verbinden",
+      "done": "„{{name}}“ ist verbunden. Die App holt sich ihren Token jetzt selbst."
+    }
   },
   "adminApiKeys": {
     "title": "API-Token in dieser Installation",
@@ -599,7 +608,13 @@
       "public_url_invalid": "Diese Adresse lässt sich nicht verwenden. Prüf, wie sie geschrieben ist.",
       "public_url_needed": "nexbeat hat noch keine öffentliche Adresse.",
       "invalid_album_types": "Diese Art von Alben kennt nexbeat nicht.",
-      "album_types_need_nexcrate": "Andere Arten als Studioalben gehen nur mit nexcrate als Ziel. Lidarr folgt dem Metadatenprofil des Künstlers."
+      "album_types_need_nexcrate": "Andere Arten als Studioalben gehen nur mit nexcrate als Ziel. Lidarr folgt dem Metadatenprofil des Künstlers.",
+      "pairing_busy": "Gerade warten zu viele Geräte auf einen Code. Bitte in ein paar Minuten noch einmal.",
+      "pairing_unknown": "Kein Gerät wartet mit diesem Code. Prüf ihn, oder lass das Gerät einen neuen zeigen.",
+      "pairing_used": "Dieser Code wurde schon benutzt.",
+      "pairing_expired": "Dieser Code ist abgelaufen. Das Gerät zeigt einen neuen.",
+      "pairing_code": "Das ist kein Code. Er hat acht Buchstaben und Ziffern, etwa ABCD-2345.",
+      "pairing_wait": "Zu viele falsche Codes. Bitte einen Moment warten."
     }
   },
   "services": {

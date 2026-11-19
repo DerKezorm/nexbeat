@@ -357,7 +357,16 @@
     "neverUsed": "never used",
     "revoke": "Revoke",
     "revokeTitle": "Revoke token",
-    "revokeText": "“{{name}}” stops working right away. Anything that uses it is locked out."
+    "revokeText": "“{{name}}” stops working right away. Anything that uses it is locked out.",
+    "pairing": {
+      "open": "Connect a device with a code",
+      "hint": "For apps like nextune: the app shows a code, you enter it here. It then gets a token of its own with your rights, which shows up in this list and can be revoked.",
+      "title": "Connect a device with a code",
+      "text": "Enter the code the app is showing.",
+      "label": "Code",
+      "confirm": "Connect",
+      "done": "“{{name}}” is connected. The app now fetches its token by itself."
+    }
   },
   "adminApiKeys": {
     "title": "API tokens in this installation",
@@ -599,7 +608,13 @@
       "public_url_invalid": "This address cannot be used. Check how it is written.",
       "public_url_needed": "nexbeat has no public address yet.",
       "invalid_album_types": "nexbeat does not know this album type.",
-      "album_types_need_nexcrate": "Types other than studio albums only work with nexcrate as the target. Lidarr follows the artist's metadata profile."
+      "album_types_need_nexcrate": "Types other than studio albums only work with nexcrate as the target. Lidarr follows the artist's metadata profile.",
+      "pairing_busy": "Too many devices are waiting for a code right now. Try again in a few minutes.",
+      "pairing_unknown": "No device is waiting with this code. Check it, or let the device show a new one.",
+      "pairing_used": "This code was used already.",
+      "pairing_expired": "This code ran out. The device shows a new one.",
+      "pairing_code": "That is not a code. It has eight letters and digits, like ABCD-2345.",
+      "pairing_wait": "Too many wrong codes. Wait a moment."
     }
   },
   "services": {

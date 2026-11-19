@@ -4,6 +4,9 @@
  * ⚠️ Der Token erscheint genau einmal. Er steht nur in der Antwort aufs Anlegen, danach kennt ihn niemand
  * mehr, auch der Admin nicht. Deshalb bleibt das Fenster nach dem Anlegen offen und zeigt ihn zum
  * Kopieren, statt sich zu schliessen und den Eindruck zu lassen, man koenne ihn spaeter nachschlagen.
+ *
+ * Apps wie nextune kommen bequemer an einen Token: Sie zeigen einen Code, der hier bestaetigt wird
+ * (``/api/pairing/confirm``), und holen ihren Token danach selbst ab. Er erscheint dann in der Liste.
  */
 
 import { useState } from 'react'
@@ -35,6 +38,9 @@ export function ApiKeysSection() {
   const [created, setCreated] = useState<CreatedKey | null>(null)
   const [copied, setCopied] = useState(false)
   const [revoking, setRevoking] = useState<ApiKey | null>(null)
+  const [pairing, setPairing] = useState(false)
+  const [code, setCode] = useState('')
+  const [paired, setPaired] = useState<string | null>(null)
 
   const keys = useQuery({ queryKey: ['api-keys'], queryFn: () => api.get<ApiKey[]>('/api/auth/me/keys') })
 
@@ -46,6 +52,17 @@ export function ApiKeysSection() {
       setCopied(false)
       setCreated(key)
       void queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+
+  const confirmCode = useMutation({
+    mutationFn: () => api.post<{ device_name: string }>('/api/pairing/confirm', { code: code.trim() }),
+    onSuccess: (answer) => {
+      setPairing(false)
+      setCode('')
+      setPaired(answer.device_name)
+      // Der Token entsteht, wenn die App ihn abholt: Sie fragt alle paar Sekunden nach.
+      window.setTimeout(() => void queryClient.invalidateQueries({ queryKey: ['api-keys'] }), 5000)
     },
   })
 
@@ -112,6 +129,48 @@ export function ApiKeysSection() {
           </Button>
         </div>
       </form>
+
+      <div className="flex flex-col gap-2 border-t border-ink-700 pt-4">
+        <p className="text-sm text-mist-500">{t('apiKeys.pairing.hint')}</p>
+        {paired && <p className="text-sm text-mist-100">{t('apiKeys.pairing.done', { name: paired })}</p>}
+        <div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              confirmCode.reset()
+              setPaired(null)
+              setPairing(true)
+            }}
+          >
+            {t('apiKeys.pairing.open')}
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={pairing}
+        title={t('apiKeys.pairing.title')}
+        description={t('apiKeys.pairing.text')}
+        error={confirmCode.isError ? errorMessage(confirmCode.error) : null}
+        confirmLabel={t('apiKeys.pairing.confirm')}
+        loading={confirmCode.isPending}
+        onConfirm={() => code.trim() && confirmCode.mutate()}
+        onCancel={() => setPairing(false)}
+      >
+        <div className="mt-4">
+          <Field
+            label={t('apiKeys.pairing.label')}
+            value={code}
+            maxLength={20}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            placeholder="ABCD-2345"
+            className="font-mono tracking-widest uppercase"
+            onChange={(event) => setCode(event.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={created !== null}

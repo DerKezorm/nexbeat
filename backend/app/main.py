@@ -28,6 +28,7 @@ from .routers import (
     health,
     oidc,
     onboarding,
+    pairing,
     requests,
     setup,
     users,
@@ -126,6 +127,7 @@ for module in (
     webhooks,
     about,
     v1,
+    pairing,
 ):
     app.include_router(module.router)
 

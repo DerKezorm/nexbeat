@@ -136,6 +136,24 @@ Administrators see every token of the installation under Settings > Users.
 Changing the password leaves tokens working; deactivating an account stops
 them.
 
+### Connecting an app with a code
+
+An app without a browser, such as the iPhone app nextune, does not need a
+token typed in. It asks for a code and shows it; you enter the code under
+**Profile > API tokens > Connect a device with a code**, and the app fetches a
+token of your account by itself. It then shows up in the list like any other
+token and can be revoked there.
+
+- `POST /api/pairing/request` (no sign-in): `id`, `secret`, `code` to show,
+  `expires_at` (ten minutes), `poll_seconds`.
+- `GET /api/pairing/request/{id}` with the header `X-Pairing-Secret`:
+  `waiting`, or once `confirmed` with `token` and `account`. An expired or used
+  code answers `410`.
+- `DELETE /api/pairing/request/{id}` with the same header lets the code go.
+
+The code alone gives nothing away: only the app holds the secret, confirming
+needs a signed-in browser, and wrong codes are slowed down per account.
+
 ## Sign-in with OpenID Connect
 
 Under **Settings > System > Sign-in** an administrator finds three cards:
