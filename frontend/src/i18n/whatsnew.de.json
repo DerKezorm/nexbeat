@@ -234,6 +234,21 @@
         "Künstlerfotos von Deezer kommen in 500 statt 1000 Pixeln, das spart vor allem am Handy Daten.",
         "Die Cover liegen im Datenordner unter covers. Was 90 Tage niemand aufgerufen hat, räumt nexbeat wieder weg."
       ]
+    },
+    "1.7.0": {
+      "lead": "Apps wie nextune verbinden sich jetzt mit einem Code statt mit einem abgetippten Token. Dazu zwei Reparaturen an Kacheln und Covern.",
+      "sections": [
+        {
+          "title": "Gerät mit Code verbinden",
+          "body": "Eine App zeigt einen Code, du gibst ihn in nexbeat ein, fertig. Die App holt sich dann selbst einen eigenen Token mit deinen Rechten. Er steht in der Liste deiner API-Token und lässt sich dort jederzeit widerrufen. Ein Token zum Abtippen geht weiterhin.",
+          "where": "Profil → API-Token → Gerät mit Code verbinden"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Kacheln, die sich beim Überfahren anheben, behalten ihren oberen Rand und werden nicht mehr abgeschnitten.",
+        "Ein neues Album, dessen Cover das Cover Art Archive erst Tage später nachreicht, zeigt es jetzt am selben Tag. Vorher merkte sich nexbeat das fehlende Cover eine Woche lang."
+      ]
     }
   }
 }

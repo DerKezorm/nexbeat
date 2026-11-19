@@ -234,6 +234,21 @@
         "Artist photos from Deezer come in 500 instead of 1000 pixels, which saves data, above all on a phone.",
         "The covers live in the data folder under covers. Whatever nobody has opened for 90 days, nexbeat clears away again."
       ]
+    },
+    "1.7.0": {
+      "lead": "Apps like nextune now connect with a code instead of a token typed in. And two repairs to tiles and covers.",
+      "sections": [
+        {
+          "title": "Connect a device with a code",
+          "body": "An app shows a code, you enter it in nexbeat, done. The app then fetches a token of its own with your rights. It shows up in your list of API tokens and can be revoked there at any time. A token typed in still works.",
+          "where": "Profile → API tokens → Connect a device with a code"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "Tiles that lift on hover keep their top edge and are no longer cut off.",
+        "A new album whose cover the Cover Art Archive only adds days later now shows it the same day. Before, nexbeat remembered the missing cover for a week."
+      ]
     }
   }
 }
