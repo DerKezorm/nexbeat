@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
 import os
 import shutil
 import time
 from collections.abc import Iterator
+from datetime import timedelta
 
 import httpx
 import pytest
