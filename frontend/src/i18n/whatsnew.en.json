@@ -249,6 +249,20 @@
         "Tiles that lift on hover keep their top edge and are no longer cut off.",
         "A new album whose cover the Cover Art Archive only adds days later now shows it the same day. Before, nexbeat remembered the missing cover for a week."
       ]
+    },
+    "1.7.1": {
+      "lead": "New album covers are no longer missing for days.",
+      "sections": [
+        {
+          "title": "Album covers",
+          "body": "For freshly uploaded pictures the Cover Art Archive often has only the original for days, the small versions are not made yet. This hit “New from your artists” most. nexbeat now fetches the original and shrinks it itself. Covers an older version remembered as missing are asked for again right away.",
+          "where": "Wherever covers are shown"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "Albums the archive has no picture for at all still show no cover."
+      ]
     }
   }
 }

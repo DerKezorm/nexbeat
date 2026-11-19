@@ -249,6 +249,20 @@
         "Kacheln, die sich beim Überfahren anheben, behalten ihren oberen Rand und werden nicht mehr abgeschnitten.",
         "Ein neues Album, dessen Cover das Cover Art Archive erst Tage später nachreicht, zeigt es jetzt am selben Tag. Vorher merkte sich nexbeat das fehlende Cover eine Woche lang."
       ]
+    },
+    "1.7.1": {
+      "lead": "Neue Albumcover fehlen nicht mehr tagelang.",
+      "sections": [
+        {
+          "title": "Albumcover",
+          "body": "Bei frisch hochgeladenen Bildern hat das Cover Art Archive oft tagelang nur das Original, die kleinen Fassungen fehlen noch. Das traf vor allem „Neu von deinen Künstlern“. nexbeat holt dann das Original und verkleinert es selbst. Cover, die eine ältere Fassung als fehlend gemerkt hat, fragt nexbeat gleich neu an.",
+          "where": "Überall, wo Cover stehen"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Alben, für die das Archiv gar kein Bild hat, bleiben weiter ohne Cover."
+      ]
     }
   }
 }
