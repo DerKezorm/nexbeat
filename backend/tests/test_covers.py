@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import os
 import shutil
 import time
@@ -10,6 +11,7 @@ from datetime import timedelta
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.db import SessionLocal
 from app.models import MusicRequest
@@ -88,7 +90,11 @@ def test_a_missing_cover_is_remembered(client: TestClient) -> None:
     address = f"/api/images/cover/release-group/{RELEASE_GROUP}/front-500"
     assert client.get(address).status_code == 404
     assert client.get(address).status_code == 404
-    assert len(asked) == 1
+    # The thumbnail, then the original; the second visit asks nothing.
+    assert [str(r.url) for r in asked] == [
+        f"https://coverartarchive.org/release-group/{RELEASE_GROUP}/front-500",
+        f"https://coverartarchive.org/release-group/{RELEASE_GROUP}/front",
+    ]
 
 
 def test_a_missing_cover_is_asked_for_again_the_same_day(client: TestClient) -> None:
@@ -108,7 +114,61 @@ def test_a_missing_cover_is_asked_for_again_the_same_day(client: TestClient) -> 
         db.commit()
     _archive(asked, status=200, body=JPEG, kind="image/jpeg")
     assert client.get(address).status_code == 200
-    assert len(asked) == 2
+    assert len(asked) == 3
+
+
+def _photo(width: int, height: int) -> bytes:
+    out = io.BytesIO()
+    Image.new("RGB", (width, height), (200, 60, 70)).save(out, format="JPEG")
+    return out.getvalue()
+
+
+def _thumbnail_not_made_yet(asked: list[httpx.Request], original: bytes) -> None:
+    """How the archive answers for a fresh upload: the image is there, its 250 and 500 versions are not yet."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        asked.append(request)
+        name = request.url.path.rsplit("/", 1)[1]
+        if name in {"front", "77.jpg"}:
+            return httpx.Response(200, content=original, headers={"content-type": "image/jpeg"})
+        return httpx.Response(404, content=b"not found", headers={"content-type": "text/plain"})
+
+    http.use_transport(httpx.MockTransport(handler))
+
+
+@pytest.mark.parametrize(
+    ("address", "original"),
+    [
+        (f"/api/images/cover/release-group/{RELEASE_GROUP}/front-250", f"release-group/{RELEASE_GROUP}/front"),
+        (f"/api/images/cover/release/{RELEASE}/77-500.jpg", f"release/{RELEASE}/77.jpg"),
+    ],
+)
+def test_a_missing_thumbnail_is_made_from_the_original(client: TestClient, address: str, original: str) -> None:
+    asked: list[httpx.Request] = []
+    _thumbnail_not_made_yet(asked, _photo(1600, 1200))
+    response = client.get(address)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    size = int(address.rsplit("-", 1)[1].removesuffix(".jpg"))
+    with Image.open(io.BytesIO(response.content)) as image:
+        assert max(image.size) == size
+    assert str(asked[-1].url) == f"https://coverartarchive.org/{original}"
+    # Kept like any other cover: the next visit asks the archive nothing.
+    before = len(asked)
+    assert client.get(address).status_code == 200
+    assert len(asked) == before
+
+
+def test_an_unreadable_original_counts_as_missing(client: TestClient) -> None:
+    asked: list[httpx.Request] = []
+    _thumbnail_not_made_yet(asked, JPEG[:4] + b" not really a jpeg")
+    assert client.get(f"/api/images/cover/release-group/{RELEASE_GROUP}/front-250").status_code == 404
+
+
+def test_misses_remembered_by_older_versions_are_not_trusted() -> None:
+    cover = covers.parse("release-group", RELEASE_GROUP, "front-250")
+    assert cover is not None
+    assert covers.missing_key(cover) != f"caa:missing:{cover.key}"
 
 
 def test_an_unreachable_archive_sends_the_browser_there_and_keeps_nothing(client: TestClient) -> None:

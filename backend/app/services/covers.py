@@ -10,11 +10,16 @@ selbst und liefert es mit langer Gueltigkeit aus.
 Angenommen werden nur die Adressformen, die nexbeat selbst ausgibt, nur bei coverartarchive.org, nur in den
 Groessen 250 und 500. Ein fehlendes Cover merkt sich nexbeat sechs Stunden, damit sich die Adresse nicht zum
 Anstossen von Abrufen missbrauchen laesst.
+
+19.11.2026 gefunden: Bei frisch hochgeladenen Bildern hat das Archiv oft nur das Original, die Vorschauen in 250
+und 500 entstehen erst Tage spaeter und antworten bis dahin mit 404, obwohl das Bild im Index steht. Genau das
+trifft "Neu von deinen Kuenstlern". Fehlt die Vorschau, holt nexbeat deshalb das Original und verkleinert es selbst.
 """
 
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import os
 import re
@@ -24,6 +29,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import httpx
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
@@ -42,6 +48,10 @@ _SOURCE = re.compile(rf"^{re.escape(BASE_URL)}/(release-group|release)/({_MBID})
 _VALID_MBID = re.compile(rf"^{_MBID}$")
 
 MAX_BYTES = 5 * 1024 * 1024
+#: Originale sind groesser als Vorschauen (gemessen bis 2,3 MB); sie werden nur verkleinert, nie ausgeliefert.
+ORIGINAL_MAX_BYTES = 30 * 1024 * 1024
+#: Groesser verkleinert nexbeat kein Original, als Schutz vor Bildern, die beim Entpacken den Speicher fuellen.
+ORIGINAL_MAX_PIXELS = 12_000 * 12_000
 #: 19.11.2026: Vorher eine Woche. Neue Alben bekommen ihr Cover im Archiv oft erst Tage nach der Veroeffentlichung;
 #: "Neu von deinen Kuenstlern" fragte am ersten Tag, hoerte "fehlt" und zeigte das spaeter vorhandene Cover eine
 #: Woche lang nicht (U2, Carnaval de Luz). Sechs Stunden halten das Anstossen von Abrufen trotzdem klein.
@@ -80,6 +90,18 @@ class Cover:
     def key(self) -> str:
         return f"{self.kind}/{self.mbid}/{self.name}"
 
+    @property
+    def size(self) -> int:
+        return int(self.name.removesuffix(".jpg").rsplit("-", 1)[1])
+
+    @property
+    def original(self) -> str:
+        """Das Bild in voller Groesse, das es auch gibt, solange die Vorschau noch fehlt."""
+        if self.kind == "release-group":
+            return f"{BASE_URL}/release-group/{self.mbid}/front"
+        image = self.name.removesuffix(".jpg").rsplit("-", 1)[0]
+        return f"{BASE_URL}/release/{self.mbid}/{image}.jpg"
+
 
 def parse(kind: str, mbid: str, name: str) -> Cover | None:
     """Nur was nexbeat selbst ausgibt. Alles andere ist kein Cover."""
@@ -107,7 +129,8 @@ def path_for(cover: Cover) -> Path:
 
 
 def missing_key(cover: Cover) -> str:
-    return f"caa:missing:{cover.key}"
+    # "missing2": Eintraege bis 1.7.0 galten bis zu einer Woche und kannten den Weg ueber das Original nicht.
+    return f"caa:missing2:{cover.key}"
 
 
 def media_type(head: bytes) -> str:
@@ -135,10 +158,10 @@ def _touch(path: Path) -> None:
         pass
 
 
-async def _download(cover: Cover) -> Path | None:
-    """Holt das Cover. ``None``: Es gibt keins. ``CoverUnavailable``: gerade keine Antwort."""
+async def _get(cover: Cover, url: str, limit: int) -> bytes | None:
+    """Ein Bild vom Archiv. ``None``: Es gibt keins. ``CoverUnavailable``: gerade keine Antwort."""
     try:
-        response = await http.client("coverart", timeout=20.0).get(cover.source)
+        response = await http.client("coverart", timeout=30.0).get(url)
     except httpx.HTTPError as error:
         logger.info("Cover Art Archive unreachable for %s: %s", cover.key, error)
         raise CoverUnavailable() from error
@@ -146,13 +169,43 @@ async def _download(cover: Cover) -> Path | None:
         return None
     content_type = response.headers.get("content-type", "")
     if response.status_code != 200 or not content_type.startswith("image/"):
-        logger.info("Cover Art Archive answered %s (%s) for %s", response.status_code, content_type, cover.key)
+        logger.info("Cover Art Archive answered %s (%s) for %s", response.status_code, content_type, url)
         raise CoverUnavailable()
-    if len(response.content) > MAX_BYTES:
-        logger.info("Cover %s is larger than %d bytes, not kept", cover.key, MAX_BYTES)
+    if len(response.content) > limit:
+        logger.info("Image %s is larger than %d bytes, not kept", url, limit)
         raise CoverUnavailable()
+    return response.content
+
+
+def shrink(content: bytes, size: int) -> bytes | None:
+    """Das Original als JPEG mit hoechstens ``size`` Pixeln Kantenlaenge. ``None``: kein lesbares Bild."""
+    try:
+        with Image.open(io.BytesIO(content)) as image:
+            width, height = image.size
+            if width * height > ORIGINAL_MAX_PIXELS:
+                return None
+            image.thumbnail((size, size))
+            out = io.BytesIO()
+            image.convert("RGB").save(out, format="JPEG", quality=85)
+            return out.getvalue()
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        return None
+
+
+async def _download(cover: Cover) -> Path | None:
+    """Holt das Cover. ``None``: Es gibt keins. ``CoverUnavailable``: gerade keine Antwort."""
+    content = await _get(cover, cover.source, MAX_BYTES)
+    if content is None:
+        # Die Vorschau fehlt, das Original steht vielleicht schon da (siehe oben).
+        original = await _get(cover, cover.original, ORIGINAL_MAX_BYTES)
+        if original is None:
+            return None
+        content = await asyncio.to_thread(shrink, original, cover.size)
+        if content is None:
+            logger.info("Original of %s could not be read, treated as missing", cover.key)
+            return None
     path = path_for(cover)
-    await asyncio.to_thread(_store, path, response.content)
+    await asyncio.to_thread(_store, path, content)
     return path
 
 
