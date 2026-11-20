@@ -277,6 +277,20 @@
       "small": [
         "Beim ersten Öffnen einer langen Diskografie bleibt archive.org der langsamste Teil."
       ]
+    },
+    "1.7.3": {
+      "lead": "Bei langen Diskografien kommen die Cover der Studioalben zuerst.",
+      "sections": [
+        {
+          "title": "Albumcover",
+          "body": "nexbeat holt die Cover einer Diskografie vorab. Bisher ging das nach Datum, und bei vielen Künstlern standen vorn Dutzende Singles. Jetzt kommen die Studioalben zuerst, dann EPs, dann der Rest.",
+          "where": "Künstlerseiten"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Apps wie nextune zeigen Singles und Zusammenstellungen erst aufgeklappt."
+      ]
     }
   }
 }

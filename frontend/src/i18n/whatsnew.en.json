@@ -277,6 +277,20 @@
       "small": [
         "The first look at a long discography still waits on archive.org most."
       ]
+    },
+    "1.7.3": {
+      "lead": "On long discographies the covers of the studio albums come first.",
+      "sections": [
+        {
+          "title": "Album covers",
+          "body": "nexbeat fetches the covers of a discography ahead. That went by date, and for many artists dozens of singles came first. Now studio albums come first, then EPs, then the rest.",
+          "where": "Artist pages"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "Apps such as nextune show singles and compilations only when opened."
+      ]
     }
   }
 }
