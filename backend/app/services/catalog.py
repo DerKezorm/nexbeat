@@ -348,6 +348,13 @@ async def _with_states(
     return albums
 
 
+def _cover_rank(album: dict[str, Any]) -> int:
+    plain = not album["secondary_types"]
+    if plain and album["primary_type"] == "Album":
+        return 0
+    return 1 if plain and album["primary_type"] == "EP" else 2
+
+
 async def artist_discography(db: Session, settings: AppSettings, user: User, mbid: str) -> dict[str, Any]:
     """Alle Veroeffentlichungen laut MusicBrainz. Faellt MusicBrainz aus, geht der Fehler weiter."""
     # Eigener Schluessel seit 12.09.2026: Aeltere Eintraege brachen nach 100 Release-Groups ab.
@@ -371,8 +378,9 @@ async def artist_discography(db: Session, settings: AppSettings, user: User, mbi
             }
         )
     albums.sort(key=lambda album: album["date"] or "0000", reverse=True)
-    # Die neuesten zuerst: Sie stehen oben auf der Seite.
-    covers.warm(db, [album["cover"] for album in albums])
+    # Studioalben zuerst, dann EPs, dann der Rest, je die neuesten vorn: So zeigen die Apps die Seite, den Rest erst
+    # aufgeklappt. 20.11.2026: Nach Datum allein holte nexbeat bei einem Rapper zuerst Dutzende Singles.
+    covers.warm(db, [album["cover"] for album in sorted(albums, key=_cover_rank)])
     return {"albums": await _with_states(db, settings, user, mbid, albums)}
 
 

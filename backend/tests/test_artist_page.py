@@ -186,3 +186,31 @@ def test_the_discography_fetches_its_covers_ahead(admin_client: TestClient, monk
     albums = admin_client.get(f"/api/artists/{ARTIST}/discography").json()["albums"]
     assert warmed == [album["cover"] for album in albums]
     assert warmed == [f"/api/images/cover/release-group/{ALBUM}/front-250"]
+
+
+def test_the_discography_fetches_studio_album_covers_first(admin_client: TestClient, monkeypatch) -> None:
+    """A rapper's newest releases are mostly singles; fetched by date, their covers came before the albums'."""
+    from app.services import covers
+
+    warmed: list[str] = []
+    monkeypatch.setattr(covers, "warm", lambda _db, urls: warmed.extend(urls) or [])
+    kinds = [("Single", [], "2024"), ("Album", ["Live"], "2023"), ("EP", [], "2022"), ("Album", [], "2021"),
+             ("Single", [], "2020"), ("Album", [], "2019")]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/release-group"):
+            groups = [
+                {"id": f"{index:08d}-0000-4000-8000-000000000000", "title": f"Release {index}", "primary-type": kind,
+                 "secondary-types": secondary, "first-release-date": f"{year}-01-01"}
+                for index, (kind, secondary, year) in enumerate(kinds)
+            ]
+            return httpx.Response(200, json={"release-group-count": len(groups), "release-group-offset": 0,
+                                             "release-groups": groups})
+        if "top-release-groups-for-artist" in request.url.path:
+            return httpx.Response(200, json=[])
+        raise AssertionError(f"Unexpected request: {request.url}")
+
+    http.use_transport(httpx.MockTransport(handler))
+    admin_client.get(f"/api/artists/{ARTIST}/discography")
+    order = [int(url.split("/")[-2].split("-")[0]) for url in warmed]
+    assert order == [3, 5, 2, 0, 1, 4]  # albums newest first, the EP, then the rest by date
