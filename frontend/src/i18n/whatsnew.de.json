@@ -263,6 +263,20 @@
       "small": [
         "Alben, für die das Archiv gar kein Bild hat, bleiben weiter ohne Cover."
       ]
+    },
+    "1.7.2": {
+      "lead": "Albumcover erscheinen beim ersten Öffnen schneller.",
+      "sections": [
+        {
+          "title": "Albumcover",
+          "body": "Ein Cover kommt beim ersten Mal über archive.org und braucht dort oft Sekunden. nexbeat holt die Cover einer Diskografie und der Startseite jetzt schon, sobald es die Liste ausliefert, und zwölf gleichzeitig statt sechs. Danach liegen sie in nexbeat und erscheinen sofort.",
+          "where": "Künstlerseiten und Entdecken"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Beim ersten Öffnen einer langen Diskografie bleibt archive.org der langsamste Teil."
+      ]
     }
   }
 }

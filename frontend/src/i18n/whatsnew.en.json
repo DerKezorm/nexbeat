@@ -263,6 +263,20 @@
       "small": [
         "Albums the archive has no picture for at all still show no cover."
       ]
+    },
+    "1.7.2": {
+      "lead": "Album covers show up faster the first time.",
+      "sections": [
+        {
+          "title": "Album covers",
+          "body": "The first time, a cover comes by way of archive.org and often takes seconds there. nexbeat now fetches the covers of a discography and of the start page as soon as it sends the list, twelve at a time instead of six. After that they are kept in nexbeat and show at once.",
+          "where": "Artist pages and Discover"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "The first look at a long discography still waits on archive.org most."
+      ]
     }
   }
 }
