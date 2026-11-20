@@ -24,8 +24,10 @@ import logging
 import os
 import re
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
 
 import httpx
@@ -33,6 +35,7 @@ from PIL import Image, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
+from ..db import SessionLocal
 from . import cache, http
 
 logger = logging.getLogger("nexbeat.covers")
@@ -46,6 +49,7 @@ _NAMES = {
 }
 _SOURCE = re.compile(rf"^{re.escape(BASE_URL)}/(release-group|release)/({_MBID})/([^/?#]+)$")
 _VALID_MBID = re.compile(rf"^{_MBID}$")
+_SERVED = re.compile(rf"^{re.escape(PUBLIC_PREFIX)}/(release-group|release)/({_MBID})/([^/?#]+)$")
 
 MAX_BYTES = 5 * 1024 * 1024
 #: Originale sind groesser als Vorschauen (gemessen bis 2,3 MB); sie werden nur verkleinert, nie ausgeliefert.
@@ -58,8 +62,13 @@ ORIGINAL_MAX_PIXELS = 12_000 * 12_000
 TTL_MISSING = timedelta(hours=6)
 #: So lange darf der Browser "kein Cover" behalten, aus demselben Grund kurz.
 BROWSER_MISSING_MAX_AGE = int(timedelta(hours=1).total_seconds())
-#: So viele Cover holt nexbeat gleichzeitig. Mehr nimmt archive.org ohnehin nicht schneller an.
-FETCH_CONCURRENCY = 6
+#: So viele Cover holt nexbeat gleichzeitig. 20.11.2026: 12 statt 6. Ein Cover braucht ueber archive.org 1 bis 19
+#: Sekunden, fast alles davon Warten; eine Diskografie mit 20 Alben stand mit 6 lange halb leer.
+FETCH_CONCURRENCY = 12
+#: So viele Cover einer Liste holt nexbeat vorab, damit eine lange Diskografie archive.org nicht flutet.
+WARM_LIMIT = 60
+#: Vorab holen an. Die Tests schalten es ab (ein Abruf im Hintergrund traefe dort auf kein Netz), die eigenen an.
+WARM_AHEAD = True
 #: Cover, die so lange niemand abgerufen hat, raeumt das taegliche Aufraeumen weg.
 KEEP_UNUSED = timedelta(days=90)
 #: Seltener als so stellt nexbeat die Uhr einer Datei nicht nach, damit nicht jeder Abruf schreibt.
@@ -118,6 +127,12 @@ def served(url: str) -> str:
         return url or ""
     kind, mbid, name = match.groups()
     return f"{PUBLIC_PREFIX}/{kind}/{mbid}/{name}"
+
+
+def _cover_of(url: str) -> Cover | None:
+    """Das Cover hinter einer Adresse, die nexbeat ausgibt, ob schon umgeschrieben oder noch beim Archiv."""
+    match = _SERVED.match(url or "") or _SOURCE.match(url or "")
+    return parse(*match.groups()) if match else None
 
 
 def directory() -> Path:
@@ -247,6 +262,40 @@ async def obtain(db: Session, cover: Cover) -> Path | None:
     if found is None:
         cache.write(db, missing_key(cover), True, TTL_MISSING)
     return found
+
+
+def warm(db: Session, urls: Iterable[str]) -> list[asyncio.Task[Path | None]]:
+    """Holt die Cover einer Liste, bevor jemand sie anfragt.
+
+    20.11.2026: Eine Diskografie fragte ihre Cover erst an, wenn die Liste dorthin kam, und jedes brauchte beim ersten
+    Mal Sekunden. Jetzt beginnt nexbeat damit, sobald es die Liste ausliefert. Was schon da ist oder als fehlend
+    gemerkt ist, holt es nicht; ein fehlendes merkt es sich wie beim Abruf durch den Browser.
+    """
+    if not WARM_AHEAD:
+        return []
+    tasks: list[asyncio.Task[Path | None]] = []
+    seen: set[str] = set()
+    for url in urls:
+        cover = _cover_of(url)
+        if cover is None or cover.key in seen:
+            continue
+        seen.add(cover.key)
+        if path_for(cover).is_file() or cache.read(db, missing_key(cover)) is not None:
+            continue
+        task = _fetch_once(cover)
+        task.add_done_callback(partial(_warmed, cover))
+        tasks.append(task)
+        if len(tasks) >= WARM_LIMIT:
+            break
+    return tasks
+
+
+def _warmed(cover: Cover, task: asyncio.Task[Path | None]) -> None:
+    if task.cancelled() or task.exception() is not None:
+        return  # Gerade keine Antwort: nichts merken, der Browser fragt spaeter selbst.
+    if task.result() is None:
+        with SessionLocal() as db:
+            cache.write(db, missing_key(cover), True, TTL_MISSING)
 
 
 def purge_unused(now: float | None = None) -> int:

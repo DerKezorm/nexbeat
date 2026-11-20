@@ -371,6 +371,8 @@ async def artist_discography(db: Session, settings: AppSettings, user: User, mbi
             }
         )
     albums.sort(key=lambda album: album["date"] or "0000", reverse=True)
+    # Die neuesten zuerst: Sie stehen oben auf der Seite.
+    covers.warm(db, [album["cover"] for album in albums])
     return {"albums": await _with_states(db, settings, user, mbid, albums)}
 
 

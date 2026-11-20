@@ -174,3 +174,15 @@ def test_artist_head_says_when_a_whole_artist_would_bring_more_than_studio_album
         db.add(LibraryArtist(mbid=ARTIST, lidarr_id=7, name="Test Artist", metadata_profile_id=2))
         db.commit()
     assert admin_client.get(f"/api/artists/{ARTIST}").json()["blocked"] is None
+
+
+def test_the_discography_fetches_its_covers_ahead(admin_client: TestClient, monkeypatch) -> None:
+    from app.services import covers
+
+    warmed: list[str] = []
+    monkeypatch.setattr(covers, "warm", lambda _db, urls: warmed.extend(urls) or [])
+    transport, _seen = _sources()
+    http.use_transport(transport)
+    albums = admin_client.get(f"/api/artists/{ARTIST}/discography").json()["albums"]
+    assert warmed == [album["cover"] for album in albums]
+    assert warmed == [f"/api/images/cover/release-group/{ALBUM}/front-250"]

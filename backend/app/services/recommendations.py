@@ -296,6 +296,8 @@ async def home(db: Session, settings: AppSettings, user: User) -> dict[str, Any]
                 }
             )
 
+    # Reihe fuer Reihe, so wie die Seite sie zeigt.
+    covers.warm(db, [item.get("cover") or "" for row in rows if row["kind"] == "albums" for item in row["items"]])
     return {
         "rows": rows,
         "library_size": len(known),

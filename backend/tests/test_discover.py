@@ -515,3 +515,14 @@ def test_an_expired_entry_is_gone_for_readers_but_not_for_stale_ones() -> None:
         # Das taegliche Aufraeumen laesst Abgelaufenes noch liegen, damit es als alter Stand taugt.
         assert cache.purge_expired(db) == 0
         assert cache.read_stale(db, "probe") == ({"a": 1}, False)
+
+
+def test_the_start_page_fetches_its_album_covers_ahead(admin_client: TestClient, monkeypatch) -> None:
+    from app.services import covers
+
+    warmed: list[str] = []
+    monkeypatch.setattr(covers, "warm", lambda _db, urls: warmed.extend(urls) or [])
+    _prepare_library()
+    rows = admin_client.get("/api/discover").json()["rows"]
+    album_covers = [item["cover"] for row in rows if row["kind"] == "albums" for item in row["items"]]
+    assert album_covers and warmed == album_covers

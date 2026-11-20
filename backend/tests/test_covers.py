@@ -257,3 +257,56 @@ def test_request_lists_show_covers_through_nexbeat(admin_client: TestClient) -> 
     body = admin_client.get("/api/requests/mine").json()
     items = body["items"] if isinstance(body, dict) else body
     assert items[0]["cover_url"] == f"/api/images/cover/release-group/{RELEASE_GROUP}/front-500"
+
+
+def _warm(urls: list[str]) -> list[asyncio.Task]:
+    async def run() -> list[asyncio.Task]:
+        with SessionLocal() as db:
+            tasks = covers.warm(db, urls)
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.sleep(0)  # the callbacks that remember a missing cover
+        return tasks
+
+    return asyncio.run(run())
+
+
+def test_a_list_fetches_its_covers_before_anyone_asks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A discography asked for its covers only when the list got there, seconds each; now nexbeat starts at once."""
+    monkeypatch.setattr(covers, "WARM_AHEAD", True)
+    asked: list[httpx.Request] = []
+    _archive(asked)
+    group = f"/api/images/cover/release-group/{RELEASE_GROUP}/front-250"
+    release = f"https://coverartarchive.org/release/{RELEASE}/77-250.jpg"
+    tasks = _warm([group, release, group, "https://cdn-images.dzcdn.net/images/cover/abc/250x250.jpg", ""])
+    assert len(tasks) == 2
+    assert sorted(str(r.url) for r in asked) == [
+        f"https://coverartarchive.org/release-group/{RELEASE_GROUP}/front-250",
+        f"https://coverartarchive.org/release/{RELEASE}/77-250.jpg",
+    ]
+    assert covers.path_for(covers.Cover("release-group", RELEASE_GROUP, "front-250")).is_file()
+    assert covers.path_for(covers.Cover("release", RELEASE, "77-250.jpg")).is_file()
+    # What is there is not fetched again.
+    assert _warm([group, release]) == []
+    assert len(asked) == 2
+
+
+def test_a_cover_missing_when_fetched_ahead_is_remembered(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(covers, "WARM_AHEAD", True)
+    asked: list[httpx.Request] = []
+    _archive(asked, status=404, body=b"not found", kind="text/plain")
+    group = f"/api/images/cover/release-group/{RELEASE_GROUP}/front-250"
+    assert len(_warm([group])) == 1
+    assert _warm([group]) == []
+    assert len(asked) == 2  # the thumbnail and the original, once
+
+
+def test_fetching_ahead_stops_at_the_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(covers, "WARM_AHEAD", True)
+    monkeypatch.setattr(covers, "WARM_LIMIT", 2)
+    _archive([])
+    urls = [f"/api/images/cover/release/{RELEASE}/{n}-250.jpg" for n in (1, 2, 3)]
+    assert len(_warm(urls)) == 2
+
+
+def test_more_covers_are_fetched_at_once() -> None:
+    assert covers.FETCH_CONCURRENCY >= 12

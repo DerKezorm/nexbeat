@@ -35,7 +35,7 @@ from app.main import app  # noqa: E402
 from app.models import Base, User  # noqa: E402
 from app.routers import onboarding  # noqa: E402
 from app.security import hash_password  # noqa: E402
-from app.services import anmeldebremse, deezer, http, lidarr, mail, musicbrainz  # noqa: E402
+from app.services import anmeldebremse, covers, deezer, http, lidarr, mail, musicbrainz  # noqa: E402
 from app.services.settings_service import save_settings  # noqa: E402
 from tests.fakes import FakeLidarr  # noqa: E402
 
@@ -58,6 +58,12 @@ def clean_db() -> Iterator[None]:
     anmeldebremse.reset_all()
     onboarding.reset_limits()
     yield
+
+
+@pytest.fixture(autouse=True)
+def no_cover_warming(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Vorab geholte Cover liefen im Hintergrund weiter und traefen auf ``no_network``. Die Cover-Tests schalten es an.
+    monkeypatch.setattr(covers, "WARM_AHEAD", False)
 
 
 @pytest.fixture(autouse=True)
