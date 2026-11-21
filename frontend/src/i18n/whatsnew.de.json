@@ -305,6 +305,18 @@
       "small": [
         "Das Zeichen fragt der Browser jetzt vor dem Benutzen nach, und seine Adresse trägt eine Fassung. So kommt ein neues Zeichen gleich nach einem Update an."
       ]
+    },
+    "1.8.1": {
+      "lead": "nexbeat lässt sich jetzt als App installieren.",
+      "sections": [
+        {
+          "title": "Als App installieren",
+          "body": "Im Browser am Rechner über das Installieren-Zeichen in der Adressleiste, auf dem iPhone über Teilen und „Zum Home-Bildschirm“. nexbeat öffnet sich dann in einem eigenen Fenster mit dem neuen Zeichen.",
+          "where": "Browser, Home-Bildschirm"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": []
     }
   }
 }

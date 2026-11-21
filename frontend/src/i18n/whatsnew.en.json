@@ -305,6 +305,18 @@
       "small": [
         "The browser now asks before it uses the mark again, and its address carries a version, so a new mark arrives right after an update."
       ]
+    },
+    "1.8.1": {
+      "lead": "nexbeat now installs as an app.",
+      "sections": [
+        {
+          "title": "Install as an app",
+          "body": "On a computer through the install sign in the address bar, on an iPhone through Share and “Add to Home Screen”. nexbeat then opens in a window of its own with the new mark.",
+          "where": "Browser, home screen"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": []
     }
   }
 }
