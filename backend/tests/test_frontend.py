@@ -83,3 +83,39 @@ def test_the_mark_follows_the_system_and_its_address_carries_a_version() -> None
     assert "@media (prefers-color-scheme: dark)" in mark and "#170b0d" in mark
     page = (PUBLIC.parent / "index.html").read_text(encoding="utf-8")
     assert 'href="/logo.svg?v=2"' in page
+
+
+def test_nexbeat_installs_as_an_app() -> None:
+    # 21.11.2026: Ohne Manifest bot der Browser nexbeat nicht zur Installation an.
+    import json
+
+    from PIL import Image
+
+    manifest = json.loads((PUBLIC / "manifest.webmanifest").read_text(encoding="utf-8"))
+    assert (manifest["name"], manifest["start_url"], manifest["display"]) == ("nexbeat", "/", "standalone")
+    sizes = {(i["sizes"], i["purpose"]): i["src"] for i in manifest["icons"]}
+    assert {("192x192", "any"), ("512x512", "any"), ("512x512", "maskable")} <= set(sizes)
+    for (size, purpose), src in sizes.items():
+        assert src.endswith("?v=2"), src
+        if size != "any":
+            image = Image.open(PUBLIC / src.lstrip("/").split("?")[0])
+            assert f"{image.width}x{image.height}" == size, src
+            if purpose == "maskable":  # Android schneidet zu: bis an den Rand gefüllt, nichts durchsichtig
+                assert image.mode == "RGB", src
+    touch = Image.open(PUBLIC / "apple-touch-icon.png")
+    assert touch.size == (180, 180) and touch.mode == "RGB"
+    page = (PUBLIC.parent / "index.html").read_text(encoding="utf-8")
+    assert '<link rel="manifest" href="/manifest.webmanifest" />' in page
+    assert '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />' in page
+
+
+def test_the_manifest_goes_out_with_its_type(tmp_path: Path) -> None:
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text(INDEX, encoding="utf-8")
+    (dist / "manifest.webmanifest").write_bytes((PUBLIC / "manifest.webmanifest").read_bytes())
+    site = FastAPI()
+    _mount_frontend(site, dist)
+    answer = TestClient(site).get("/manifest.webmanifest")
+    assert answer.headers["content-type"].startswith("application/manifest+json")
+    assert answer.headers["cache-control"] == "no-cache" and answer.json()["name"] == "nexbeat"

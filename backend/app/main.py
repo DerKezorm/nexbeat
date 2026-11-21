@@ -152,9 +152,13 @@ def _mount_frontend(target: FastAPI, dist: Path) -> None:
         if path and candidate.is_file() and root in candidate.parents and candidate != start_page:
             if path.startswith("assets/"):
                 return FileResponse(candidate)
-            # Alles aus public/ (das Zeichen) hat keine Prüfsumme im Namen: der Browser fragt vor dem Benutzen nach,
-            # sonst behält er nach einem Update das alte Zeichen.
-            return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
+            # Alles aus public/ (Zeichen, Symbole, Manifest) hat keine Prüfsumme im Namen: der Browser fragt vor dem
+            # Benutzen nach, sonst behält er nach einem Update das alte Zeichen.
+            again = {"Cache-Control": "no-cache"}
+            if path.endswith(".webmanifest"):
+                # Nicht jedes System kennt die Endung; ohne den Typ nimmt der Browser das Manifest nicht an.
+                return FileResponse(candidate, media_type="application/manifest+json", headers=again)
+            return FileResponse(candidate, headers=again)
         # Die Startseite fragt der Browser vor jeder Nutzung nach, mit dem ETag ist das ein 304.
         # 12.09.2026: Ohne die Zeile behielt er nach einem Update die alte, die auf Dateien zeigt,
         # die es nicht mehr gibt. Die Dateien unter /assets brauchen das nicht, ihr Name wechselt.
