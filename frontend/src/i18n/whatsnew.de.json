@@ -291,6 +291,20 @@
       "small": [
         "Apps wie nextune zeigen Singles und Zusammenstellungen erst aufgeklappt."
       ]
+    },
+    "1.8.0": {
+      "lead": "nexbeat hat ein neues Zeichen: eine Pulslinie mit rotem Ausschlag.",
+      "sections": [
+        {
+          "title": "Neues Zeichen",
+          "body": "Die Pulslinie mit rotem Ausschlag und Punkt am Ende ersetzt das alte Zeichen. Das Logo folgt dem hellen und dunklen Modus, der Browser-Tab folgt dem System.",
+          "where": "Kopfzeile, Anmeldung, Über, Browser-Tab"
+        }
+      ],
+      "smallTitle": "Außerdem",
+      "small": [
+        "Das Zeichen fragt der Browser jetzt vor dem Benutzen nach, und seine Adresse trägt eine Fassung. So kommt ein neues Zeichen gleich nach einem Update an."
+      ]
     }
   }
 }

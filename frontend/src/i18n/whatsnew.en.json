@@ -291,6 +291,20 @@
       "small": [
         "Apps such as nextune show singles and compilations only when opened."
       ]
+    },
+    "1.8.0": {
+      "lead": "nexbeat has a new mark: a pulse line with a red beat.",
+      "sections": [
+        {
+          "title": "New mark",
+          "body": "The pulse line with a red beat and a dot at its end replaces the old mark. The logo follows light and dark mode, the browser tab follows your system.",
+          "where": "Header, sign-in, About, browser tab"
+        }
+      ],
+      "smallTitle": "Also",
+      "small": [
+        "The browser now asks before it uses the mark again, and its address carries a version, so a new mark arrives right after an update."
+      ]
     }
   }
 }
