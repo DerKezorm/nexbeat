@@ -1,12 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Das Zeichen: weiße Kachel, wenn das System hell ist, dunkle, wenn es dunkel ist (Quelle nexapps/icons-vergleich/neu.py). -->
+  <style>
+    .grund { fill: #fff }
+    .rand { stroke: #e11d2f; stroke-opacity: .3 }
+    .akzent { stroke: #d90f25 }
+    .punkt { fill: #d90f25; stroke: #fff }
+    .v1 { stop-color: #ff8a95 } .v2 { stop-color: #e11d2f } .v3 { stop-color: #8f0f1c }
+    @media (prefers-color-scheme: dark) {
+      .grund { fill: #170b0d }
+      .rand { stroke: #ff3b4e; stroke-opacity: .45 }
+      .akzent { stroke: #ff5a67 }
+      .punkt { fill: #ff5a67; stroke: #170b0d }
+      .v1 { stop-color: #ffc9ce } .v2 { stop-color: #ff3b4e } .v3 { stop-color: #c81e2f }
+    }
+  </style>
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#ff3b4e"/>
-      <stop offset="55%" stop-color="#e11d2f"/>
-      <stop offset="100%" stop-color="#8f0f1c"/>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="10" y1="10" x2="54" y2="54">
+      <stop offset="0" class="v1"/>
+      <stop offset=".5" class="v2"/>
+      <stop offset="1" class="v3"/>
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="#141019"/>
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="none" stroke="url(#g)" stroke-width="2.5" stroke-opacity=".55"/>
-  <path d="M11 33h8l4.5-11 7 22 6.5-17 4 6H53" fill="none" stroke="url(#g)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect class="grund" x="2" y="2" width="60" height="60" rx="16"/>
+  <rect class="rand" x="2.75" y="2.75" width="58.5" height="58.5" rx="15.3" fill="none" stroke-width="1.5"/>
+  <path d="M10 33h9l4.5-11 7 22 6.5-17 4 6H54" fill="none" stroke="url(#g)" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="akzent" d="M23.5 22 30.5 44" stroke-width="4.4" stroke-linecap="round"/>
+  <circle class="punkt" cx="54" cy="33" r="3.6" stroke-width="1.8"/>
 </svg>
